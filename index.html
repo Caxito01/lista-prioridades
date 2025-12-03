@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gerenciamento de Prioridades</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="logo">
+                <h1>📊 Sistema de Prioridades</h1>
+                <p class="subtitle">Gerenciamento Colaborativo de Tarefas</p>
+            </div>
+            <button class="btn-help" onclick="showHelp()" title="Ajuda">❓ Ajuda</button>
+        </div>
+    </header>
+
+    <!-- Modal de Ajuda -->
+    <div id="helpModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeHelp()">&times;</span>
+            <h2>📖 Guia de Uso do Sistema</h2>
+            
+            <div class="help-section">
+                <h3>⚙️ 1. Configuração Inicial</h3>
+                <p>Personalize os nomes dos 4 avaliadores conforme sua equipe. Clique em "Salvar Nomes" para aplicar as mudanças.</p>
+            </div>
+
+            <div class="help-section">
+                <h3>➕ 2. Cadastrar Tarefas</h3>
+                <p>Preencha todos os campos obrigatórios:</p>
+                <ul>
+                    <li><strong>Descrição:</strong> Nome ou descrição da tarefa/projeto</li>
+                    <li><strong>Estágio:</strong> Selecione o status atual (EM EXECUÇÃO, ATRASADO, INICIADO, EM PLANEJAMENTO, CONCLUÍDO)</li>
+                    <li><strong>Notas:</strong> Cada avaliador atribui uma nota de 1 a 5</li>
+                </ul>
+                <p>A média é calculada automaticamente e determina a prioridade da tarefa.</p>
+            </div>
+
+            <div class="help-section">
+                <h3>📋 3. Gerenciar Tarefas na Lista</h3>
+                <p><strong>Alterar Estágio:</strong> Use o dropdown na coluna "Estágio" para mudar rapidamente o status.</p>
+                <p><strong>Editar:</strong> Clique no ícone ✏️ para modificar todos os dados da tarefa.</p>
+                <p><strong>Excluir:</strong> Clique no ícone 🗑️ para remover a tarefa (confirmação necessária).</p>
+            </div>
+
+            <div class="help-section">
+                <h3>🔍 4. Filtros e Ordenação</h3>
+                <p><strong>Filtrar por Estágio:</strong> Selecione um estágio específico no dropdown para ver apenas essas tarefas.</p>
+                <p><strong>Ordenação:</strong></p>
+                <ul>
+                    <li>Por padrão, tarefas são ordenadas por <strong>prioridade</strong> (maior média primeiro)</li>
+                    <li>Clique em "ORDEM ALFABÉTICA" para ordenar por descrição</li>
+                    <li>Clique em "ORDEM POR PRIORIDADE" para voltar à ordenação por média</li>
+                </ul>
+                <p><strong>Limpar Filtros:</strong> Remove todos os filtros aplicados.</p>
+            </div>
+
+            <div class="help-section">
+                <h3>🖨️ 5. Impressão em PDF</h3>
+                <p>Clique em "IMPRIMIR PDF" para gerar uma versão otimizada para impressão:</p>
+                <ul>
+                    <li>Fonte Times New Roman, tamanho 10pt</li>
+                    <li>Inclui rodapé com data/hora de impressão e copyright</li>
+                    <li>Na janela de impressão, selecione "Salvar como PDF" para gerar o arquivo</li>
+                </ul>
+            </div>
+
+            <div class="help-section">
+                <h3>🎨 6. Código de Cores</h3>
+                <p><strong>Estágios:</strong></p>
+                <ul>
+                    <li>🟢 <strong>EM EXECUÇÃO:</strong> Verde - tarefa sendo executada</li>
+                    <li>🔴 <strong>ATRASADO:</strong> Vermelho - tarefa com atraso</li>
+                    <li>⚪ <strong>INICIADO:</strong> Cinza claro - tarefa iniciada</li>
+                    <li>🟠 <strong>EM PLANEJAMENTO:</strong> Laranja - em fase de planejamento</li>
+                    <li>⚫ <strong>CONCLUÍDO:</strong> Cinza escuro - tarefa finalizada</li>
+                </ul>
+                <p><strong>Médias:</strong></p>
+                <ul>
+                    <li>🟢 Verde: Média ≥ 4 (alta prioridade)</li>
+                    <li>🟡 Amarelo: Média entre 3 e 3.99 (média prioridade)</li>
+                    <li>🔴 Vermelho: Média < 3 (baixa prioridade)</li>
+                </ul>
+            </div>
+
+            <div class="help-section">
+                <h3>💾 7. Armazenamento de Dados</h3>
+                <p>Todas as tarefas e configurações são salvas automaticamente no navegador (localStorage). Os dados permanecem mesmo após fechar a página.</p>
+                <p><strong>Atenção:</strong> Limpar dados do navegador apagará todas as tarefas cadastradas.</p>
+            </div>
+        </div>
+    </div>
+
+    <main class="container">
+        <!-- Seção de Configurações -->
+        <section class="config-section">
+            <h2>⚙️ Configurações de Avaliadores</h2>
+            <div class="evaluators-config">
+                <div class="evaluator-input">
+                    <label>Avaliador 1:</label>
+                    <input type="text" id="evaluator1" value="Avaliador 1">
+                </div>
+                <div class="evaluator-input">
+                    <label>Avaliador 2:</label>
+                    <input type="text" id="evaluator2" value="Avaliador 2">
+                </div>
+                <div class="evaluator-input">
+                    <label>Avaliador 3:</label>
+                    <input type="text" id="evaluator3" value="Avaliador 3">
+                </div>
+                <div class="evaluator-input">
+                    <label>Avaliador 4:</label>
+                    <input type="text" id="evaluator4" value="Avaliador 4">
+                </div>
+                <button class="btn btn-primary" onclick="saveEvaluatorNames()">Salvar Nomes</button>
+            </div>
+        </section>
+
+        <!-- Formulário de Cadastro -->
+        <section class="form-section">
+            <h2 id="formTitle">➕ Cadastrar Nova Tarefa</h2>
+            <form id="taskForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="taskDescription">Descrição da Tarefa *</label>
+                        <input type="text" id="taskDescription" required placeholder="Digite a descrição da tarefa">
+                    </div>
+                    <div class="form-group">
+                        <label for="taskStage">Estágio *</label>
+                        <select id="taskStage" required>
+                            <option value="">Selecione...</option>
+                            <option value="EM EXECUÇÃO">EM EXECUÇÃO</option>
+                            <option value="ATRASADO">ATRASADO</option>
+                            <option value="INICIADO">INICIADO</option>
+                            <option value="EM PLANEJAMENTO">EM PLANEJAMENTO</option>
+                            <option value="CONCLUÍDO">CONCLUÍDO</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row evaluations-row">
+                    <div class="form-group">
+                        <label for="eval1">Nota <span class="evaluator-name">Avaliador 1</span> (1-5) *</label>
+                        <input type="number" id="eval1" min="1" max="5" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="eval2">Nota <span class="evaluator-name">Avaliador 2</span> (1-5) *</label>
+                        <input type="number" id="eval2" min="1" max="5" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="eval3">Nota <span class="evaluator-name">Avaliador 3</span> (1-5) *</label>
+                        <input type="number" id="eval3" min="1" max="5" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="eval4">Nota <span class="evaluator-name">Avaliador 4</span> (1-5) *</label>
+                        <input type="number" id="eval4" min="1" max="5" required>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-success" id="submitBtn">Adicionar Tarefa</button>
+                    <button type="button" class="btn btn-secondary" id="cancelBtn" onclick="cancelEdit()" style="display: none;">Cancelar</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Filtros e Controles -->
+        <section class="controls-section">
+            <h2>🔍 Filtros e Controles</h2>
+            <div class="controls">
+                <div class="filter-group">
+                    <label for="filterStage">Filtrar por Estágio:</label>
+                    <select id="filterStage" onchange="applyFilters()">
+                        <option value="">Todos os Estágios</option>
+                        <option value="EM EXECUÇÃO">EM EXECUÇÃO</option>
+                        <option value="ATRASADO">ATRASADO</option>
+                        <option value="INICIADO">INICIADO</option>
+                        <option value="EM PLANEJAMENTO">EM PLANEJAMENTO</option>
+                        <option value="CONCLUÍDO">CONCLUÍDO</option>
+                    </select>
+                </div>
+                <button class="btn btn-info" onclick="toggleSortOrder()">
+                    <span id="sortButtonText">ORDEM ALFABÉTICA</span>
+                </button>
+                <button class="btn btn-warning" onclick="clearFilters()">LIMPAR FILTROS</button>
+                <button class="btn btn-success" onclick="printToPDF()">🖨️ IMPRIMIR PDF</button>
+            </div>
+        </section>
+
+        <!-- Tabela de Tarefas -->
+        <section class="table-section">
+            <h2>📋 Lista de Tarefas</h2>
+            <div class="table-container">
+                <table id="tasksTable">
+                    <thead>
+                        <tr>
+                            <th>Estágio</th>
+                            <th>Descrição</th>
+                            <th class="evaluator-header">Avaliador 1</th>
+                            <th class="evaluator-header">Avaliador 2</th>
+                            <th class="evaluator-header">Avaliador 3</th>
+                            <th class="evaluator-header">Avaliador 4</th>
+                            <th>Média</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tasksTableBody">
+                        <!-- Tarefas serão inseridas aqui dinamicamente -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="noTasksMessage" class="no-tasks">
+                Nenhuma tarefa cadastrada. Adicione uma nova tarefa acima.
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; CECM - 2025 Sistema de Gerenciamento de Prioridades. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
