@@ -218,8 +218,17 @@ function getAverageClass(average) {
 // Ordenar tarefas
 function sortTasks(tasksToSort) {
     if (currentSortOrder === 'priority') {
-        // Ordenar por média (maior para menor)
-        return tasksToSort.sort((a, b) => parseFloat(b.average) - parseFloat(a.average));
+        // Ordenar por média (maior para menor), e se iguais, colocar ATRASADO em primeiro
+        return tasksToSort.sort((a, b) => {
+            const avgDiff = parseFloat(b.average) - parseFloat(a.average);
+            if (avgDiff !== 0) {
+                return avgDiff;
+            }
+            // Se as médias forem iguais, ATRASADO vem primeiro
+            if (a.stage === 'ATRASADO' && b.stage !== 'ATRASADO') return -1;
+            if (a.stage !== 'ATRASADO' && b.stage === 'ATRASADO') return 1;
+            return 0;
+        });
     } else {
         // Ordenar alfabeticamente
         return tasksToSort.sort((a, b) => a.description.localeCompare(b.description));
