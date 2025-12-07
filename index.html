@@ -194,6 +194,23 @@
         <!-- Tabela de Tarefas -->
         <section class="table-section">
             <h2>📋 Lista de Tarefas</h2>
+            
+            <!-- Legenda de Cores -->
+            <div class="legend-container">
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: #d4edda;"></span>
+                    <span>🟢 Verde: Média ≥ 4 (alta prioridade)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: #fff3cd;"></span>
+                    <span>🟡 Amarelo: Média entre 3 e 3.99 (média prioridade)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: #f8d7da;"></span>
+                    <span>🔴 Vermelho: Média < 3 (baixa prioridade)</span>
+                </div>
+            </div>
+            
             <div class="table-container">
                 <table id="tasksTable">
                     <thead>
