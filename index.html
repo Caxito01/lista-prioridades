@@ -99,39 +99,24 @@
         <!-- Seção de Configurações -->
         <section class="config-section">
             <h2>⚙️ Configurações de Avaliadores</h2>
-            <div class="evaluators-config" id="evaluatorsContainer">
+            <div class="evaluators-config">
                 <div class="evaluator-input">
                     <label>Avaliador 1:</label>
-                    <div class="evaluator-input-group">
-                        <input type="text" id="evaluator1" value="Avaliador 1" class="evaluator-field">
-                        <button type="button" class="btn btn-danger btn-remove-evaluator" onclick="removeEvaluator(1)" style="display: none;" title="Remover avaliador">✕</button>
-                    </div>
+                    <input type="text" id="evaluator1" value="Avaliador 1">
                 </div>
                 <div class="evaluator-input">
                     <label>Avaliador 2:</label>
-                    <div class="evaluator-input-group">
-                        <input type="text" id="evaluator2" value="Avaliador 2" class="evaluator-field">
-                        <button type="button" class="btn btn-danger btn-remove-evaluator" onclick="removeEvaluator(2)" style="display: none;" title="Remover avaliador">✕</button>
-                    </div>
+                    <input type="text" id="evaluator2" value="Avaliador 2">
                 </div>
                 <div class="evaluator-input">
                     <label>Avaliador 3:</label>
-                    <div class="evaluator-input-group">
-                        <input type="text" id="evaluator3" value="Avaliador 3" class="evaluator-field">
-                        <button type="button" class="btn btn-danger btn-remove-evaluator" onclick="removeEvaluator(3)" style="display: none;" title="Remover avaliador">✕</button>
-                    </div>
+                    <input type="text" id="evaluator3" value="Avaliador 3">
                 </div>
                 <div class="evaluator-input">
                     <label>Avaliador 4:</label>
-                    <div class="evaluator-input-group">
-                        <input type="text" id="evaluator4" value="Avaliador 4" class="evaluator-field">
-                        <button type="button" class="btn btn-danger btn-remove-evaluator" onclick="removeEvaluator(4)" title="Remover avaliador">✕</button>
-                    </div>
+                    <input type="text" id="evaluator4" value="Avaliador 4">
                 </div>
-            </div>
-            <div class="evaluator-actions">
-                <button type="button" class="btn btn-success" onclick="addEvaluator()" id="btnAddEvaluator">➕ Adicionar Avaliador</button>
-                <button class="btn btn-primary" onclick="saveEvaluatorNames()">💾 Salvar Nomes</button>
+                <button class="btn btn-primary" onclick="saveEvaluatorNames()">Salvar Nomes</button>
             </div>
         </section>
 
@@ -173,10 +158,6 @@
                     <div class="form-group">
                         <label for="eval4">Nota <span class="evaluator-name">Avaliador 4</span> (1-5) *</label>
                         <input type="number" id="eval4" min="1" max="5" required>
-                    </div>
-                    <div class="form-group" id="eval5Group" style="display: none;">
-                        <label for="eval5">Nota <span class="evaluator-name">Avaliador 5</span> (1-5) *</label>
-                        <input type="number" id="eval5" min="1" max="5" required>
                     </div>
                 </div>
 
@@ -223,7 +204,6 @@
                             <th class="evaluator-header">Avaliador 2</th>
                             <th class="evaluator-header">Avaliador 3</th>
                             <th class="evaluator-header">Avaliador 4</th>
-                            <th class="evaluator-header" id="eval5Header" style="display: none;">Avaliador 5</th>
                             <th>Média</th>
                             <th>Ações</th>
                         </tr>

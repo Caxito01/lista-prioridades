@@ -3,7 +3,6 @@ let tasks = [];
 let editingTaskId = null;
 let currentSortOrder = 'priority'; // 'priority' ou 'alphabetical'
 let currentFilter = '';
-let currentEvaluatorCount = 4; // Número atual de avaliadores
 
 // Nomes dos avaliadores
 let evaluatorNames = {
@@ -16,10 +15,8 @@ let evaluatorNames = {
 // Inicialização
 document.addEventListener('DOMContentLoaded', function() {
     loadEvaluatorNames();
-    loadEvaluatorCount();
     loadTasks();
     updateEvaluatorLabels();
-    updateRemoveButtonsVisibility();
     renderTasks();
     
     // Event listener para o formulário
@@ -35,84 +32,19 @@ function loadEvaluatorNames() {
         document.getElementById('evaluator2').value = evaluatorNames.eval2;
         document.getElementById('evaluator3').value = evaluatorNames.eval3;
         document.getElementById('evaluator4').value = evaluatorNames.eval4;
-        
-        // Carregar campos adicionais se existirem
-        for (let i = 5; i <= currentEvaluatorCount; i++) {
-            const field = document.getElementById(`evaluator${i}`);
-            if (field && evaluatorNames[`eval${i}`]) {
-                field.value = evaluatorNames[`eval${i}`];
-            }
-        }
-    }
-}
-
-// Carregar o número de avaliadores do localStorage
-function loadEvaluatorCount() {
-    const saved = localStorage.getItem('evaluatorCount');
-    if (saved) {
-        currentEvaluatorCount = parseInt(saved);
-    }
-    syncEvaluatorFields();
-    syncEvaluationFieldsRequired();
-}
-
-// Sincronizar atributo required dos campos de avaliação
-function syncEvaluationFieldsRequired() {
-    for (let i = 1; i <= 5; i++) {
-        const field = document.getElementById(`eval${i}`);
-        if (field) {
-            if (i <= currentEvaluatorCount) {
-                field.required = true;
-            } else {
-                field.required = false;
-            }
-        }
-    }
-}
-
-// Sincronizar campos de avaliadores com o número atual
-function syncEvaluatorFields() {
-    for (let i = 1; i <= 5; i++) {
-        const input = document.getElementById(`evaluator${i}`);
-        const container = input?.parentElement?.parentElement;
-        const eval5Group = document.getElementById('eval5Group');
-        const eval5Header = document.getElementById('eval5Header');
-        
-        if (i <= currentEvaluatorCount) {
-            if (container) {
-                container.style.display = 'flex';
-            }
-            // Mostrar campo de avaliação 5 se necessário
-            if (i === 5 && eval5Group) {
-                eval5Group.style.display = 'block';
-            }
-            if (i === 5 && eval5Header) {
-                eval5Header.style.display = 'table-cell';
-            }
-        } else {
-            if (container) {
-                container.style.display = 'none';
-            }
-            // Ocultar campo de avaliação 5 se necessário
-            if (i === 5) {
-                if (eval5Group) eval5Group.style.display = 'none';
-                if (eval5Header) eval5Header.style.display = 'none';
-            }
-        }
     }
 }
 
 // Salvar nomes dos avaliadores
 function saveEvaluatorNames() {
-    evaluatorNames = {};
-    
-    for (let i = 1; i <= currentEvaluatorCount; i++) {
-        const fieldValue = document.getElementById(`evaluator${i}`).value || `Avaliador ${i}`;
-        evaluatorNames[`eval${i}`] = fieldValue;
-    }
+    evaluatorNames = {
+        eval1: document.getElementById('evaluator1').value || 'Avaliador 1',
+        eval2: document.getElementById('evaluator2').value || 'Avaliador 2',
+        eval3: document.getElementById('evaluator3').value || 'Avaliador 3',
+        eval4: document.getElementById('evaluator4').value || 'Avaliador 4'
+    };
     
     localStorage.setItem('evaluatorNames', JSON.stringify(evaluatorNames));
-    localStorage.setItem('evaluatorCount', currentEvaluatorCount.toString());
     updateEvaluatorLabels();
     renderTasks();
     
@@ -130,85 +62,6 @@ function showNotification(message) {
         notification.style.animation = 'fadeOut 0.3s ease-out';
         setTimeout(() => notification.remove(), 300);
     }, 3000);
-}
-
-// Adicionar novo avaliador
-function addEvaluator() {
-    if (currentEvaluatorCount >= 5) {
-        showNotification('Número máximo de avaliadores (5) atingido!');
-        return;
-    }
-    
-    currentEvaluatorCount++;
-    createEvaluatorField(currentEvaluatorCount);
-    syncEvaluationFieldsRequired();
-    updateRemoveButtonsVisibility();
-    showNotification(`Avaliador ${currentEvaluatorCount} adicionado!`);
-}
-
-// Remover avaliador
-function removeEvaluator(index) {
-    if (currentEvaluatorCount <= 1) {
-        showNotification('É necessário manter pelo menos 1 avaliador!');
-        return;
-    }
-    
-    if (confirm(`Tem certeza que deseja remover o Avaliador ${index}?`)) {
-        // Deslocar avaliadores subsequentes
-        for (let i = index; i < currentEvaluatorCount; i++) {
-            const current = document.getElementById(`evaluator${i}`);
-            const next = document.getElementById(`evaluator${i + 1}`);
-            if (current && next) {
-                current.value = next.value;
-                evaluatorNames[`eval${i}`] = next.value;
-            }
-        }
-        
-        currentEvaluatorCount--;
-        syncEvaluatorFields();
-        syncEvaluationFieldsRequired();
-        updateRemoveButtonsVisibility();
-        saveEvaluatorNames();
-        showNotification(`Avaliador removido com sucesso!`);
-    }
-}
-
-// Criar campo de novo avaliador
-function createEvaluatorField(index) {
-    const container = document.getElementById('evaluatorsContainer');
-    const newField = document.createElement('div');
-    newField.className = 'evaluator-input';
-    newField.innerHTML = `
-        <label>Avaliador ${index}:</label>
-        <div class="evaluator-input-group">
-            <input type="text" id="evaluator${index}" value="Avaliador ${index}" class="evaluator-field">
-            <button type="button" class="btn btn-danger btn-remove-evaluator" onclick="removeEvaluator(${index})" title="Remover avaliador">✕</button>
-        </div>
-    `;
-    container.appendChild(newField);
-    syncEvaluatorFields();
-}
-
-// Atualizar visibilidade dos botões de remover
-function updateRemoveButtonsVisibility() {
-    for (let i = 1; i <= 5; i++) {
-        const button = document.querySelector(`button[onclick="removeEvaluator(${i})"]`);
-        if (button) {
-            if (currentEvaluatorCount <= 1) {
-                button.style.display = 'none';
-            } else if (i <= currentEvaluatorCount) {
-                button.style.display = 'block';
-            } else {
-                button.style.display = 'none';
-            }
-        }
-    }
-    
-    // Atualizar disponibilidade do botão de adicionar
-    const btnAdd = document.getElementById('btnAddEvaluator');
-    if (btnAdd) {
-        btnAdd.disabled = currentEvaluatorCount >= 5;
-    }
 }
 
 // Mostrar modal de ajuda
@@ -232,12 +85,16 @@ window.onclick = function(event) {
 // Atualizar labels dos avaliadores na interface
 function updateEvaluatorLabels() {
     const evaluatorNameSpans = document.querySelectorAll('.evaluator-name');
-    const headers = document.querySelectorAll('.evaluator-header');
+    evaluatorNameSpans[0].textContent = evaluatorNames.eval1;
+    evaluatorNameSpans[1].textContent = evaluatorNames.eval2;
+    evaluatorNameSpans[2].textContent = evaluatorNames.eval3;
+    evaluatorNameSpans[3].textContent = evaluatorNames.eval4;
     
-    for (let i = 1; i <= currentEvaluatorCount && i <= evaluatorNameSpans.length; i++) {
-        evaluatorNameSpans[i - 1].textContent = evaluatorNames[`eval${i}`];
-        headers[i - 1].textContent = evaluatorNames[`eval${i}`];
-    }
+    const headers = document.querySelectorAll('.evaluator-header');
+    headers[0].textContent = evaluatorNames.eval1;
+    headers[1].textContent = evaluatorNames.eval2;
+    headers[2].textContent = evaluatorNames.eval3;
+    headers[3].textContent = evaluatorNames.eval4;
 }
 
 // Carregar tarefas do localStorage
@@ -255,37 +112,24 @@ function saveTasks() {
 
 // Calcular média das avaliações
 function calculateAverage(evaluations) {
-    let sum = 0;
-    let count = 0;
-    
-    for (let i = 1; i <= currentEvaluatorCount; i++) {
-        const key = `eval${i}`;
-        if (evaluations[key]) {
-            sum += evaluations[key];
-            count++;
-        }
-    }
-    
-    return count > 0 ? (sum / count).toFixed(2) : 0;
+    const sum = evaluations.eval1 + evaluations.eval2 + evaluations.eval3 + evaluations.eval4;
+    return (sum / 4).toFixed(2);
 }
 
 // Manipular envio do formulário
 function handleFormSubmit(e) {
     e.preventDefault();
     
-    const evaluations = {};
-    for (let i = 1; i <= currentEvaluatorCount; i++) {
-        const fieldValue = document.getElementById(`eval${i}`);
-        if (fieldValue) {
-            evaluations[`eval${i}`] = parseInt(fieldValue.value);
-        }
-    }
-    
     const taskData = {
         id: editingTaskId || Date.now(),
         description: document.getElementById('taskDescription').value,
         stage: document.getElementById('taskStage').value,
-        evaluations: evaluations
+        evaluations: {
+            eval1: parseInt(document.getElementById('eval1').value),
+            eval2: parseInt(document.getElementById('eval2').value),
+            eval3: parseInt(document.getElementById('eval3').value),
+            eval4: parseInt(document.getElementById('eval4').value)
+        }
     };
     
     taskData.average = calculateAverage(taskData.evaluations);
@@ -330,13 +174,10 @@ function editTask(id) {
     editingTaskId = id;
     document.getElementById('taskDescription').value = task.description;
     document.getElementById('taskStage').value = task.stage;
-    
-    for (let i = 1; i <= currentEvaluatorCount; i++) {
-        const field = document.getElementById(`eval${i}`);
-        if (field && task.evaluations[`eval${i}`]) {
-            field.value = task.evaluations[`eval${i}`];
-        }
-    }
+    document.getElementById('eval1').value = task.evaluations.eval1;
+    document.getElementById('eval2').value = task.evaluations.eval2;
+    document.getElementById('eval3').value = task.evaluations.eval3;
+    document.getElementById('eval4').value = task.evaluations.eval4;
     
     document.getElementById('formTitle').textContent = '✏️ Editar Tarefa';
     document.getElementById('submitBtn').textContent = 'Salvar Alterações';
@@ -434,17 +275,7 @@ function renderTasks() {
     
     noTasksMessage.style.display = 'none';
     
-    // Gerar células de avaliação dinamicamente
-    const evaluationCells = sortedTasks.map(task => {
-        let cellsHTML = '';
-        for (let i = 1; i <= currentEvaluatorCount; i++) {
-            const value = task.evaluations[`eval${i}`] || '-';
-            cellsHTML += `<td class="score-cell">${value}</td>`;
-        }
-        return cellsHTML;
-    });
-    
-    tbody.innerHTML = sortedTasks.map((task, index) => `
+    tbody.innerHTML = sortedTasks.map(task => `
         <tr>
             <td>
                 <select class="stage-select" data-stage="${task.stage}" onchange="updateTaskStage(${task.id}, this.value)">
@@ -456,7 +287,10 @@ function renderTasks() {
                 </select>
             </td>
             <td>${task.description}</td>
-            ${evaluationCells[index]}
+            <td class="score-cell">${task.evaluations.eval1}</td>
+            <td class="score-cell">${task.evaluations.eval2}</td>
+            <td class="score-cell">${task.evaluations.eval3}</td>
+            <td class="score-cell">${task.evaluations.eval4}</td>
             <td>
                 <span class="${getAverageClass(parseFloat(task.average))}">
                     ${task.average}

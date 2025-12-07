@@ -102,38 +102,6 @@ section h2 {
     flex-direction: column;
 }
 
-.evaluator-input-group {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
-
-.evaluator-input-group .evaluator-field {
-    flex: 1;
-    padding: 10px;
-    border: 2px solid #e0e0e0;
-    border-radius: 5px;
-    font-size: 0.95rem;
-    transition: border-color 0.3s;
-}
-
-.evaluator-input-group .evaluator-field:focus {
-    outline: none;
-    border-color: #667eea;
-}
-
-.evaluator-input-group .btn-remove-evaluator {
-    padding: 10px 12px;
-    font-size: 1rem;
-    margin: 0;
-}
-
-.evaluator-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
 .evaluator-input label {
     font-weight: 600;
     margin-bottom: 5px;
@@ -335,28 +303,10 @@ section h2 {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.table-container table {
+table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: fixed; /* Ensure proportional column widths */
-}
-
-.table-container th, .table-container td {
-    padding: 12px; /* Uniform padding */
-    text-align: center; /* Center text horizontally */
-    vertical-align: middle; /* Center text vertically */
-    font-size: 0.9rem; /* Consistent font size */
-}
-
-.table-container th {
-    background-color: #667eea; /* Highlight header */
-    color: white;
-    font-weight: bold;
-    text-transform: uppercase;
-}
-
-.table-container td {
-    border: 1px solid #ddd; /* Uniform border thickness */
+    background: white;
 }
 
 thead {
@@ -383,18 +333,6 @@ tbody tr {
 
 tbody tr:hover {
     background-color: #f8f9ff;
-}
-
-/* Ensure checkboxes align with text */
-.table-container td:first-child {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
-.table-container td:first-child input[type="checkbox"] {
-    transform: scale(1.2); /* Slightly larger checkboxes */
 }
 
 /* Stage Colors */
@@ -594,11 +532,6 @@ footer {
         font-size: 0.75rem;
         padding: 6px 10px;
     }
-
-    .table-container th, .table-container td {
-        font-size: 0.8rem; /* Adjust font size for smaller screens */
-        padding: 8px; /* Adjust padding for smaller screens */
-    }
 }
 
 /* Modal de Ajuda */
@@ -719,7 +652,6 @@ tbody tr {
         background: white;
         font-family: 'Times New Roman', Times, serif;
         font-size: 10pt;
-        color: black !important;
     }
 
     header,
@@ -745,12 +677,12 @@ tbody tr {
     }
 
     .table-section h2 {
-        font-family: 'Times New Roman', Times, serif !important;
-        font-size: 14pt !important;
-        color: black !important;
-        border: none !important;
-        margin-bottom: 10px !important;
-        text-align: center !important;
+        font-family: 'Times New Roman', Times, serif;
+        font-size: 14pt;
+        color: black;
+        border: none;
+        margin-bottom: 10px;
+        text-align: center;
     }
 
     table {
@@ -758,28 +690,13 @@ tbody tr {
         width: 100%;
         font-family: 'Times New Roman', Times, serif;
         font-size: 10pt;
-        color: black !important;
     }
 
-    /* Garantir largura e estilo uniforme das linhas */
-    td {
+    th, td {
         border: 1px solid black;
         padding: 8px;
         text-align: left;
         font-size: 10pt;
-        vertical-align: middle;
-        color: black !important;
-    }
-
-    th {
-        border: 1px solid black;
-        padding: 8px;
-        text-align: center;
-        font-size: 10pt;
-        background-color: #f0f0f0;
-        color: black !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
     }
 
     /* Centralizar a coluna de média */
@@ -793,18 +710,6 @@ tbody tr {
         content: '☐ ';
         font-size: 12pt;
         margin-right: 5px;
-    }
-
-    /* Ajustar checkbox e texto na mesma linha */
-    td:first-child {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-    }
-
-    td:first-child input[type="checkbox"] {
-        margin: 0;
-        transform: scale(1.2);
     }
 
     thead {
