@@ -639,34 +639,6 @@ function closeSaveModal() {
 }
 
 // Carregar dados do Supabase
-async function loadFromDatabase() {
-    try {
-        // Buscar últimos projetos
-        const { data, error } = await supabase
-            .from('projects')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(10);
-        
-        if (error) {
-            showNotification('Erro ao carregar: ' + error.message);
-            console.error('Erro:', error);
-            return;
-        }
-        
-        if (data.length === 0) {
-            showNotification('Nenhum projeto encontrado no banco de dados.');
-            return;
-        }
-        
-        // Exibir lista de projetos para o usuário escolher
-        showProjectSelection(data);
-    } catch (error) {
-        showNotification('Erro: ' + error.message);
-        console.error('Erro:', error);
-    }
-}
-
 // Formatar data do Supabase corretamente (Brasil - UTC-3)
 function formatSupabaseDate(dateString) {
     // O Supabase retorna no formato ISO 8601 com timezone
