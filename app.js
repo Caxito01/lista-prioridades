@@ -403,6 +403,12 @@ async function confirmSaveProject() {
         return;
     }
     
+    // Validar se há tarefas
+    if (!tasks || tasks.length === 0) {
+        showNotification('❌ A lista de tarefas está vazia! Adicione pelo menos uma tarefa antes de salvar.');
+        return;
+    }
+    
     // Validar se há tarefas com estágio vazio
     const tasksWithEmptyStage = tasks.filter(task => !task.stage || task.stage.trim() === '');
     
