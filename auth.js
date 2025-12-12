@@ -10,6 +10,16 @@ async function checkAuth() {
         return null;
     }
     
+    // Verificar se é um novo usuário (primeira vez logando)
+    const currentUser = session.user.id;
+    const lastUser = localStorage.getItem('lastUserId');
+    
+    if (lastUser !== currentUser) {
+        // Novo usuário - limpar dados locais
+        clearUserData();
+        localStorage.setItem('lastUserId', currentUser);
+    }
+    
     return session.user;
 }
 
