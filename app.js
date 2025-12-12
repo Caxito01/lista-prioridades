@@ -105,6 +105,14 @@ function loadTasks() {
     }
 }
 
+// Função para carregar todos os dados do localStorage
+function loadData() {
+    loadEvaluatorNames();
+    loadTasks();
+    updateEvaluatorLabels();
+    renderTasks();
+}
+
 // Salvar tarefas no localStorage
 function saveTasks() {
     localStorage.setItem('tasks', JSON.stringify(tasks));
@@ -356,23 +364,8 @@ function printToPDF() {
 
 // Salvar dados no Supabase
 async function saveToDatabase() {
-    try {
-        // Buscar todos os projetos
-        const { data: projects, error } = await supabase
-            .from('projects')
-            .select('*')
-            .order('created_at', { ascending: false });
-        
-        if (error) {
-            showNotification('❌ Erro ao carregar projetos: ' + error.message);
-            return;
-        }
-        
-        // Mostrar lista de projetos ou criar novo
-        showSaveProjectSelection(projects);
-    } catch (error) {
-        showNotification('❌ Erro: ' + error.message);
-    }
+    // Esta função chama a versão do auth.js que filtra por usuário
+    await saveToDatabaseWithAuth();
 }
 
 // Mostrar seleção de projetos para salvar

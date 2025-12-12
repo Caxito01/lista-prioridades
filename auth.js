@@ -91,7 +91,7 @@ async function loadUserProjects() {
 }
 
 // Salvar projeto com user_id
-async function saveToDatabase() {
+async function saveToDatabaseWithAuth() {
     try {
         const { data: { session } } = await supabase.auth.getSession();
         
