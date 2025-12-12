@@ -72,22 +72,7 @@ async function loadUserProjects() {
         console.log('   User ID:', userId);
         console.log('   Email:', userEmail);
         
-        // Primeiro, vamos ver TODOS os projetos no banco para debug
-        const { data: allProjects, error: allError } = await supabase
-            .from('projects')
-            .select('id, name, user_id, created_at');
-        
-        console.log('📊 Total de projetos no banco:', allProjects?.length || 0);
-        if (allProjects) {
-            console.log('📊 Projetos (preview):', allProjects.map(p => ({
-                id: p.id.substring(0, 8),
-                name: p.name,
-                user_id: p.user_id ? p.user_id.substring(0, 8) : 'NULL',
-                created_at: p.created_at
-            })));
-        }
-        
-        // Agora carregar apenas os do usuário
+        // Carregar APENAS os projetos do usuário logado
         const { data: projects, error } = await supabase
             .from('projects')
             .select('*')
