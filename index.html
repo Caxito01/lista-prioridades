@@ -7,6 +7,8 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="auth.js"></script>
 </head>
 <body>
     <header>
@@ -15,7 +17,10 @@
                 <h1>📊 Sistema de Prioridades</h1>
                 <p class="subtitle">Gerenciamento Colaborativo de Tarefas</p>
             </div>
-            <button class="btn-help" onclick="showHelp()" title="Ajuda">❓ Ajuda</button>
+            <div class="header-buttons">
+                <button class="btn-help" onclick="showHelp()" title="Ajuda">❓ Ajuda</button>
+                <button class="btn-logout" onclick="handleLogout()" title="Sair">🚪 Sair</button>
+            </div>
         </div>
     </header>
 

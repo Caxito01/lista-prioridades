@@ -766,3 +766,22 @@ async function confirmLoadProject(projectId) {
         if (actionModal) actionModal.remove();
     }
 }
+
+// Verificação de autenticação ao carregar a página
+window.addEventListener('load', async function() {
+    const user = await checkAuth();
+    if (user) {
+        // Mostrar email do usuário no header
+        const headerButtons = document.querySelector('.header-buttons');
+        if (headerButtons) {
+            const userInfo = document.createElement('span');
+            userInfo.style.cssText = 'color: #666; font-size: 13px; margin-right: 15px; display: flex; align-items: center;';
+            userInfo.innerHTML = `👤 ${user.email}`;
+            headerButtons.insertBefore(userInfo, headerButtons.firstChild);
+        }
+        
+        // Carregar dados locais
+        loadData();
+    }
+});
+
