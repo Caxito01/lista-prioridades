@@ -61,14 +61,33 @@ async function loadUserProjects() {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
-            console.log('Nenhuma sessão encontrada');
+            console.log('❌ ERRO: Nenhuma sessão encontrada');
             showNotification('❌ Você precisa estar logado!');
             return [];
         }
         
         const userId = session.user.id;
-        console.log('Carregando projetos do usuário:', userId);
+        const userEmail = session.user.email;
+        console.log('📊 Carregando projetos para:');
+        console.log('   User ID:', userId);
+        console.log('   Email:', userEmail);
         
+        // Primeiro, vamos ver TODOS os projetos no banco para debug
+        const { data: allProjects, error: allError } = await supabase
+            .from('projects')
+            .select('id, name, user_id, created_at');
+        
+        console.log('📊 Total de projetos no banco:', allProjects?.length || 0);
+        if (allProjects) {
+            console.log('📊 Projetos (preview):', allProjects.map(p => ({
+                id: p.id.substring(0, 8),
+                name: p.name,
+                user_id: p.user_id ? p.user_id.substring(0, 8) : 'NULL',
+                created_at: p.created_at
+            })));
+        }
+        
+        // Agora carregar apenas os do usuário
         const { data: projects, error } = await supabase
             .from('projects')
             .select('*')
@@ -76,15 +95,18 @@ async function loadUserProjects() {
             .order('created_at', { ascending: false });
         
         if (error) {
-            console.log('Erro ao carregar projetos:', error);
+            console.log('❌ ERRO ao carregar projetos do usuário:', error);
             showNotification('❌ Erro ao carregar projetos: ' + error.message);
             return [];
         }
         
-        console.log('Projetos encontrados:', projects?.length);
+        console.log('✅ Projetos encontrados para este usuário:', projects?.length || 0);
+        if (projects && projects.length > 0) {
+            console.log('✅ Detalhes dos projetos:', projects.map(p => ({ id: p.id.substring(0, 8), name: p.name })));
+        }
         return projects || [];
     } catch (error) {
-        console.log('Erro geral:', error);
+        console.log('❌ ERRO geral em loadUserProjects:', error);
         showNotification('❌ Erro: ' + error.message);
         return [];
     }
@@ -116,9 +138,18 @@ async function performSaveProject(projectName) {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
+            console.log('❌ ERRO: Nenhuma sessão ao tentar salvar');
             showNotification('❌ Você precisa estar logado!');
             return;
         }
+        
+        const userId = session.user.id;
+        const userEmail = session.user.email;
+        
+        console.log('💾 Salvando projeto:');
+        console.log('   Nome:', projectName);
+        console.log('   User ID:', userId);
+        console.log('   Email:', userEmail);
         
         const projectData = {
             evaluator_names: evaluatorNames,
@@ -133,17 +164,21 @@ async function performSaveProject(projectName) {
                 {
                     name: projectName,
                     data: projectData,
-                    user_id: session.user.id,
+                    user_id: userId,
                     created_at: now.toISOString()
                 }
             ]);
         
         if (error) {
+            console.log('❌ ERRO ao inserir projeto:', error);
             showNotification('❌ Erro ao salvar: ' + error.message);
         } else {
+            console.log('✅ Projeto salvo com sucesso!');
+            console.log('   Dados retornados:', data);
             showNotification('✅ Projeto salvo com sucesso!');
         }
     } catch (error) {
+        console.log('❌ ERRO geral em performSaveProject:', error);
         showNotification('❌ Erro: ' + error.message);
     }
 }
