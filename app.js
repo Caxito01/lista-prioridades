@@ -465,12 +465,16 @@ async function performSaveProject(projectName) {
             tasks: tasks
         };
         
+        // Obter data/hora atual do navegador (já está em hora local)
+        const now = new Date();
+        
         const { data, error } = await supabase
             .from('projects')
             .insert([
                 {
                     name: projectName,
-                    data: projectData
+                    data: projectData,
+                    created_at: now.toISOString()
                 }
             ]);
         
@@ -552,18 +556,23 @@ async function loadFromDatabase() {
     }
 }
 
-// Formatar data do Supabase corretamente
+// Formatar data do Supabase corretamente (Brasil - UTC-3)
 function formatSupabaseDate(dateString) {
-    // O Supabase retorna no formato ISO 8601
+    // O Supabase retorna no formato ISO 8601 com timezone
     const date = new Date(dateString);
-    return date.toLocaleString('pt-BR', {
+    
+    // Formatar no padrão brasileiro
+    const options = {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit'
-    });
+        second: '2-digit',
+        timeZone: 'America/Sao_Paulo'
+    };
+    
+    return date.toLocaleString('pt-BR', options);
 }
 
 // Mostrar seleção de projetos
