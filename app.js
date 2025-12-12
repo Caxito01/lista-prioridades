@@ -356,9 +356,47 @@ function printToPDF() {
 
 // Salvar dados no Supabase
 async function saveToDatabase() {
-    // Criar modal para pedir nome do projeto
+    try {
+        // Buscar todos os projetos
+        const { data: projects, error } = await supabase
+            .from('projects')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        if (error) {
+            showNotification('❌ Erro ao carregar projetos: ' + error.message);
+            return;
+        }
+        
+        // Mostrar lista de projetos ou criar novo
+        showSaveProjectSelection(projects);
+    } catch (error) {
+        showNotification('❌ Erro: ' + error.message);
+    }
+}
+
+// Mostrar seleção de projetos para salvar
+function showSaveProjectSelection(projects) {
+    let projectsList = '';
+    
+    if (projects && projects.length > 0) {
+        projectsList = '<div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 15px;">';
+        
+        projects.forEach(project => {
+            const date = formatSupabaseDate(project.created_at);
+            projectsList += `
+                <div onclick="selectProjectToSave('${project.id}', '${project.name}')" style="padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s; background: #f9f9f9;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='#f9f9f9'">
+                    <strong style="color: #333;">${project.name}</strong><br>
+                    <small style="color: #999;">${date}</small>
+                </div>
+            `;
+        });
+        
+        projectsList += '</div>';
+    }
+    
     const modal = document.createElement('div');
-    modal.id = 'saveProjectModal';
+    modal.id = 'saveSaveProjectModal';
     modal.style.cssText = `
         position: fixed;
         top: 0;
@@ -373,43 +411,113 @@ async function saveToDatabase() {
     `;
     
     modal.innerHTML = `
-        <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); max-width: 400px; width: 90%;">
+        <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); max-width: 450px; width: 90%;">
             <h2 style="margin-top: 0; color: #333;">💾 Salvar Projeto</h2>
-            <p style="color: #666;">Digite um nome para o projeto:</p>
-            <input type="text" id="projectNameInput" placeholder="Ex: Projeto Importante" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 14px;">
-            <div style="margin-top: 20px; display: flex; gap: 10px;">
-                <button onclick="confirmSaveProject()" style="flex: 1; padding: 12px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">Salvar</button>
-                <button onclick="closeSaveModal()" style="flex: 1; padding: 12px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">Cancelar</button>
+            <p style="color: #666; margin-bottom: 15px;">Clique em um projeto para atualizar ou crie um novo:</p>
+            ${projectsList}
+            <div style="display: flex; gap: 10px;">
+                <button onclick="createNewProject()" style="flex: 1; padding: 12px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">➕ Novo Projeto</button>
+                <button onclick="closeSaveSelectModal()" style="flex: 1; padding: 12px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">Cancelar</button>
             </div>
         </div>
     `;
     
     document.body.appendChild(modal);
-    document.getElementById('projectNameInput').focus();
     
-    // Permitir salvar ao pressionar Enter
-    document.getElementById('projectNameInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') confirmSaveProject();
+    window.projectsList = projects;
+}
+
+// Selecionar projeto para salvar
+function selectProjectToSave(projectId, projectName) {
+    const modal = document.getElementById('saveSaveProjectModal');
+    if (modal) modal.remove();
+    
+    // Perguntar o que fazer
+    const confirmModal = document.createElement('div');
+    confirmModal.id = 'saveActionModal';
+    confirmModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10001;
+    `;
+    
+    confirmModal.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); max-width: 400px; width: 90%;">
+            <h2 style="margin-top: 0; color: #333;">📋 ${projectName}</h2>
+            <p style="color: #666;">O que deseja fazer?</p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button onclick="performUpdateProject('${projectId}')" style="width: 100%; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">🔄 Atualizar este Projeto</button>
+                <button onclick="performSaveAsNew('${projectName}')" style="width: 100%; padding: 12px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">💾 Salvar Como Novo</button>
+                <button onclick="confirmLoadProject('${projectId}')" style="width: 100%; padding: 12px; background: #9C27B0; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">📥 Carregar este Projeto</button>
+                <button onclick="closeSaveActionModal()" style="width: 100%; padding: 12px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">✖ Cancelar</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(confirmModal);
+}
+
+// Criar novo projeto
+function createNewProject() {
+    const modal = document.getElementById('saveSaveProjectModal');
+    if (modal) modal.remove();
+    
+    const inputModal = document.createElement('div');
+    inputModal.id = 'newProjectNameModal';
+    inputModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10001;
+    `;
+    
+    inputModal.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); max-width: 400px; width: 90%;">
+            <h2 style="margin-top: 0; color: #333;">📝 Novo Projeto</h2>
+            <p style="color: #666;">Digite um nome para o novo projeto:</p>
+            <input type="text" id="newProjectNameInput" placeholder="Ex: Projeto Importante" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 14px; margin-bottom: 15px;">
+            <div style="display: flex; gap: 10px;">
+                <button onclick="confirmNewProject()" style="flex: 1; padding: 12px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">Criar</button>
+                <button onclick="closeNewProjectModal()" style="flex: 1; padding: 12px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">Cancelar</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(inputModal);
+    document.getElementById('newProjectNameInput').focus();
+    
+    document.getElementById('newProjectNameInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') confirmNewProject();
     });
 }
 
-// Confirmar e salvar projeto
-async function confirmSaveProject() {
-    const projectName = document.getElementById('projectNameInput').value.trim();
-    const saveModal = document.getElementById('saveProjectModal');
+// Confirmar novo projeto
+async function confirmNewProject() {
+    const projectName = document.getElementById('newProjectNameInput').value.trim();
     
     if (!projectName) {
         showNotification('❌ Digite um nome para o projeto!');
         return;
     }
     
-    // Validar se há tarefas
     if (!tasks || tasks.length === 0) {
         showNotification('❌ A lista de tarefas está vazia! Adicione pelo menos uma tarefa antes de salvar.');
         return;
     }
     
-    // Validar se há tarefas com estágio vazio
     const tasksWithEmptyStage = tasks.filter(task => !task.stage || task.stage.trim() === '');
     
     if (tasksWithEmptyStage.length > 0) {
@@ -417,58 +525,25 @@ async function confirmSaveProject() {
         return;
     }
     
-    // Verificar se já existe projeto com esse nome
-    const { data: existingProjects, error: checkError } = await supabase
-        .from('projects')
-        .select('id')
-        .eq('name', projectName);
-    
-    if (checkError) {
-        showNotification('❌ Erro ao verificar: ' + checkError.message);
-        return;
-    }
-    
-    if (existingProjects && existingProjects.length > 0) {
-        // Projeto já existe - perguntar se deseja atualizar
-        if (saveModal) saveModal.remove();
-        askUpdateProject(projectName, existingProjects[0].id);
-    } else {
-        // Projeto novo - salvar direto
-        performSaveProject(projectName);
-        if (saveModal) saveModal.remove();
-    }
+    await performSaveProject(projectName);
+    const modal = document.getElementById('newProjectNameModal');
+    if (modal) modal.remove();
 }
 
-// Perguntar se deseja atualizar projeto existente
-function askUpdateProject(projectName, projectId) {
-    const modal = document.createElement('div');
-    modal.id = 'updateProjectModal';
-    modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 10001;
-    `;
-    
-    modal.innerHTML = `
-        <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); max-width: 400px; width: 90%;">
-            <h2 style="margin-top: 0; color: #333;">⚠️ Projeto Já Existe</h2>
-            <p style="color: #666;">O projeto "<strong>${projectName}</strong>" já existe.</p>
-            <p style="color: #666;">Deseja atualizar o projeto existente ou criar um novo?</p>
-            <div style="margin-top: 20px; display: flex; gap: 10px;">
-                <button onclick="performUpdateProject('${projectId}')" style="flex: 1; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">Atualizar</button>
-                <button onclick="performSaveAsNew('${projectName}')" style="flex: 1; padding: 12px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">Criar Novo</button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
+// Fechar modal
+function closeSaveSelectModal() {
+    const modal = document.getElementById('saveSaveProjectModal');
+    if (modal) modal.remove();
+}
+
+function closeSaveActionModal() {
+    const modal = document.getElementById('saveActionModal');
+    if (modal) modal.remove();
+}
+
+function closeNewProjectModal() {
+    const modal = document.getElementById('newProjectNameModal');
+    if (modal) modal.remove();
 }
 
 // Salvar novo projeto
@@ -506,13 +581,25 @@ async function performSaveProject(projectName) {
 async function performSaveAsNew(projectName) {
     const newName = projectName + ` (${new Date().toLocaleTimeString('pt-BR')})`;
     await performSaveProject(newName);
-    const modal = document.getElementById('updateProjectModal');
+    const modal = document.getElementById('saveActionModal');
     if (modal) modal.remove();
 }
 
 // Atualizar projeto existente
 async function performUpdateProject(projectId) {
     try {
+        if (!tasks || tasks.length === 0) {
+            showNotification('❌ A lista de tarefas está vazia! Adicione pelo menos uma tarefa antes de salvar.');
+            return;
+        }
+        
+        const tasksWithEmptyStage = tasks.filter(task => !task.stage || task.stage.trim() === '');
+        
+        if (tasksWithEmptyStage.length > 0) {
+            showNotification(`❌ Há ${tasksWithEmptyStage.length} tarefa(s) sem estágio definido! Preencha antes de salvar.`);
+            return;
+        }
+        
         const projectData = {
             evaluator_names: evaluatorNames,
             tasks: tasks
@@ -527,7 +614,7 @@ async function performUpdateProject(projectId) {
             showNotification('❌ Erro ao atualizar: ' + error.message);
         } else {
             showNotification('✅ Projeto atualizado com sucesso!');
-            const modal = document.getElementById('updateProjectModal');
+            const modal = document.getElementById('saveActionModal');
             if (modal) modal.remove();
         }
     } catch (error) {
@@ -640,13 +727,16 @@ function closeLoadModal() {
 }
 
 // Confirmar carregamento de projeto
-async function confirmLoadProject() {
-    const select = document.getElementById('projectSelect');
-    const projectId = select.value;
-    
+async function confirmLoadProject(projectId) {
+    // Se não recebeu ID, busca do select
     if (!projectId) {
-        showNotification('❌ Selecione um projeto primeiro!');
-        return;
+        const select = document.getElementById('projectSelect');
+        projectId = select.value;
+        
+        if (!projectId) {
+            showNotification('❌ Selecione um projeto primeiro!');
+            return;
+        }
     }
     
     // Encontrar projeto na lista
@@ -668,8 +758,11 @@ async function confirmLoadProject() {
         
         showNotification('✅ Projeto carregado com sucesso!');
         
-        // Remover modal
-        const modal = document.getElementById('loadProjectModal');
-        if (modal) modal.remove();
+        // Remover modais
+        const loadModal = document.getElementById('loadProjectModal');
+        if (loadModal) loadModal.remove();
+        
+        const actionModal = document.getElementById('saveActionModal');
+        if (actionModal) actionModal.remove();
     }
 }
