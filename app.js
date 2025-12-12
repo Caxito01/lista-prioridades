@@ -403,6 +403,14 @@ async function confirmSaveProject() {
         return;
     }
     
+    // Validar se há tarefas com estágio vazio
+    const tasksWithEmptyStage = tasks.filter(task => !task.stage || task.stage.trim() === '');
+    
+    if (tasksWithEmptyStage.length > 0) {
+        showNotification(`❌ Há ${tasksWithEmptyStage.length} tarefa(s) sem estágio definido! Preencha antes de salvar.`);
+        return;
+    }
+    
     // Verificar se já existe projeto com esse nome
     const { data: existingProjects, error: checkError } = await supabase
         .from('projects')
