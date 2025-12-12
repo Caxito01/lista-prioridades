@@ -227,8 +227,13 @@ async function loadFromDatabase() {
         }
         
         const userId = session.user.id;
-        console.log('Carregando projetos do usuário:', userId);
+        const userEmail = session.user.email;
         
+        console.log('📂 CARREGANDO PROJETOS DO USUÁRIO:');
+        console.log('   User ID:', userId);
+        console.log('   Email:', userEmail);
+        
+        // Carregar APENAS os projetos deste usuário (filtrado por user_id)
         const { data: projects, error } = await supabase
             .from('projects')
             .select('*')
@@ -237,21 +242,28 @@ async function loadFromDatabase() {
             .limit(10);
         
         if (error) {
-            console.log('Erro ao carregar:', error);
+            console.log('❌ ERRO ao carregar projetos:', error);
             showNotification('Erro ao carregar: ' + error.message);
             return;
         }
         
-        console.log('Projetos encontrados:', projects?.length);
+        console.log('✅ Projetos encontrados para este usuário:', projects?.length || 0);
+        
+        if (projects && projects.length > 0) {
+            console.log('✅ Detalhes dos projetos:');
+            projects.forEach(p => {
+                console.log(`   - ${p.name} (ID: ${p.id.substring(0, 8)}, User: ${p.user_id.substring(0, 8)})`);
+            });
+        }
         
         if (!projects || projects.length === 0) {
-            showNotification('Nenhum projeto encontrado.');
+            showNotification('Nenhum projeto encontrado para sua conta.');
             return;
         }
         
         showProjectSelection(projects);
     } catch (error) {
-        console.log('Erro geral:', error);
+        console.log('❌ ERRO geral em loadFromDatabase:', error);
         showNotification('Erro: ' + error.message);
     }
 }
