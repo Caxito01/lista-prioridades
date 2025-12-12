@@ -542,6 +542,19 @@ function closeNewProjectModal() {
 // Salvar novo projeto
 async function performSaveProject(projectName) {
     try {
+        // Obter a sessão do usuário
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+            showNotification('❌ Você precisa estar logado para salvar!');
+            return;
+        }
+        
+        const userId = session.user.id;
+        console.log('💾 Salvando projeto em app.js:');
+        console.log('   Nome:', projectName);
+        console.log('   User ID:', userId);
+        
         const projectData = {
             evaluator_names: evaluatorNames,
             tasks: tasks
@@ -556,16 +569,20 @@ async function performSaveProject(projectName) {
                 {
                     name: projectName,
                     data: projectData,
+                    user_id: userId,
                     created_at: now.toISOString()
                 }
             ]);
         
         if (error) {
+            console.log('❌ ERRO ao salvar:', error);
             showNotification('❌ Erro ao salvar: ' + error.message);
         } else {
+            console.log('✅ Projeto salvo com sucesso!');
             showNotification('✅ Projeto salvo com sucesso!');
         }
     } catch (error) {
+        console.log('❌ ERRO geral:', error);
         showNotification('❌ Erro: ' + error.message);
     }
 }
