@@ -356,36 +356,171 @@ function printToPDF() {
 
 // Salvar dados no Supabase
 async function saveToDatabase() {
+    // Criar modal para pedir nome do projeto
+    const modal = document.createElement('div');
+    modal.id = 'saveProjectModal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10001;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); max-width: 400px; width: 90%;">
+            <h2 style="margin-top: 0; color: #333;">💾 Salvar Projeto</h2>
+            <p style="color: #666;">Digite um nome para o projeto:</p>
+            <input type="text" id="projectNameInput" placeholder="Ex: Projeto Importante" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 14px;">
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button onclick="confirmSaveProject()" style="flex: 1; padding: 12px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">Salvar</button>
+                <button onclick="closeSaveModal()" style="flex: 1; padding: 12px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">Cancelar</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    document.getElementById('projectNameInput').focus();
+    
+    // Permitir salvar ao pressionar Enter
+    document.getElementById('projectNameInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') confirmSaveProject();
+    });
+}
+
+// Confirmar e salvar projeto
+async function confirmSaveProject() {
+    const projectName = document.getElementById('projectNameInput').value.trim();
+    const saveModal = document.getElementById('saveProjectModal');
+    
+    if (!projectName) {
+        showNotification('❌ Digite um nome para o projeto!');
+        return;
+    }
+    
+    // Verificar se já existe projeto com esse nome
+    const { data: existingProjects, error: checkError } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('name', projectName);
+    
+    if (checkError) {
+        showNotification('❌ Erro ao verificar: ' + checkError.message);
+        return;
+    }
+    
+    if (existingProjects && existingProjects.length > 0) {
+        // Projeto já existe - perguntar se deseja atualizar
+        if (saveModal) saveModal.remove();
+        askUpdateProject(projectName, existingProjects[0].id);
+    } else {
+        // Projeto novo - salvar direto
+        performSaveProject(projectName);
+        if (saveModal) saveModal.remove();
+    }
+}
+
+// Perguntar se deseja atualizar projeto existente
+function askUpdateProject(projectName, projectId) {
+    const modal = document.createElement('div');
+    modal.id = 'updateProjectModal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10001;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); max-width: 400px; width: 90%;">
+            <h2 style="margin-top: 0; color: #333;">⚠️ Projeto Já Existe</h2>
+            <p style="color: #666;">O projeto "<strong>${projectName}</strong>" já existe.</p>
+            <p style="color: #666;">Deseja atualizar o projeto existente ou criar um novo?</p>
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button onclick="performUpdateProject('${projectId}')" style="flex: 1; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">Atualizar</button>
+                <button onclick="performSaveAsNew('${projectName}')" style="flex: 1; padding: 12px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">Criar Novo</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+// Salvar novo projeto
+async function performSaveProject(projectName) {
     try {
-        // Preparar dados para salvar
-        const dataToSave = {
+        const projectData = {
             evaluator_names: evaluatorNames,
-            tasks: tasks,
-            timestamp: new Date().toISOString()
+            tasks: tasks
         };
         
-        // Inserir ou atualizar no Supabase
         const { data, error } = await supabase
             .from('projects')
             .insert([
                 {
-                    name: `Projeto_${new Date().getTime()}`,
-                    data: dataToSave,
-                    created_at: new Date().toISOString()
+                    name: projectName,
+                    data: projectData
                 }
             ]);
         
         if (error) {
-            showNotification('Erro ao salvar: ' + error.message);
-            console.error('Erro:', error);
-            return;
+            showNotification('❌ Erro ao salvar: ' + error.message);
+        } else {
+            showNotification('✅ Projeto salvo com sucesso!');
         }
-        
-        showNotification('✅ Projeto salvo no banco de dados com sucesso!');
     } catch (error) {
-        showNotification('Erro: ' + error.message);
-        console.error('Erro:', error);
+        showNotification('❌ Erro: ' + error.message);
     }
+}
+
+// Salvar como novo projeto
+async function performSaveAsNew(projectName) {
+    const newName = projectName + ` (${new Date().toLocaleTimeString('pt-BR')})`;
+    await performSaveProject(newName);
+    const modal = document.getElementById('updateProjectModal');
+    if (modal) modal.remove();
+}
+
+// Atualizar projeto existente
+async function performUpdateProject(projectId) {
+    try {
+        const projectData = {
+            evaluator_names: evaluatorNames,
+            tasks: tasks
+        };
+        
+        const { error } = await supabase
+            .from('projects')
+            .update({ data: projectData, updated_at: new Date().toISOString() })
+            .eq('id', projectId);
+        
+        if (error) {
+            showNotification('❌ Erro ao atualizar: ' + error.message);
+        } else {
+            showNotification('✅ Projeto atualizado com sucesso!');
+            const modal = document.getElementById('updateProjectModal');
+            if (modal) modal.remove();
+        }
+    } catch (error) {
+        showNotification('❌ Erro: ' + error.message);
+    }
+}
+
+// Fechar modal de save
+function closeSaveModal() {
+    const modal = document.getElementById('saveProjectModal');
+    if (modal) modal.remove();
 }
 
 // Carregar dados do Supabase
@@ -419,21 +554,52 @@ async function loadFromDatabase() {
 
 // Mostrar seleção de projetos
 function showProjectSelection(projects) {
-    let options = '<select id="projectSelect" style="padding: 10px; font-size: 1rem; margin: 10px 0;">\n<option value="">Escolha um projeto...</option>\n';
+    let options = '<select id="projectSelect" style="padding: 10px; font-size: 1rem; margin: 10px 0; width: 100%; box-sizing: border-box;">\n<option value="">Escolha um projeto...</option>\n';
     
     projects.forEach(project => {
         const date = new Date(project.created_at).toLocaleString('pt-BR');
         options += `<option value="${project.id}">${project.name} - ${date}</option>\n`;
     });
     
-    options += '</select>\n<button class="btn btn-success" onclick="confirmLoadProject()" style="margin-left: 10px;">Carregar</button>';
+    options += '</select>';
     
-    const notification = document.createElement('div');
-    notification.style.cssText = 'position: fixed; top: 100px; right: 20px; background: white; color: #333; padding: 20px; border-radius: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 10000; max-width: 400px;';
-    notification.innerHTML = `<h3 style="margin-top: 0;">Projetos Salvos</h3>${options}`;
-    document.body.appendChild(notification);
+    // Modal centralizado
+    const modal = document.createElement('div');
+    modal.id = 'loadProjectModal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10001;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); max-width: 400px; width: 90%;">
+            <h2 style="margin-top: 0; color: #333;">📥 Carregar Projeto</h2>
+            <p style="color: #666;">Selecione um projeto:</p>
+            ${options}
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button onclick="confirmLoadProject()" style="flex: 1; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">Carregar</button>
+                <button onclick="closeLoadModal()" style="flex: 1; padding: 12px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">Cancelar</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
     
     window.projectsList = projects;
+}
+
+// Fechar modal de load
+function closeLoadModal() {
+    const modal = document.getElementById('loadProjectModal');
+    if (modal) modal.remove();
 }
 
 // Confirmar carregamento de projeto
@@ -442,7 +608,7 @@ async function confirmLoadProject() {
     const projectId = select.value;
     
     if (!projectId) {
-        showNotification('Selecione um projeto primeiro!');
+        showNotification('❌ Selecione um projeto primeiro!');
         return;
     }
     
@@ -465,7 +631,8 @@ async function confirmLoadProject() {
         
         showNotification('✅ Projeto carregado com sucesso!');
         
-        // Remover seletor
-        document.querySelector('div[style*="position: fixed"]').remove();
+        // Remover modal
+        const modal = document.getElementById('loadProjectModal');
+        if (modal) modal.remove();
     }
 }
