@@ -55,14 +55,19 @@ function clearUserData() {
 // Filtrar projetos apenas do usuário logado
 async function loadUserProjects() {
     try {
+        // Aguardar um pouco para garantir que a session está pronta
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
+            console.log('Nenhuma sessão encontrada');
             showNotification('❌ Você precisa estar logado!');
             return [];
         }
         
         const userId = session.user.id;
+        console.log('Carregando projetos do usuário:', userId);
         
         const { data: projects, error } = await supabase
             .from('projects')
@@ -71,12 +76,15 @@ async function loadUserProjects() {
             .order('created_at', { ascending: false });
         
         if (error) {
+            console.log('Erro ao carregar projetos:', error);
             showNotification('❌ Erro ao carregar projetos: ' + error.message);
             return [];
         }
         
+        console.log('Projetos encontrados:', projects?.length);
         return projects || [];
     } catch (error) {
+        console.log('Erro geral:', error);
         showNotification('❌ Erro: ' + error.message);
         return [];
     }
@@ -188,6 +196,9 @@ async function performUpdateProject(projectId) {
 // Carregar projeto verificando user_id
 async function loadFromDatabase() {
     try {
+        // Aguardar um pouco para garantir que a session está pronta
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
@@ -196,6 +207,7 @@ async function loadFromDatabase() {
         }
         
         const userId = session.user.id;
+        console.log('Carregando projetos do usuário:', userId);
         
         const { data: projects, error } = await supabase
             .from('projects')
@@ -205,9 +217,12 @@ async function loadFromDatabase() {
             .limit(10);
         
         if (error) {
+            console.log('Erro ao carregar:', error);
             showNotification('Erro ao carregar: ' + error.message);
             return;
         }
+        
+        console.log('Projetos encontrados:', projects?.length);
         
         if (!projects || projects.length === 0) {
             showNotification('Nenhum projeto encontrado.');
@@ -216,6 +231,7 @@ async function loadFromDatabase() {
         
         showProjectSelection(projects);
     } catch (error) {
+        console.log('Erro geral:', error);
         showNotification('Erro: ' + error.message);
     }
 }
