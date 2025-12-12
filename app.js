@@ -552,12 +552,26 @@ async function loadFromDatabase() {
     }
 }
 
+// Formatar data do Supabase corretamente
+function formatSupabaseDate(dateString) {
+    // O Supabase retorna no formato ISO 8601
+    const date = new Date(dateString);
+    return date.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+}
+
 // Mostrar seleção de projetos
 function showProjectSelection(projects) {
     let options = '<select id="projectSelect" style="padding: 10px; font-size: 1rem; margin: 10px 0; width: 100%; box-sizing: border-box;">\n<option value="">Escolha um projeto...</option>\n';
     
     projects.forEach(project => {
-        const date = new Date(project.created_at).toLocaleString('pt-BR');
+        const date = formatSupabaseDate(project.created_at);
         options += `<option value="${project.id}">${project.name} - ${date}</option>\n`;
     });
     
