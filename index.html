@@ -6,6 +6,7 @@
     <title>Sistema de Gerenciamento de Prioridades</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <header>
@@ -38,6 +39,7 @@
                     <li><strong>Notas:</strong> Cada avaliador atribui uma nota de 1 a 5</li>
                 </ul>
                 <p>A média é calculada automaticamente e determina a prioridade da tarefa.</p>
+                <p>Tarefas com a média empatada são ordenadas por estágio. O estágio, <strong>ATRASADO</strong> tem prioridade máxima.</p>
             </div>
 
             <div class="help-section">
@@ -188,6 +190,8 @@
                 </button>
                 <button class="btn btn-warning" onclick="clearFilters()">LIMPAR FILTROS</button>
                 <button class="btn btn-success" onclick="printToPDF()">🖨️ IMPRIMIR PDF</button>
+                <button class="btn btn-primary" onclick="saveToDatabase()">💾 SALVAR NO BANCO</button>
+                <button class="btn btn-info" onclick="loadFromDatabase()">📥 CARREGAR DO BANCO</button>
             </div>
         </section>
 
@@ -242,6 +246,7 @@
         </div>
     </footer>
 
+    <script src="supabase-config.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

@@ -353,3 +353,119 @@ function printToPDF() {
         footer.remove();
     }, 100);
 }
+
+// Salvar dados no Supabase
+async function saveToDatabase() {
+    try {
+        // Preparar dados para salvar
+        const dataToSave = {
+            evaluator_names: evaluatorNames,
+            tasks: tasks,
+            timestamp: new Date().toISOString()
+        };
+        
+        // Inserir ou atualizar no Supabase
+        const { data, error } = await supabase
+            .from('projects')
+            .insert([
+                {
+                    name: `Projeto_${new Date().getTime()}`,
+                    data: dataToSave,
+                    created_at: new Date().toISOString()
+                }
+            ]);
+        
+        if (error) {
+            showNotification('Erro ao salvar: ' + error.message);
+            console.error('Erro:', error);
+            return;
+        }
+        
+        showNotification('✅ Projeto salvo no banco de dados com sucesso!');
+    } catch (error) {
+        showNotification('Erro: ' + error.message);
+        console.error('Erro:', error);
+    }
+}
+
+// Carregar dados do Supabase
+async function loadFromDatabase() {
+    try {
+        // Buscar últimos projetos
+        const { data, error } = await supabase
+            .from('projects')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(10);
+        
+        if (error) {
+            showNotification('Erro ao carregar: ' + error.message);
+            console.error('Erro:', error);
+            return;
+        }
+        
+        if (data.length === 0) {
+            showNotification('Nenhum projeto encontrado no banco de dados.');
+            return;
+        }
+        
+        // Exibir lista de projetos para o usuário escolher
+        showProjectSelection(data);
+    } catch (error) {
+        showNotification('Erro: ' + error.message);
+        console.error('Erro:', error);
+    }
+}
+
+// Mostrar seleção de projetos
+function showProjectSelection(projects) {
+    let options = '<select id="projectSelect" style="padding: 10px; font-size: 1rem; margin: 10px 0;">\n<option value="">Escolha um projeto...</option>\n';
+    
+    projects.forEach(project => {
+        const date = new Date(project.created_at).toLocaleString('pt-BR');
+        options += `<option value="${project.id}">${project.name} - ${date}</option>\n`;
+    });
+    
+    options += '</select>\n<button class="btn btn-success" onclick="confirmLoadProject()" style="margin-left: 10px;">Carregar</button>';
+    
+    const notification = document.createElement('div');
+    notification.style.cssText = 'position: fixed; top: 100px; right: 20px; background: white; color: #333; padding: 20px; border-radius: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 10000; max-width: 400px;';
+    notification.innerHTML = `<h3 style="margin-top: 0;">Projetos Salvos</h3>${options}`;
+    document.body.appendChild(notification);
+    
+    window.projectsList = projects;
+}
+
+// Confirmar carregamento de projeto
+async function confirmLoadProject() {
+    const select = document.getElementById('projectSelect');
+    const projectId = select.value;
+    
+    if (!projectId) {
+        showNotification('Selecione um projeto primeiro!');
+        return;
+    }
+    
+    // Encontrar projeto na lista
+    const project = window.projectsList.find(p => p.id == projectId);
+    
+    if (project && project.data) {
+        // Carregar dados
+        evaluatorNames = project.data.evaluator_names || evaluatorNames;
+        tasks = project.data.tasks || [];
+        
+        // Atualizar interface
+        document.getElementById('evaluator1').value = evaluatorNames.eval1;
+        document.getElementById('evaluator2').value = evaluatorNames.eval2;
+        document.getElementById('evaluator3').value = evaluatorNames.eval3;
+        document.getElementById('evaluator4').value = evaluatorNames.eval4;
+        
+        updateEvaluatorLabels();
+        renderTasks();
+        
+        showNotification('✅ Projeto carregado com sucesso!');
+        
+        // Remover seletor
+        document.querySelector('div[style*="position: fixed"]').remove();
+    }
+}
