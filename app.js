@@ -405,7 +405,7 @@ function showSaveProjectSelection(projects) {
     
     modal.innerHTML = `
         <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); max-width: 450px; width: 90%;">
-            <h2 style="margin-top: 0; color: #333;">💾 Salvar Projeto</h2>
+            <h2 style="margin-top: 0; color: #333;">💾 Salvar Tarefa</h2>
             <p style="color: #666; margin-bottom: 15px;">Clique em um projeto para atualizar ou crie um novo:</p>
             ${projectsList}
             <div style="display: flex; gap: 10px;">
