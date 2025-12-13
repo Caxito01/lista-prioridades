@@ -353,7 +353,6 @@ section h2 {
 
 /* Table Section */
 .table-container {
-    overflow-x: auto;
     border-radius: 10px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
@@ -362,6 +361,7 @@ table {
     width: 100%;
     border-collapse: collapse;
     background: white;
+    table-layout: auto;
 }
 
 thead {
@@ -864,7 +864,7 @@ td:nth-child(1) {
 /* Estágio - Coluna pequena */
 th:nth-child(2),
 td:nth-child(2) {
-    width: 100px;
+    width: auto;
 }
 
 /* Descrição - Coluna grande */
