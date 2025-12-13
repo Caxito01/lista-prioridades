@@ -849,3 +849,50 @@ tbody tr {
         background: white;
     }
 }
+
+/* Column Width Adjustments - Normal View Only */
+table {
+    table-layout: fixed;
+}
+
+/* Nº - Coluna pequena */
+th:nth-child(1),
+td:nth-child(1) {
+    width: 50px;
+}
+
+/* Estágio - Coluna pequena */
+th:nth-child(2),
+td:nth-child(2) {
+    width: 120px;
+}
+
+/* Descrição - Coluna grande */
+th:nth-child(3),
+td:nth-child(3) {
+    width: auto;
+}
+
+/* Avaliadores 1-4 - Colunas médias */
+th:nth-child(4),
+td:nth-child(4),
+th:nth-child(5),
+td:nth-child(5),
+th:nth-child(6),
+td:nth-child(6),
+th:nth-child(7),
+td:nth-child(7) {
+    width: 80px;
+}
+
+/* Média - Coluna pequena */
+th:nth-child(8),
+td:nth-child(8) {
+    width: 70px;
+}
+
+/* Ações - Coluna pequena */
+th:nth-child(9),
+td:nth-child(9) {
+    width: 80px;
+}
