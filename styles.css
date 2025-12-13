@@ -715,6 +715,18 @@ tbody tr {
     animation: fadeIn 0.3s ease-in;
 }
 
+/* Coluna de Número */
+.col-number {
+    width: 40px;
+    text-align: center;
+}
+
+.row-number {
+    text-align: center;
+    font-weight: 600;
+    width: 40px;
+}
+
 /* Estilos de Impressão */
 @media print {
     body {
@@ -734,8 +746,16 @@ tbody tr {
         display: none !important;
     }
 
-    /* Ocultar coluna de ações */
+    /* Ocultar colunas de avaliadores e coluna de ações */
+    th:nth-child(4),
+    th:nth-child(5),
+    th:nth-child(6),
+    th:nth-child(7),
     th:last-child,
+    td:nth-child(4),
+    td:nth-child(5),
+    td:nth-child(6),
+    td:nth-child(7),
     td:last-child {
         display: none !important;
     }
