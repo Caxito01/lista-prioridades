@@ -292,8 +292,9 @@ function renderTasks() {
     
     noTasksMessage.style.display = 'none';
     
-    tbody.innerHTML = sortedTasks.map(task => `
+    tbody.innerHTML = sortedTasks.map((task, index) => `
         <tr>
+            <td class="row-number">${index + 1}</td>
             <td>
                 <select class="stage-select" data-stage="${task.stage}" onchange="updateTaskStage(${task.id}, this.value)">
                     <option value="ATRASADO" ${task.stage === 'ATRASADO' ? 'selected' : ''}>ATRASADO</option>
