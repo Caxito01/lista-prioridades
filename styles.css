@@ -746,17 +746,17 @@ tbody tr {
         display: none !important;
     }
 
-    /* Ocultar colunas de avaliadores e coluna de ações */
+    /* Ocultar apenas as colunas de avaliadores (4-7) e ações (9), manter Nº (1), Estágio (2), Descrição (3), Média (8) */
     th:nth-child(4),
     th:nth-child(5),
     th:nth-child(6),
     th:nth-child(7),
-    th:last-child,
+    th:nth-child(9),
     td:nth-child(4),
     td:nth-child(5),
     td:nth-child(6),
     td:nth-child(7),
-    td:last-child {
+    td:nth-child(9) {
         display: none !important;
     }
 
@@ -789,17 +789,12 @@ tbody tr {
         font-size: 10pt;
     }
 
-    /* Centralizar a coluna de média */
-    th:nth-child(7),
-    td:nth-child(7) {
+    /* Centralizar as colunas Nº (1) e Média (8) */
+    th:nth-child(1),
+    th:nth-child(8),
+    td:nth-child(1),
+    td:nth-child(8) {
         text-align: center;
-    }
-
-    /* Adicionar checkbox antes do estágio */
-    td:first-child::before {
-        content: '☐ ';
-        font-size: 12pt;
-        margin-right: 5px;
     }
 
     thead {
