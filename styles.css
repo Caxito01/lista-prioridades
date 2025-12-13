@@ -864,7 +864,7 @@ td:nth-child(1) {
 /* Estágio - Coluna pequena */
 th:nth-child(2),
 td:nth-child(2) {
-    width: 120px;
+    width: 100px;
 }
 
 /* Descrição - Coluna grande */
