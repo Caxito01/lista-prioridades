@@ -895,7 +895,7 @@ td:nth-child(2) {
 /* Descrição - Coluna grande */
 th:nth-child(3),
 td:nth-child(3) {
-    width: auto;
+    width: 100px;
 }
 
 /* Avaliadores 1-4 - Colunas médias */
@@ -913,11 +913,11 @@ td:nth-child(7) {
 /* Média - Coluna pequena */
 th:nth-child(8),
 td:nth-child(8) {
-    width: 70px;
+    width: 90px;
 }
 
 /* Ações - Coluna pequena */
 th:nth-child(9),
 td:nth-child(9) {
-    width: 80px;
+    width: 110px;
 }
