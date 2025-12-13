@@ -780,6 +780,7 @@ tbody tr {
         width: 100%;
         font-family: 'Times New Roman', Times, serif;
         font-size: 10pt;
+        table-layout: auto;
     }
 
     th, td {
@@ -787,6 +788,30 @@ tbody tr {
         padding: 8px;
         text-align: left;
         font-size: 10pt;
+    }
+
+    /* Colunas proporcionais na impressão */
+    th:nth-child(1),
+    td:nth-child(1) {
+        width: 5%;
+        white-space: nowrap;
+    }
+
+    th:nth-child(2),
+    td:nth-child(2) {
+        width: 12%;
+    }
+
+    th:nth-child(3),
+    td:nth-child(3) {
+        width: 50%;
+        word-wrap: break-word;
+    }
+
+    th:nth-child(8),
+    td:nth-child(8) {
+        width: 8%;
+        white-space: nowrap;
     }
 
     /* Centralizar as colunas Nº (1) e Média (8) */
@@ -870,7 +895,7 @@ td:nth-child(2) {
 /* Descrição - Coluna grande */
 th:nth-child(3),
 td:nth-child(3) {
-    width: auto;
+    width: 100px;
 }
 
 /* Avaliadores 1-4 - Colunas médias */
