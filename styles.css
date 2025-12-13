@@ -303,7 +303,6 @@ section h2 {
 .filter-group {
     display: flex;
     flex-direction: column;
-    flex: 1;
     min-width: 200px;
 }
 
