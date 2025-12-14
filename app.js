@@ -197,11 +197,60 @@ function editTask(id) {
 
 // Deletar tarefa
 function deleteTask(id) {
-    if (confirm('Tem certeza que deseja excluir esta tarefa?')) {
-        tasks = tasks.filter(t => t.id !== id);
-        saveTasks();
-        renderTasks();
-    }
+    showDeleteModal(id);
+}
+
+// Modal de confirmação de exclusão
+function showDeleteModal(id) {
+    const deleteModal = document.createElement('div');
+    deleteModal.id = 'deleteModal';
+    deleteModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+    `;
+    
+    const task = tasks.find(t => t.id === id);
+    const taskName = task ? task.name : 'Tarefa';
+    
+    deleteModal.innerHTML = `
+        <div style="background: white; border-radius: 15px; padding: 30px; max-width: 400px; width: 90%; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3); text-align: center;">
+            <h2 style="color: #dc3545; margin-bottom: 20px; font-size: 1.5rem;">⚠️ Confirmar Exclusão</h2>
+            <p style="color: #666; margin-bottom: 10px; font-size: 1rem; line-height: 1.5;">Tem certeza que deseja excluir esta tarefa?</p>
+            <p style="color: #333; font-weight: bold; margin-bottom: 30px; font-size: 0.95rem; word-break: break-word;">"${taskName}"</p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button onclick="confirmDeleteTask(${id})" style="flex: 1; padding: 12px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.3s;"
+                onmouseover="this.style.background='#c82333'" onmouseout="this.style.background='#dc3545'">Excluir</button>
+                <button onclick="closeDeleteModal()" style="flex: 1; padding: 12px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.3s;"
+                onmouseover="this.style.background='#5a6268'" onmouseout="this.style.background='#6c757d'">Cancelar</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(deleteModal);
+    
+    deleteModal.onclick = (e) => {
+        if (e.target === deleteModal) closeDeleteModal();
+    };
+}
+
+function confirmDeleteTask(id) {
+    tasks = tasks.filter(t => t.id !== id);
+    saveTasks();
+    closeDeleteModal();
+    renderTasks();
+}
+
+function closeDeleteModal() {
+    const deleteModal = document.getElementById('deleteModal');
+    if (deleteModal) deleteModal.remove();
 }
 
 // Obter classe CSS do estágio
