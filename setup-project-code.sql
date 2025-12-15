@@ -1,19 +1,19 @@
 -- SQL para adicionar coluna project_code na tabela projects
--- Execute isso no SQL Editor do Supabase
+-- Execute OBRIGATORIAMENTE isso no SQL Editor do Supabase
+-- 
+-- PASSOS:
+-- 1. Acesse: https://app.supabase.com
+-- 2. Selecione seu projeto (vzfhsfrfucqoloecnvvu)
+-- 3. Clique em "SQL Editor" (lado esquerdo)
+-- 4. Clique em "New Query"
+-- 5. Cole TUDO abaixo e clique em "Run" (Ctrl+Enter)
 
--- 1. Adicionar coluna project_code (se ainda não existir)
-ALTER TABLE projects 
-ADD COLUMN IF NOT EXISTS project_code VARCHAR(8) UNIQUE;
+-- 1. Adicionar coluna project_code (VARCHAR 8 caracteres, UNIQUE)
+ALTER TABLE public.projects 
+ADD COLUMN project_code VARCHAR(8) UNIQUE;
 
 -- 2. Criar índice para busca rápida
-CREATE INDEX IF NOT EXISTS idx_projects_code ON projects(project_code);
+CREATE INDEX idx_projects_code ON public.projects(project_code);
 
--- 3. Atualizar projetos existentes com códigos aleatórios (OPCIONAL)
--- Descomente a linha abaixo apenas se quiser gerar códigos para projetos existentes
--- UPDATE projects 
--- SET project_code = CASE 
---     WHEN RANDOM() < 0.33 THEN 'CXT' || LPAD(CAST(FLOOR(RANDOM() * 100000) AS TEXT), 5, '0')
---     WHEN RANDOM() < 0.66 THEN LPAD(CAST(FLOOR(RANDOM() * 10) AS TEXT), 2, '0') || 'CXT' || LPAD(CAST(FLOOR(RANDOM() * 1000) AS TEXT), 3, '0')
---     ELSE LPAD(CAST(FLOOR(RANDOM() * 100000) AS TEXT), 5, '0') || 'CXT'
--- END
--- WHERE project_code IS NULL;
+-- 3. Pronto! Agora a coluna está disponível e os projetos salvos terão código
+-- O código é gerado automaticamente no formato: CXT + 5 números
