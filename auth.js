@@ -25,8 +25,52 @@ async function checkAuth() {
 
 // Logout
 async function handleLogout() {
-    if (!confirm('Tem certeza que deseja sair?')) return;
+    showLogoutModal();
+}
+
+// Modal de confirmação de logout
+function showLogoutModal() {
+    const logoutModal = document.createElement('div');
+    logoutModal.id = 'logoutModal';
+    logoutModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+    `;
     
+    logoutModal.innerHTML = `
+        <div style="background: white; border-radius: 15px; padding: 30px; max-width: 400px; width: 90%; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3); text-align: center;">
+            <h2 style="color: #f44336; margin-bottom: 20px; font-size: 1.5rem;">⚠️ Confirmar Saída</h2>
+            <p style="color: #666; margin-bottom: 30px; font-size: 1rem; line-height: 1.5;">Tem certeza que deseja sair?</p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button onclick="confirmLogout()" style="flex: 1; padding: 12px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.3s;"
+                onmouseover="this.style.background='#d32f2f'" onmouseout="this.style.background='#f44336'">Sair</button>
+                <button onclick="closeLogoutModal()" style="flex: 1; padding: 12px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.3s;"
+                onmouseover="this.style.background='#5a6268'" onmouseout="this.style.background='#6c757d'">Cancelar</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(logoutModal);
+    
+    logoutModal.onclick = (e) => {
+        if (e.target === logoutModal) closeLogoutModal();
+    };
+}
+
+function confirmLogout() {
+    closeLogoutModal();
+    performLogout();
+}
+
+async function performLogout() {
     const { error } = await supabase.auth.signOut();
     
     if (error) {
@@ -37,6 +81,11 @@ async function handleLogout() {
             window.location.href = 'auth.html';
         }, 1000);
     }
+}
+
+function closeLogoutModal() {
+    const logoutModal = document.getElementById('logoutModal');
+    if (logoutModal) logoutModal.remove();
 }
 
 // Limpar dados do usuário anterior
