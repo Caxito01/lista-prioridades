@@ -173,8 +173,14 @@
 
         <div id="messageContainer"></div>
 
-        <!-- Form de Login -->
-        <div id="loginForm" class="form-section active">
+        <!-- Abas de Login -->
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0;">
+            <button onclick="switchTab('email')" id="emailTab" style="flex: 1; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: bold;">📧 Email</button>
+            <button onclick="switchTab('code')" id="codeTab" style="flex: 1; padding: 12px; background: #e0e0e0; color: #666; border: none; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: bold;">🔑 Código</button>
+        </div>
+
+        <!-- Form de Login por Email -->
+        <div id="emailForm" class="form-section active">
             <div class="form-group">
                 <label for="loginEmail">Email:</label>
                 <input type="email" id="loginEmail" placeholder="seu@email.com" required>
@@ -185,7 +191,19 @@
             </div>
             <button class="btn-submit" onclick="handleLogin()" id="loginBtn">Entrar</button>
             <div class="toggle-form">
-                Não tem conta? <a onclick="toggleForm()">Cadastre-se aqui</a>
+                Não tem conta? <a onclick="switchToRegister()">Cadastre-se aqui</a>
+            </div>
+        </div>
+
+        <!-- Form de Login por Código -->
+        <div id="codeForm" class="form-section">
+            <div class="form-group">
+                <label for="projectCode">Código do Projeto:</label>
+                <input type="text" id="projectCode" placeholder="Ex: CXT12345 ou 12345CXT" required maxlength="8">
+            </div>
+            <button class="btn-submit" onclick="handleCodeLogin()" id="codeBtn">Acessar Projeto</button>
+            <div class="toggle-form">
+                Novo por aqui? <a onclick="switchToRegister()">Crie uma conta</a>
             </div>
         </div>
 
@@ -205,7 +223,7 @@
             </div>
             <button class="btn-submit" onclick="handleRegister()" id="registerBtn">Cadastrar</button>
             <div class="toggle-form">
-                Já tem conta? <a onclick="toggleForm()">Entre aqui</a>
+                Já tem conta? <a onclick="switchTab('email')">Entre aqui</a>
             </div>
         </div>
     </div>
@@ -220,11 +238,45 @@
             }
         });
 
-        function toggleForm() {
-            const loginForm = document.getElementById('loginForm');
+        let currentTab = 'email';
+
+        function switchTab(tab) {
+            currentTab = tab;
+            const emailForm = document.getElementById('emailForm');
+            const codeForm = document.getElementById('codeForm');
             const registerForm = document.getElementById('registerForm');
-            loginForm.classList.toggle('active');
-            registerForm.classList.toggle('active');
+            const emailTab = document.getElementById('emailTab');
+            const codeTab = document.getElementById('codeTab');
+
+            emailForm.classList.remove('active');
+            codeForm.classList.remove('active');
+            registerForm.classList.remove('active');
+            emailTab.style.background = '#e0e0e0';
+            emailTab.style.color = '#666';
+            codeTab.style.background = '#e0e0e0';
+            codeTab.style.color = '#666';
+
+            if (tab === 'email') {
+                emailForm.classList.add('active');
+                emailTab.style.background = '#667eea';
+                emailTab.style.color = 'white';
+            } else {
+                codeForm.classList.add('active');
+                codeTab.style.background = '#667eea';
+                codeTab.style.color = 'white';
+            }
+
+            clearMessages();
+        }
+
+        function switchToRegister() {
+            document.getElementById('emailForm').classList.remove('active');
+            document.getElementById('codeForm').classList.remove('active');
+            document.getElementById('registerForm').classList.add('active');
+            document.getElementById('emailTab').style.background = '#e0e0e0';
+            document.getElementById('emailTab').style.color = '#666';
+            document.getElementById('codeTab').style.background = '#e0e0e0';
+            document.getElementById('codeTab').style.color = '#666';
             clearMessages();
         }
 
@@ -272,6 +324,64 @@
             }
         }
 
+        async function handleCodeLogin() {
+            const code = document.getElementById('projectCode').value.trim().toUpperCase();
+            const btn = document.getElementById('codeBtn');
+
+            if (!code) {
+                showMessage('❌ Digite o código do projeto!', 'error');
+                return;
+            }
+
+            if (!validarCodigoProject(code)) {
+                showMessage('❌ Código inválido! Deve conter "CXT" + 5 dígitos', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Acessando...';
+
+            try {
+                const { data, error } = await supabase
+                    .from('projects')
+                    .select('*')
+                    .eq('project_code', code)
+                    .single();
+
+                if (error || !data) {
+                    showMessage('❌ Código de projeto não encontrado!', 'error');
+                } else {
+                    showMessage('✅ Acesso concedido! Abrindo projeto...', 'success');
+                    localStorage.setItem('projectCode', code);
+                    localStorage.setItem('projectId', data.id);
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1500);
+                }
+            } catch (error) {
+                showMessage('❌ Erro ao acessar projeto: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Acessar Projeto';
+            }
+        }
+
+        function validarCodigoProject(code) {
+            // Verifica se contém CXT (início, meio ou fim) + 5 números
+            const pattern = /^([A-Z0-9]{0,5}CXT[A-Z0-9]{0,5}|CXT[A-Z0-9]{0,5})$/;
+            if (!pattern.test(code)) return false;
+            
+            // Verifica se tem exatamente 8 caracteres (CXT + 5 números)
+            const cxtIndex = code.indexOf('CXT');
+            if (cxtIndex === -1) return false;
+            
+            const beforeCXT = code.substring(0, cxtIndex);
+            const afterCXT = code.substring(cxtIndex + 3);
+            const allNumbers = (beforeCXT + afterCXT).replace(/[0-9]/g, '');
+            
+            return (beforeCXT + afterCXT).length === 5 && allNumbers.length === 0;
+        }
+
         async function handleRegister() {
             const email = document.getElementById('registerEmail').value.trim();
             const password = document.getElementById('registerPassword').value;
@@ -310,7 +420,7 @@
                 } else {
                     showMessage('✅ Cadastro realizado! Verifique seu email para confirmar a conta.', 'success');
                     setTimeout(() => {
-                        toggleForm();
+                        switchTab('email');
                         document.getElementById('registerEmail').value = '';
                         document.getElementById('registerPassword').value = '';
                         document.getElementById('registerPasswordConfirm').value = '';
@@ -327,12 +437,15 @@
         // Permitir Enter nas inputs
         document.addEventListener('keypress', function(event) {
             if (event.key === 'Enter') {
-                const loginForm = document.getElementById('loginForm');
+                const emailForm = document.getElementById('emailForm');
+                const codeForm = document.getElementById('codeForm');
                 const registerForm = document.getElementById('registerForm');
                 
-                if (loginForm.classList.contains('active')) {
+                if (emailForm.classList.contains('active')) {
                     handleLogin();
-                } else {
+                } else if (codeForm.classList.contains('active')) {
+                    handleCodeLogin();
+                } else if (registerForm.classList.contains('active')) {
                     handleRegister();
                 }
             }

@@ -3,6 +3,7 @@ let tasks = [];
 let editingTaskId = null;
 let currentSortOrder = 'priority'; // 'priority' ou 'alphabetical'
 let currentFilter = '';
+let currentProjectCode = null; // Código do projeto acessado
 
 // Nomes dos avaliadores
 let evaluatorNames = {
@@ -12,12 +13,35 @@ let evaluatorNames = {
     eval4: 'Avaliador 4'
 };
 
+// Gerar código de projeto (CXT + 5 números aleatórios)
+function generateProjectCode() {
+    const randomNumbers = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
+    const positions = ['inicio', 'meio', 'fim'];
+    const position = positions[Math.floor(Math.random() * positions.length)];
+    
+    switch(position) {
+        case 'inicio':
+            return 'CXT' + randomNumbers;
+        case 'meio':
+            return randomNumbers.substring(0, 2) + 'CXT' + randomNumbers.substring(2);
+        case 'fim':
+            return randomNumbers + 'CXT';
+    }
+}
+
 // Inicialização
 document.addEventListener('DOMContentLoaded', function() {
     loadEvaluatorNames();
     loadTasks();
     updateEvaluatorLabels();
     renderTasks();
+    
+    // Verificar acesso por código
+    const projectCode = localStorage.getItem('projectCode');
+    if (projectCode) {
+        currentProjectCode = projectCode;
+        document.title = `Lista de Tarefas - Projeto: ${projectCode}`;
+    }
     
     // Event listener para o formulário
     document.getElementById('taskForm').addEventListener('submit', handleFormSubmit);
@@ -597,9 +621,12 @@ async function performSaveProject(projectName) {
         }
         
         const userId = session.user.id;
+        const projectCode = generateProjectCode();
+        
         console.log('💾 Salvando projeto em app.js:');
         console.log('   Nome:', projectName);
         console.log('   User ID:', userId);
+        console.log('   Código:', projectCode);
         
         const projectData = {
             evaluator_names: evaluatorNames,
@@ -616,6 +643,7 @@ async function performSaveProject(projectName) {
                     name: projectName,
                     data: projectData,
                     user_id: userId,
+                    project_code: projectCode,
                     created_at: now.toISOString()
                 }
             ]);
@@ -625,7 +653,7 @@ async function performSaveProject(projectName) {
             showNotification('❌ Erro ao salvar: ' + error.message);
         } else {
             console.log('✅ Projeto salvo com sucesso!');
-            showNotification('✅ Projeto salvo com sucesso!');
+            showNotification(`✅ Projeto salvo! Código: ${projectCode}`);
         }
     } catch (error) {
         console.log('❌ ERRO geral:', error);
