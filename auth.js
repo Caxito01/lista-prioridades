@@ -76,6 +76,9 @@ async function performLogout() {
     if (error) {
         showNotification('❌ Erro ao fazer logout: ' + error.message);
     } else {
+        // Limpar dados de acesso por código
+        localStorage.removeItem('projectCode');
+        localStorage.removeItem('projectId');
         showNotification('✅ Desconectado com sucesso!');
         setTimeout(() => {
             window.location.href = 'auth.html';
@@ -106,6 +109,21 @@ async function loadUserProjects() {
     try {
         // Aguardar um pouco para garantir que a session está pronta
         await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Verificar se há acesso por código
+        const projectCode = localStorage.getItem('projectCode');
+        if (projectCode) {
+            const { data: project, error } = await supabase
+                .from('projects')
+                .select('*')
+                .eq('project_code', projectCode)
+                .single();
+            
+            if (!error && project) {
+                console.log('✅ Projeto acessado por código:', projectCode);
+                return [project];
+            }
+        }
         
         const { data: { session } } = await supabase.auth.getSession();
         
