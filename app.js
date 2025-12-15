@@ -630,27 +630,55 @@ async function performSaveProject(projectName) {
         
         const projectData = {
             evaluator_names: evaluatorNames,
-            tasks: tasks
+            tasks: tasks,
+            project_code: projectCode  // Guardar no JSON do projeto também
         };
         
         // Obter data/hora atual do navegador (já está em hora local)
         const now = new Date();
         
+        // Preparar objeto de inserção sem project_code (por enquanto)
+        const insertData = {
+            name: projectName,
+            data: projectData,
+            user_id: userId,
+            created_at: now.toISOString()
+        };
+        
+        // Tentar adicionar project_code se a coluna existir
+        // Será ignorado se a coluna não existir no banco
+        try {
+            insertData.project_code = projectCode;
+        } catch (e) {
+            console.log('⚠️ Coluna project_code não disponível ainda');
+        }
+        
         const { data, error } = await supabase
             .from('projects')
-            .insert([
-                {
-                    name: projectName,
-                    data: projectData,
-                    user_id: userId,
-                    project_code: projectCode,
-                    created_at: now.toISOString()
-                }
-            ]);
+            .insert([insertData]);
         
         if (error) {
             console.log('❌ ERRO ao salvar:', error);
-            showNotification('❌ Erro ao salvar: ' + error.message);
+            // Se o erro for sobre project_code, tenta sem ela
+            if (error.message.includes('project_code')) {
+                console.log('⚠️ Tentando salvar sem project_code...');
+                const { data: data2, error: error2 } = await supabase
+                    .from('projects')
+                    .insert([{
+                        name: projectName,
+                        data: projectData,
+                        user_id: userId,
+                        created_at: now.toISOString()
+                    }]);
+                
+                if (error2) {
+                    showNotification('❌ Erro ao salvar: ' + error2.message);
+                } else {
+                    showNotification(`✅ Projeto salvo! Código: ${projectCode}\n(Configure a coluna no banco para usar o código)`);
+                }
+            } else {
+                showNotification('❌ Erro ao salvar: ' + error.message);
+            }
         } else {
             console.log('✅ Projeto salvo com sucesso!');
             showNotification(`✅ Projeto salvo! Código: ${projectCode}`);
