@@ -146,11 +146,75 @@ function loadTasks() {
 }
 
 // Função para carregar todos os dados do localStorage
-function loadData() {
+async function loadData() {
     loadEvaluatorNames();
-    loadTasks();
+    await loadTasks();
     updateEvaluatorLabels();
     renderTasks();
+}
+
+// Carregar tarefas - primeiro tenta do Supabase se houver projectId, depois do localStorage
+async function loadTasks() {
+    const projectId = localStorage.getItem('projectId');
+    const projectCode = localStorage.getItem('projectCode');
+    
+    console.log('📂 Carregando tarefas:');
+    console.log('   Project ID:', projectId);
+    console.log('   Project Code:', projectCode);
+    
+    // Se houver projectId, carregar do Supabase
+    if (projectId) {
+        try {
+            console.log('🔄 Buscando tarefas do Supabase...');
+            const { data: project, error } = await supabase
+                .from('projects')
+                .select('*')
+                .eq('id', projectId)
+                .single();
+            
+            if (error) {
+                console.log('❌ Erro ao carregar do Supabase:', error);
+                console.log('⚠️ Tentando carregar do localStorage como fallback...');
+                loadTasksFromLocalStorage();
+                return;
+            }
+            
+            if (project && project.data) {
+                console.log('✅ Dados encontrados no Supabase');
+                tasks = project.data.tasks || [];
+                // Carregar nomes dos avaliadores também
+                if (project.data.evaluator_names) {
+                    evaluatorNames = project.data.evaluator_names;
+                }
+                console.log('✅ Tarefas carregadas:', tasks.length);
+            } else {
+                console.log('⚠️ Nenhum dado no projeto, usando localStorage');
+                loadTasksFromLocalStorage();
+            }
+        } catch (error) {
+            console.log('❌ ERRO ao carregar tarefas:', error);
+            loadTasksFromLocalStorage();
+        }
+    } else {
+        // Sem projectId, carregar do localStorage
+        console.log('📱 Carregando do localStorage');
+        loadTasksFromLocalStorage();
+    }
+}
+
+function loadTasksFromLocalStorage() {
+    const saved = localStorage.getItem('tasks');
+    if (saved) {
+        try {
+            tasks = JSON.parse(saved);
+            console.log('✅ Tarefas do localStorage:', tasks.length);
+        } catch (e) {
+            console.log('❌ Erro ao parsear localStorage:', e);
+            tasks = [];
+        }
+    } else {
+        tasks = [];
+    }
 }
 
 // Salvar tarefas no localStorage
@@ -891,8 +955,10 @@ window.addEventListener('load', async function() {
             headerButtons.insertBefore(userInfo, headerButtons.firstChild);
         }
         
-        // Carregar dados locais
-        loadData();
+        // Carregar dados (aguardar se for do Supabase)
+        console.log('⏳ Carregando dados...');
+        await loadData();
+        console.log('✅ Dados carregados com sucesso');
     }
 });
 
