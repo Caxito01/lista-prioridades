@@ -1,4 +1,4 @@
--- SQL para adicionar coluna project_code na tabela projects
+-- -- SQL para adicionar coluna project_code na tabela projects
 -- Execute OBRIGATORIAMENTE isso no SQL Editor do Supabase
 -- 
 -- PASSOS:
