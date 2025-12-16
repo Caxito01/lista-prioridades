@@ -344,7 +344,7 @@
             try {
                 console.log('🔍 Buscando projeto com código:', code);
                 
-                // Buscar com query dinâmica (case-insensitive)
+                // Buscar todos os projetos
                 const { data: allProjects, error: listError } = await supabase
                     .from('projects')
                     .select('*');
@@ -358,7 +358,8 @@
                 }
 
                 console.log('📊 Total de projetos no banco:', allProjects?.length || 0);
-                console.log('Códigos disponíveis:', allProjects?.map(p => p.project_code).filter(c => c) || []);
+                const codigosDisponiveis = allProjects?.map(p => p.project_code).filter(c => c) || [];
+                console.log('Códigos disponíveis:', codigosDisponiveis);
 
                 // Buscar projeto com código (case-insensitive)
                 const project = allProjects?.find(p => 
@@ -367,12 +368,16 @@
 
                 if (!project) {
                     console.log('❌ Projeto não encontrado com código:', code);
-                    showMessage('❌ Código de projeto não encontrado!<br><small>Códigos disponíveis: ' + (allProjects?.filter(p => p.project_code).map(p => p.project_code).join(', ') || 'nenhum') + '</small>', 'error');
+                    const codigosMsg = codigosDisponiveis.length > 0 
+                        ? '<br><small style="color: #666;">Códigos disponíveis: ' + codigosDisponiveis.join(', ') + '</small>'
+                        : '<br><small style="color: #dc3545; font-weight: bold;">⚠️ Nenhum código disponível no banco!</small>';
+                    showMessage('❌ Código de projeto não encontrado!' + codigosMsg, 'error');
                 } else {
                     console.log('✅ Projeto encontrado:', project.name, '- Código:', project.project_code);
                     showMessage('✅ Acesso concedido! Abrindo projeto...', 'success');
                     localStorage.setItem('projectCode', project.project_code);
                     localStorage.setItem('projectId', project.id);
+                    localStorage.setItem('projectName', project.name);
                     setTimeout(() => {
                         window.location.href = 'index.html';
                     }, 1500);
