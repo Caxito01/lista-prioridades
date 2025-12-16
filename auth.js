@@ -134,15 +134,31 @@ async function loadUserProjects() {
         // Verificar se há acesso por código
         const projectCode = localStorage.getItem('projectCode');
         if (projectCode) {
-            const { data: project, error } = await supabase
-                .from('projects')
-                .select('*')
-                .eq('project_code', projectCode)
-                .single();
+            console.log('🔑 Tentando carregar projeto com código:', projectCode);
             
-            if (!error && project) {
-                console.log('✅ Projeto acessado por código:', projectCode);
-                return [project];
+            // Tentar usar a função pública primeiro
+            const { data: project, error } = await supabase
+                .rpc('get_project_by_code', { p_code: projectCode });
+            
+            if (!error && project && project.length > 0) {
+                console.log('✅ Projeto acessado por código:', projectCode, project[0].name);
+                return [project[0]];
+            } else {
+                console.log('⚠️ Função RPC falhou, tentando fallback...');
+                // Fallback: query direta (pode ser bloqueada por RLS)
+                const { data: fallbackProject, error: fallbackError } = await supabase
+                    .from('projects')
+                    .select('*')
+                    .eq('project_code', projectCode)
+                    .single();
+                
+                if (!fallbackError && fallbackProject) {
+                    console.log('✅ Projeto acessado por código (fallback):', projectCode);
+                    return [fallbackProject];
+                } else {
+                    console.log('❌ Projeto não encontrado com código:', projectCode);
+                    return [];
+                }
             }
         }
         
