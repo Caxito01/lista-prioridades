@@ -29,6 +29,19 @@ function generateProjectCode() {
     }
 }
 
+// Exibir código do projeto na página
+function displayProjectCode(code) {
+    const banner = document.getElementById('projectCodeBanner');
+    const display = document.getElementById('projectCodeDisplay');
+    if (banner && display) {
+        banner.style.display = 'block';
+        display.textContent = code;
+        console.log('✅ Código exibido na página:', code);
+    } else {
+        console.warn('⚠️ Elementos de código não encontrados');
+    }
+}
+
 // Inicialização
 document.addEventListener('DOMContentLoaded', function() {
     loadEvaluatorNames();
@@ -860,12 +873,21 @@ async function confirmLoadProject(projectId) {
 window.addEventListener('load', async function() {
     const user = await checkAuth();
     if (user) {
-        // Mostrar email do usuário no header
+        // Mostrar email do usuário no header (ou código se acesso por código)
         const headerButtons = document.querySelector('.header-buttons');
         if (headerButtons) {
             const userInfo = document.createElement('span');
             userInfo.style.cssText = 'color: #666; font-size: 13px; margin-right: 15px; display: flex; align-items: center;';
-            userInfo.innerHTML = `👤 ${user.email}`;
+            
+            // Se for acesso por código, mostrar o código
+            const projectCode = localStorage.getItem('projectCode');
+            if (projectCode) {
+                userInfo.innerHTML = `🔑 ${projectCode}`;
+                displayProjectCode(projectCode);
+            } else {
+                userInfo.innerHTML = `👤 ${user.email}`;
+            }
+            
             headerButtons.insertBefore(userInfo, headerButtons.firstChild);
         }
         

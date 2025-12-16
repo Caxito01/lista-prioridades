@@ -2,6 +2,14 @@
 
 // Verificar se usuário está logado
 async function checkAuth() {
+    // Primeiro, verificar se há acesso por código
+    const projectCode = localStorage.getItem('projectCode');
+    if (projectCode) {
+        console.log('🔑 Acesso por código detectado:', projectCode);
+        displayProjectCode(projectCode);
+        return { id: 'code-access', email: projectCode };
+    }
+    
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
@@ -21,6 +29,19 @@ async function checkAuth() {
     }
     
     return session.user;
+}
+
+// Exibir código do projeto na página
+function displayProjectCode(code) {
+    const banner = document.getElementById('projectCodeBanner');
+    const display = document.getElementById('projectCodeDisplay');
+    if (banner && display) {
+        banner.style.display = 'block';
+        display.textContent = code;
+        console.log('✅ Código exibido na página:', code);
+    } else {
+        console.warn('⚠️ Elementos de código não encontrados');
+    }
 }
 
 // Logout
