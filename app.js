@@ -186,24 +186,56 @@ async function loadTasks() {
             }
             
             console.log('✅ Projeto encontrado no Supabase:', project.name);
-            console.log('📊 Estrutura do projeto:', JSON.stringify(project, null, 2));
+            console.log('📊 Campo data:', project.data);
+            console.log('📊 Tipo de data:', typeof project.data);
             
+            // Tentar diferentes formas de acessar os dados
             if (project.data) {
-                console.log('📦 Dados do projeto:', JSON.stringify(project.data, null, 2));
+                let projectData = project.data;
                 
-                // Extrair tarefas
-                if (project.data.tasks && Array.isArray(project.data.tasks)) {
-                    tasks = project.data.tasks;
+                // Se data for string, fazer parse
+                if (typeof projectData === 'string') {
+                    console.log('🔄 Convertendo data de string para objeto...');
+                    try {
+                        projectData = JSON.parse(projectData);
+                    } catch (e) {
+                        console.log('❌ Erro ao fazer parse de data:', e);
+                        projectData = {};
+                    }
+                }
+                
+                console.log('📦 Dados processados:', projectData);
+                
+                // Procurar tarefas em diferentes locais
+                let foundTasks = null;
+                
+                if (projectData.tasks && Array.isArray(projectData.tasks)) {
+                    foundTasks = projectData.tasks;
+                    console.log('✅ Tarefas encontradas em data.tasks');
+                } else if (projectData.data && projectData.data.tasks && Array.isArray(projectData.data.tasks)) {
+                    foundTasks = projectData.data.tasks;
+                    console.log('✅ Tarefas encontradas em data.data.tasks');
+                } else if (Array.isArray(projectData)) {
+                    foundTasks = projectData;
+                    console.log('✅ Data é diretamente um array de tarefas');
+                }
+                
+                if (foundTasks) {
+                    tasks = foundTasks;
                     console.log('✅ Tarefas carregadas:', tasks.length);
                 } else {
-                    console.log('⚠️ Campo "tasks" não é um array ou está vazio');
+                    console.log('⚠️ Nenhuma tarefa encontrada na estrutura esperada');
+                    console.log('Estrutura do objeto:', Object.keys(projectData));
                     tasks = [];
                 }
                 
-                // Extrair nomes dos avaliadores
-                if (project.data.evaluator_names) {
-                    evaluatorNames = project.data.evaluator_names;
+                // Extrair nomes dos avaliadores (também em diferentes locais possíveis)
+                if (projectData.evaluator_names) {
+                    evaluatorNames = projectData.evaluator_names;
                     console.log('✅ Nomes dos avaliadores carregados');
+                } else if (projectData.data && projectData.data.evaluator_names) {
+                    evaluatorNames = projectData.data.evaluator_names;
+                    console.log('✅ Nomes dos avaliadores carregados (nested)');
                 } else {
                     console.log('⚠️ Nomes dos avaliadores não encontrados, usando padrão');
                 }
