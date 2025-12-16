@@ -342,23 +342,43 @@
             btn.innerHTML = '<span class="spinner"></span>Acessando...';
 
             try {
-                const { data, error } = await supabase
+                console.log('🔍 Buscando projeto com código:', code);
+                
+                // Buscar com query dinâmica (case-insensitive)
+                const { data: allProjects, error: listError } = await supabase
                     .from('projects')
-                    .select('*')
-                    .eq('project_code', code)
-                    .single();
+                    .select('*');
 
-                if (error || !data) {
-                    showMessage('❌ Código de projeto não encontrado!', 'error');
+                if (listError) {
+                    console.log('❌ Erro ao listar projetos:', listError);
+                    showMessage('❌ Erro ao acessar banco: ' + listError.message, 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = 'Acessar Projeto';
+                    return;
+                }
+
+                console.log('📊 Total de projetos no banco:', allProjects?.length || 0);
+                console.log('Códigos disponíveis:', allProjects?.map(p => p.project_code).filter(c => c) || []);
+
+                // Buscar projeto com código (case-insensitive)
+                const project = allProjects?.find(p => 
+                    p.project_code && p.project_code.toUpperCase() === code.toUpperCase()
+                );
+
+                if (!project) {
+                    console.log('❌ Projeto não encontrado com código:', code);
+                    showMessage('❌ Código de projeto não encontrado!<br><small>Códigos disponíveis: ' + (allProjects?.filter(p => p.project_code).map(p => p.project_code).join(', ') || 'nenhum') + '</small>', 'error');
                 } else {
+                    console.log('✅ Projeto encontrado:', project.name, '- Código:', project.project_code);
                     showMessage('✅ Acesso concedido! Abrindo projeto...', 'success');
-                    localStorage.setItem('projectCode', code);
-                    localStorage.setItem('projectId', data.id);
+                    localStorage.setItem('projectCode', project.project_code);
+                    localStorage.setItem('projectId', project.id);
                     setTimeout(() => {
                         window.location.href = 'index.html';
                     }, 1500);
                 }
             } catch (error) {
+                console.log('❌ Erro geral:', error);
                 showMessage('❌ Erro ao acessar projeto: ' + error.message, 'error');
             } finally {
                 btn.disabled = false;
