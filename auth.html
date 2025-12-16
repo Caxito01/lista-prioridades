@@ -367,19 +367,13 @@
         }
 
         function validarCodigoProject(code) {
-            // Verifica se contém CXT (início, meio ou fim) + 5 números
-            const pattern = /^([A-Z0-9]{0,5}CXT[A-Z0-9]{0,5}|CXT[A-Z0-9]{0,5})$/;
-            if (!pattern.test(code)) return false;
+            // Verifica se tem 8 caracteres exatamente
+            if (code.length !== 8) return false;
             
-            // Verifica se tem exatamente 8 caracteres (CXT + 5 números)
-            const cxtIndex = code.indexOf('CXT');
-            if (cxtIndex === -1) return false;
+            // Verifica se contém CXT em qualquer posição
+            if (!code.includes('CXT')) return false;
             
-            const beforeCXT = code.substring(0, cxtIndex);
-            const afterCXT = code.substring(cxtIndex + 3);
-            const allNumbers = (beforeCXT + afterCXT).replace(/[0-9]/g, '');
-            
-            return (beforeCXT + afterCXT).length === 5 && allNumbers.length === 0;
+            return true;
         }
 
         async function handleRegister() {

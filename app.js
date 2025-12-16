@@ -41,6 +41,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (projectCode) {
         currentProjectCode = projectCode;
         document.title = `Lista de Tarefas - Projeto: ${projectCode}`;
+        // Mostrar código na página
+        document.getElementById('projectCodeBanner').style.display = 'block';
+        document.getElementById('projectCodeDisplay').textContent = projectCode;
     }
     
     // Event listener para o formulário
@@ -447,10 +450,12 @@ function showSaveProjectSelection(projects) {
         
         projects.forEach(project => {
             const date = formatSupabaseDate(project.created_at);
+            const projectCode = project.project_code ? `<br><small style="color: #667eea; font-weight: bold;">🔑 ${project.project_code}</small>` : '';
             projectsList += `
                 <div onclick="selectProjectToSave('${project.id}', '${project.name}')" style="padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s; background: #f9f9f9;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='#f9f9f9'">
                     <strong style="color: #333;">${project.name}</strong><br>
                     <small style="color: #999;">${date}</small>
+                    ${projectCode}
                 </div>
             `;
         });
