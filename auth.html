@@ -344,39 +344,47 @@
             try {
                 console.log('🔍 Buscando projeto com código:', code);
                 
-                // Buscar todos os projetos
-                const { data: allProjects, error: listError } = await supabase
-                    .from('projects')
-                    .select('*');
+                // Tentar buscar usando a função pública (recomendado)
+                let project = null;
+                const { data: functionResult, error: funcError } = await supabase
+                    .rpc('get_project_by_code', { p_code: code });
 
-                if (listError) {
-                    console.log('❌ Erro ao listar projetos:', listError);
-                    showMessage('❌ Erro ao acessar banco: ' + listError.message, 'error');
-                    btn.disabled = false;
-                    btn.innerHTML = 'Acessar Projeto';
-                    return;
+                if (!funcError && functionResult && functionResult.length > 0) {
+                    project = functionResult[0];
+                    console.log('✅ Função pública encontrou projeto:', project.name);
+                } else {
+                    // Fallback: buscar todos os projetos (pode ser bloqueado por RLS)
+                    console.log('⚠️ Função pública não disponível, tentando fallback...');
+                    const { data: allProjects, error: listError } = await supabase
+                        .from('projects')
+                        .select('*');
+
+                    if (listError) {
+                        console.log('❌ Erro ao listar projetos:', listError);
+                        showMessage('❌ Erro ao acessar banco: ' + listError.message, 'error');
+                        btn.disabled = false;
+                        btn.innerHTML = 'Acessar Projeto';
+                        return;
+                    }
+
+                    console.log('📊 Total de projetos no banco:', allProjects?.length || 0);
+                    const codigosDisponiveis = allProjects?.map(p => p.project_code).filter(c => c) || [];
+                    console.log('Códigos disponíveis:', codigosDisponiveis);
+
+                    // Buscar projeto com código (case-insensitive)
+                    project = allProjects?.find(p => 
+                        p.project_code && 
+                        p.project_code.trim().toUpperCase() === code.trim().toUpperCase()
+                    );
+
+                    if (!project && codigosDisponiveis.length > 0) {
+                        console.log('Códigos no banco:', codigosDisponiveis);
+                    }
                 }
-
-                console.log('📊 Total de projetos no banco:', allProjects?.length || 0);
-                const codigosDisponiveis = allProjects?.map(p => p.project_code).filter(c => c) || [];
-                console.log('Códigos disponíveis:', codigosDisponiveis);
-                console.log('Procurando por:', code);
-
-                // Buscar projeto com código (case-insensitive e trim)
-                const project = allProjects?.find(p => {
-                    if (!p.project_code) return false;
-                    const codigoDb = p.project_code.trim();
-                    const codigoInput = code.trim();
-                    console.log(`Comparando: "${codigoDb.toUpperCase()}" === "${codigoInput.toUpperCase()}"`);
-                    return codigoDb.toUpperCase() === codigoInput.toUpperCase();
-                });
 
                 if (!project) {
                     console.log('❌ Projeto não encontrado com código:', code);
-                    const codigosMsg = codigosDisponiveis.length > 0 
-                        ? '<br><small style="color: #666;">Códigos disponíveis: ' + codigosDisponiveis.join(', ') + '</small>'
-                        : '<br><small style="color: #dc3545; font-weight: bold;">⚠️ Nenhum código disponível no banco!</small>';
-                    showMessage('❌ Código de projeto não encontrado!' + codigosMsg, 'error');
+                    showMessage('❌ Código de projeto não encontrado!<br><small style="color: #dc3545; font-weight: bold;">⚠️ Verifique se o código está correto ou contacte o administrador.</small>', 'error');
                 } else {
                     console.log('✅ Projeto encontrado:', project.name, '- Código:', project.project_code);
                     showMessage('✅ Acesso concedido! Abrindo projeto...', 'success');
