@@ -967,6 +967,13 @@ async function confirmLoadProject(projectId) {
         evaluatorNames = project.data.evaluator_names || evaluatorNames;
         tasks = project.data.tasks || [];
         
+        // Exibir código do projeto se houver
+        if (project.project_code) {
+            console.log('🔑 Código do projeto:', project.project_code);
+            displayProjectCode(project.project_code);
+            localStorage.setItem('currentProjectCode', project.project_code);
+        }
+        
         // Atualizar interface
         document.getElementById('evaluator1').value = evaluatorNames.eval1;
         document.getElementById('evaluator2').value = evaluatorNames.eval2;
@@ -1003,7 +1010,14 @@ window.addEventListener('load', async function() {
                 userInfo.innerHTML = `🔑 ${projectCode}`;
                 displayProjectCode(projectCode);
             } else {
-                userInfo.innerHTML = `👤 ${user.email}`;
+                // Se for email, procurar por código do projeto armazenado
+                const currentProjectCode = localStorage.getItem('currentProjectCode');
+                if (currentProjectCode) {
+                    userInfo.innerHTML = `🔑 ${currentProjectCode}`;
+                    displayProjectCode(currentProjectCode);
+                } else {
+                    userInfo.innerHTML = `👤 ${user.email}`;
+                }
             }
             
             headerButtons.insertBefore(userInfo, headerButtons.firstChild);
