@@ -158,14 +158,14 @@ async function loadTasks() {
     const projectId = localStorage.getItem('projectId');
     const projectCode = localStorage.getItem('projectCode');
     
-    console.log('📂 Carregando tarefas:');
+    console.log('📂 Iniciando loadTasks:');
     console.log('   Project ID:', projectId);
     console.log('   Project Code:', projectCode);
     
     // Se houver projectId, carregar do Supabase
     if (projectId) {
         try {
-            console.log('🔄 Buscando tarefas do Supabase...');
+            console.log('🔄 Buscando projeto do Supabase com ID:', projectId);
             const { data: project, error } = await supabase
                 .from('projects')
                 .select('*')
@@ -174,30 +174,51 @@ async function loadTasks() {
             
             if (error) {
                 console.log('❌ Erro ao carregar do Supabase:', error);
-                console.log('⚠️ Tentando carregar do localStorage como fallback...');
+                console.log('⚠️ Caindo para localStorage como fallback...');
                 loadTasksFromLocalStorage();
                 return;
             }
             
-            if (project && project.data) {
-                console.log('✅ Dados encontrados no Supabase');
-                tasks = project.data.tasks || [];
-                // Carregar nomes dos avaliadores também
+            if (!project) {
+                console.log('⚠️ Projeto não encontrado no Supabase');
+                loadTasksFromLocalStorage();
+                return;
+            }
+            
+            console.log('✅ Projeto encontrado no Supabase:', project.name);
+            console.log('📊 Estrutura do projeto:', JSON.stringify(project, null, 2));
+            
+            if (project.data) {
+                console.log('📦 Dados do projeto:', JSON.stringify(project.data, null, 2));
+                
+                // Extrair tarefas
+                if (project.data.tasks && Array.isArray(project.data.tasks)) {
+                    tasks = project.data.tasks;
+                    console.log('✅ Tarefas carregadas:', tasks.length);
+                } else {
+                    console.log('⚠️ Campo "tasks" não é um array ou está vazio');
+                    tasks = [];
+                }
+                
+                // Extrair nomes dos avaliadores
                 if (project.data.evaluator_names) {
                     evaluatorNames = project.data.evaluator_names;
+                    console.log('✅ Nomes dos avaliadores carregados');
+                } else {
+                    console.log('⚠️ Nomes dos avaliadores não encontrados, usando padrão');
                 }
-                console.log('✅ Tarefas carregadas:', tasks.length);
             } else {
-                console.log('⚠️ Nenhum dado no projeto, usando localStorage');
-                loadTasksFromLocalStorage();
+                console.log('⚠️ Campo "data" está vazio no projeto');
+                tasks = [];
             }
         } catch (error) {
             console.log('❌ ERRO ao carregar tarefas:', error);
+            console.log('Stack:', error.stack);
             loadTasksFromLocalStorage();
         }
     } else {
         // Sem projectId, carregar do localStorage
-        console.log('📱 Carregando do localStorage');
+        console.log('📱 Sem projectId, carregando do localStorage');
         loadTasksFromLocalStorage();
     }
 }
@@ -213,6 +234,7 @@ function loadTasksFromLocalStorage() {
             tasks = [];
         }
     } else {
+        console.log('⚠️ Nenhuma tarefa no localStorage');
         tasks = [];
     }
 }
