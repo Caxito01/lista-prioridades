@@ -103,31 +103,48 @@ function confirmLogout() {
 
 async function performLogout() {
     try {
-        // Tentar fazer logout no Supabase
-        const { error } = await supabase.auth.signOut();
+        console.log('🔐 Iniciando logout...');
         
-        if (error && error.message !== 'Auth session missing!') {
-            // Se houver erro que não seja "sessão faltando", mostrar
-            console.log('⚠️ Erro ao fazer logout no Supabase:', error);
-        }
+        // Tentar fazer logout no Supabase
+        await supabase.auth.signOut().catch(err => {
+            console.log('⚠️ Aviso ao desconectar:', err?.message);
+        });
+        
+        console.log('✅ Logout do Supabase realizado');
     } catch (e) {
         // Se houver exceção, continuar mesmo assim
-        console.log('⚠️ Exceção ao fazer logout:', e);
+        console.log('⚠️ Exceção ao fazer logout:', e?.message);
     }
     
-    // Limpar TODOS os dados do localStorage (sempre fazer, independente do erro)
+    // Limpar TODOS os dados do localStorage (SEMPRE fazer, independente do erro)
+    console.log('🧹 Limpando localStorage...');
     localStorage.removeItem('projectCode');
     localStorage.removeItem('projectId');
     localStorage.removeItem('projectName');
     localStorage.removeItem('currentProjectCode');
     localStorage.removeItem('lastUserId');
-    localStorage.clear(); // Limpar tudo para garantir
+    localStorage.removeItem('tasks');
+    
+    // Limpar tudo (force clear)
+    try {
+        localStorage.clear();
+    } catch (e) {
+        console.log('⚠️ Não conseguiu fazer clear:', e?.message);
+    }
+    
     console.log('🧹 localStorage limpo completamente');
     
     showNotification('✅ Desconectado com sucesso!');
+    
+    // Aguardar um pouco e depois redirecionar
     setTimeout(() => {
-        window.location.href = 'auth.html?logout=' + Date.now(); // Adicionar timestamp para evitar cache
-    }, 1000);
+        console.log('🔄 Redirecionando para auth.html...');
+        // Fazer redirect com cache buster
+        const timestamp = Date.now();
+        window.location.href = 'auth.html?t=' + timestamp;
+        // Force reload se necessário
+        window.location.reload(true);
+    }, 1500);
 }
 
 function closeLogoutModal() {
