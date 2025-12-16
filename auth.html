@@ -325,7 +325,7 @@
         }
 
         async function handleCodeLogin() {
-            const code = document.getElementById('projectCode').value.trim().toUpperCase();
+            const code = document.getElementById('projectCode').value.trim();
             const btn = document.getElementById('codeBtn');
 
             if (!code) {
@@ -360,11 +360,16 @@
                 console.log('📊 Total de projetos no banco:', allProjects?.length || 0);
                 const codigosDisponiveis = allProjects?.map(p => p.project_code).filter(c => c) || [];
                 console.log('Códigos disponíveis:', codigosDisponiveis);
+                console.log('Procurando por:', code);
 
-                // Buscar projeto com código (case-insensitive)
-                const project = allProjects?.find(p => 
-                    p.project_code && p.project_code.toUpperCase() === code.toUpperCase()
-                );
+                // Buscar projeto com código (case-insensitive e trim)
+                const project = allProjects?.find(p => {
+                    if (!p.project_code) return false;
+                    const codigoDb = p.project_code.trim();
+                    const codigoInput = code.trim();
+                    console.log(`Comparando: "${codigoDb.toUpperCase()}" === "${codigoInput.toUpperCase()}"`);
+                    return codigoDb.toUpperCase() === codigoInput.toUpperCase();
+                });
 
                 if (!project) {
                     console.log('❌ Projeto não encontrado com código:', code);
@@ -392,12 +397,22 @@
         }
 
         function validarCodigoProject(code) {
+            const cleaned = code.trim();
+            console.log('Validando código:', cleaned);
+            
             // Verifica se tem 8 caracteres exatamente
-            if (code.length !== 8) return false;
+            if (cleaned.length !== 8) {
+                console.log('❌ Comprimento inválido:', cleaned.length);
+                return false;
+            }
             
-            // Verifica se contém CXT em qualquer posição
-            if (!code.includes('CXT')) return false;
+            // Verifica se contém CXT em qualquer posição (case-insensitive)
+            if (!cleaned.toUpperCase().includes('CXT')) {
+                console.log('❌ Não contém CXT');
+                return false;
+            }
             
+            console.log('✅ Código válido');
             return true;
         }
 
