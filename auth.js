@@ -102,23 +102,32 @@ function confirmLogout() {
 }
 
 async function performLogout() {
-    const { error } = await supabase.auth.signOut();
-    
-    if (error) {
-        showNotification('❌ Erro ao fazer logout: ' + error.message);
-    } else {
-        // Limpar TODOS os dados do localStorage
-        localStorage.removeItem('projectCode');
-        localStorage.removeItem('projectId');
-        localStorage.removeItem('projectName');
-        localStorage.removeItem('lastUserId');
-        localStorage.clear(); // Limpar tudo para garantir
-        console.log('🧹 localStorage limpo completamente');
-        showNotification('✅ Desconectado com sucesso!');
-        setTimeout(() => {
-            window.location.href = 'auth.html?logout=' + Date.now(); // Adicionar timestamp para evitar cache
-        }, 1000);
+    try {
+        // Tentar fazer logout no Supabase
+        const { error } = await supabase.auth.signOut();
+        
+        if (error && error.message !== 'Auth session missing!') {
+            // Se houver erro que não seja "sessão faltando", mostrar
+            console.log('⚠️ Erro ao fazer logout no Supabase:', error);
+        }
+    } catch (e) {
+        // Se houver exceção, continuar mesmo assim
+        console.log('⚠️ Exceção ao fazer logout:', e);
     }
+    
+    // Limpar TODOS os dados do localStorage (sempre fazer, independente do erro)
+    localStorage.removeItem('projectCode');
+    localStorage.removeItem('projectId');
+    localStorage.removeItem('projectName');
+    localStorage.removeItem('currentProjectCode');
+    localStorage.removeItem('lastUserId');
+    localStorage.clear(); // Limpar tudo para garantir
+    console.log('🧹 localStorage limpo completamente');
+    
+    showNotification('✅ Desconectado com sucesso!');
+    setTimeout(() => {
+        window.location.href = 'auth.html?logout=' + Date.now(); // Adicionar timestamp para evitar cache
+    }, 1000);
 }
 
 function closeLogoutModal() {
