@@ -232,8 +232,11 @@
     <script>
         // Verificar se usuário já está logado
         window.addEventListener('load', async function() {
+            // Se voltou da página de projeto, pode estar na aba de código
+            // Não redireciona se o usuário está na página de login intencional
             const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
+            if (session && !localStorage.getItem('projectCode')) {
+                // Usuário logado por email, vai para a página principal
                 window.location.href = 'index.html';
             }
         });
@@ -387,13 +390,21 @@
                     showMessage('❌ Código de projeto não encontrado!<br><small style="color: #dc3545; font-weight: bold;">⚠️ Verifique se o código está correto ou contacte o administrador.</small>', 'error');
                 } else {
                     console.log('✅ Projeto encontrado:', project.name, '- Código:', project.project_code);
-                    showMessage('✅ Acesso concedido! Abrindo projeto...', 'success');
-                    localStorage.setItem('projectCode', project.project_code);
-                    localStorage.setItem('projectId', project.id);
-                    localStorage.setItem('projectName', project.name);
+                    // Limpar dados anteriores para garantir que carrega o novo código
+                    localStorage.removeItem('projectCode');
+                    localStorage.removeItem('projectId');
+                    localStorage.removeItem('projectName');
+                    // Aguardar um pouco e depois salvar os novos dados
                     setTimeout(() => {
-                        window.location.href = 'index.html';
-                    }, 1500);
+                        localStorage.setItem('projectCode', project.project_code);
+                        localStorage.setItem('projectId', project.id);
+                        localStorage.setItem('projectName', project.name);
+                        console.log('💾 Dados do novo projeto salvos no localStorage');
+                        showMessage('✅ Acesso concedido! Abrindo projeto...', 'success');
+                        setTimeout(() => {
+                            window.location.href = 'index.html?t=' + Date.now(); // Adicionar timestamp para evitar cache
+                        }, 800);
+                    }, 200);
                 }
             } catch (error) {
                 console.log('❌ Erro geral:', error);

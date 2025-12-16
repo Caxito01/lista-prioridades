@@ -4,10 +4,20 @@
 async function checkAuth() {
     // Primeiro, verificar se há acesso por código
     const projectCode = localStorage.getItem('projectCode');
-    if (projectCode) {
+    const projectId = localStorage.getItem('projectId');
+    
+    if (projectCode && projectId) {
         console.log('🔑 Acesso por código detectado:', projectCode);
-        displayProjectCode(projectCode);
-        return { id: 'code-access', email: projectCode };
+        // Validar que o código tem 8 caracteres e contém CXT
+        if (projectCode.length === 8 && projectCode.toUpperCase().includes('CXT')) {
+            displayProjectCode(projectCode);
+            return { id: 'code-access', email: projectCode };
+        } else {
+            console.log('⚠️ Código inválido no localStorage, limpando...');
+            localStorage.removeItem('projectCode');
+            localStorage.removeItem('projectId');
+            localStorage.removeItem('projectName');
+        }
     }
     
     const { data: { session } } = await supabase.auth.getSession();
@@ -97,12 +107,16 @@ async function performLogout() {
     if (error) {
         showNotification('❌ Erro ao fazer logout: ' + error.message);
     } else {
-        // Limpar dados de acesso por código
+        // Limpar TODOS os dados do localStorage
         localStorage.removeItem('projectCode');
         localStorage.removeItem('projectId');
+        localStorage.removeItem('projectName');
+        localStorage.removeItem('lastUserId');
+        localStorage.clear(); // Limpar tudo para garantir
+        console.log('🧹 localStorage limpo completamente');
         showNotification('✅ Desconectado com sucesso!');
         setTimeout(() => {
-            window.location.href = 'auth.html';
+            window.location.href = 'auth.html?logout=' + Date.now(); // Adicionar timestamp para evitar cache
         }, 1000);
     }
 }
