@@ -1,5 +1,5 @@
 // Versão de build para depuração em produção
-console.log('auth.js v20251222b carregado');
+console.log('auth.js v1735000001 carregado');
 
 // Verificar se usuário está logado
 async function checkAuth() {
