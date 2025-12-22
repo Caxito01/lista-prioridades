@@ -1,3 +1,6 @@
+// Versão de build para depuração
+console.log('app.js v1735000000 carregado');
+
 // Estado da aplicação
 let tasks = [];
 let editingTaskId = null;
@@ -43,9 +46,14 @@ function displayProjectCode(code) {
 }
 
 // Inicialização
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('📄 DOMContentLoaded - iniciando app.js...');
+    
+    // Garantir que Supabase está inicializado
+    await window.initSupabase();
+    
     loadEvaluatorNames();
-    loadTasks();
+    await loadTasks();
     updateEvaluatorLabels();
     renderTasks();
     
@@ -61,6 +69,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Event listener para o formulário
     document.getElementById('taskForm').addEventListener('submit', handleFormSubmit);
+    
+    console.log('✅ App.js inicializado com sucesso!');
 });
 
 // Carregar nomes dos avaliadores do localStorage
@@ -77,18 +87,49 @@ function loadEvaluatorNames() {
 
 // Salvar nomes dos avaliadores
 function saveEvaluatorNames() {
-    evaluatorNames = {
-        eval1: document.getElementById('evaluator1').value || 'Avaliador 1',
-        eval2: document.getElementById('evaluator2').value || 'Avaliador 2',
-        eval3: document.getElementById('evaluator3').value || 'Avaliador 3',
-        eval4: document.getElementById('evaluator4').value || 'Avaliador 4'
-    };
+    console.log('💾 Salvando nomes dos avaliadores...');
     
-    localStorage.setItem('evaluatorNames', JSON.stringify(evaluatorNames));
-    updateEvaluatorLabels();
-    renderTasks();
-    
-    showNotification('Nomes dos avaliadores salvos com sucesso!');
+    try {
+        // Obter valores dos campos
+        const eval1Value = document.getElementById('evaluator1')?.value || 'Avaliador 1';
+        const eval2Value = document.getElementById('evaluator2')?.value || 'Avaliador 2';
+        const eval3Value = document.getElementById('evaluator3')?.value || 'Avaliador 3';
+        const eval4Value = document.getElementById('evaluator4')?.value || 'Avaliador 4';
+        
+        console.log('📝 Valores obtidos:');
+        console.log('   1:', eval1Value);
+        console.log('   2:', eval2Value);
+        console.log('   3:', eval3Value);
+        console.log('   4:', eval4Value);
+        
+        // Atualizar objeto global
+        evaluatorNames = {
+            eval1: eval1Value,
+            eval2: eval2Value,
+            eval3: eval3Value,
+            eval4: eval4Value
+        };
+        
+        // Salvar no localStorage
+        localStorage.setItem('evaluatorNames', JSON.stringify(evaluatorNames));
+        console.log('✅ Nomes salvos no localStorage');
+        
+        // Atualizar labels
+        updateEvaluatorLabels();
+        console.log('✅ Labels atualizados');
+        
+        // Renderizar tarefas
+        renderTasks();
+        console.log('✅ Tarefas renderizadas');
+        
+        // Mostrar notificação
+        showNotification('✅ Nomes dos avaliadores salvos com sucesso!');
+        console.log('✅ Notificação exibida');
+        
+    } catch (error) {
+        console.error('❌ Erro ao salvar nomes:', error);
+        showNotification('❌ Erro ao salvar nomes: ' + error.message);
+    }
 }
 
 // Mostrar notificação
@@ -124,77 +165,94 @@ window.onclick = function(event) {
 
 // Atualizar labels dos avaliadores na interface
 function updateEvaluatorLabels() {
+    console.log('🔄 Atualizando labels dos avaliadores...');
+    
     const evaluatorNameSpans = document.querySelectorAll('.evaluator-name');
-    evaluatorNameSpans[0].textContent = evaluatorNames.eval1;
-    evaluatorNameSpans[1].textContent = evaluatorNames.eval2;
-    evaluatorNameSpans[2].textContent = evaluatorNames.eval3;
-    evaluatorNameSpans[3].textContent = evaluatorNames.eval4;
+    console.log('📍 Encontrados .evaluator-name:', evaluatorNameSpans.length);
+    
+    if (evaluatorNameSpans.length >= 4) {
+        evaluatorNameSpans[0].textContent = evaluatorNames.eval1;
+        evaluatorNameSpans[1].textContent = evaluatorNames.eval2;
+        evaluatorNameSpans[2].textContent = evaluatorNames.eval3;
+        evaluatorNameSpans[3].textContent = evaluatorNames.eval4;
+        console.log('✅ Labels de nomes atualizados:', evaluatorNames);
+    } else {
+        console.warn('⚠️ Nem todos os elementos .evaluator-name encontrados');
+    }
     
     const headers = document.querySelectorAll('.evaluator-header');
-    headers[0].textContent = evaluatorNames.eval1;
-    headers[1].textContent = evaluatorNames.eval2;
-    headers[2].textContent = evaluatorNames.eval3;
-    headers[3].textContent = evaluatorNames.eval4;
-}
-
-// Carregar tarefas do localStorage
-function loadTasks() {
-    const saved = localStorage.getItem('tasks');
-    if (saved) {
-        tasks = JSON.parse(saved);
+    console.log('📍 Encontrados .evaluator-header:', headers.length);
+    
+    if (headers.length >= 4) {
+        headers[0].textContent = evaluatorNames.eval1;
+        headers[1].textContent = evaluatorNames.eval2;
+        headers[2].textContent = evaluatorNames.eval3;
+        headers[3].textContent = evaluatorNames.eval4;
+        console.log('✅ Headers atualizados');
+    } else {
+        console.warn('⚠️ Nem todos os elementos .evaluator-header encontrados');
     }
-}
-
-// Função para carregar todos os dados do localStorage
-async function loadData() {
-    loadEvaluatorNames();
-    await loadTasks();
-    updateEvaluatorLabels();
-    renderTasks();
 }
 
 // Carregar tarefas
 async function loadTasks() {
     const projectId = localStorage.getItem('projectId');
     
-    console.log('📂 Carregando tarefas...');
+    console.log('📂 Carregando tarefas... (projectId:', projectId, ')');
     
     if (projectId) {
         try {
             await window.initSupabase();
             const client = window.getClient();
             if (!client) {
-                console.log('⚠️ Supabase não disponível');
+                console.log('⚠️ Supabase não disponível, usando localStorage');
                 loadTasksFromLocalStorage();
                 return;
             }
             
-            const { data: project } = await client
+            console.log('🔍 Buscando projeto no Supabase: ', projectId);
+            const { data: project, error } = await client
                 .from('projects')
                 .select('*')
                 .eq('id', projectId)
                 .single();
             
+            if (error) {
+                console.log('⚠️ Erro ao buscar projeto:', error.message);
+                loadTasksFromLocalStorage();
+                return;
+            }
+            
             if (project && project.data) {
                 tasks = project.data;
                 localStorage.setItem('tasks', JSON.stringify(tasks));
-                console.log('✅ Tarefas carregadas:', tasks.length);
+                console.log('✅ Tarefas carregadas do Supabase:', tasks.length);
+            } else if (project && project.tasks) {
+                // Compatibilidade com estrutura alternativa
+                tasks = project.tasks;
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+                console.log('✅ Tarefas carregadas (alt):', tasks.length);
             } else {
+                console.log('⚠️ Projeto encontrado mas sem tarefas, usando localStorage');
                 loadTasksFromLocalStorage();
             }
         } catch (error) {
-            console.log('⚠️ Erro:', error.message);
+            console.log('❌ Erro ao carregar tarefas:', error.message);
             loadTasksFromLocalStorage();
         }
-    } else {
-        loadTasksFromLocalStorage();
-    }
-}
     } else {
         // Sem projectId, carregar do localStorage
         console.log('📱 Sem projectId, carregando do localStorage');
         loadTasksFromLocalStorage();
     }
+}
+
+// Função para carregar todos os dados
+async function loadData() {
+    await loadEvaluatorNames();
+    await loadTasks();
+    updateEvaluatorLabels();
+    renderTasks();
 }
 
 function loadTasksFromLocalStorage() {
@@ -423,19 +481,33 @@ function toggleSortOrder() {
 
 // Renderizar tarefas na tabela
 function renderTasks() {
+    console.log('🔄 Renderizando tarefas...');
+    
     const tbody = document.getElementById('tasksTableBody');
     const noTasksMessage = document.getElementById('noTasksMessage');
+    
+    if (!tbody) {
+        console.warn('⚠️ Elemento tasksTableBody não encontrado');
+        return;
+    }
     
     let filteredTasks = filterTasks();
     let sortedTasks = sortTasks(filteredTasks);
     
+    console.log('📊 Tarefas a renderizar:', sortedTasks.length);
+    
     if (sortedTasks.length === 0) {
         tbody.innerHTML = '';
-        noTasksMessage.style.display = 'block';
+        if (noTasksMessage) {
+            noTasksMessage.style.display = 'block';
+        }
+        console.log('📭 Nenhuma tarefa para exibir');
         return;
     }
     
-    noTasksMessage.style.display = 'none';
+    if (noTasksMessage) {
+        noTasksMessage.style.display = 'none';
+    }
     
     tbody.innerHTML = sortedTasks.map((task, index) => `
         <tr>
@@ -697,7 +769,14 @@ async function performSaveProject(projectName) {
             return;
         }
         
-        const { data: { session } } = await client.auth.getSession();
+        const { data, error: sessionError } = await client.auth.getSession();
+        const session = data?.session;
+        
+        if (sessionError) {
+            showNotification('❌ Erro ao verificar autenticação: ' + sessionError.message);
+            return;
+        }
+        
         if (!session) {
             showNotification('❌ Você precisa estar logado para salvar!');
             return;
@@ -724,7 +803,7 @@ async function performSaveProject(projectName) {
             project_code: projectCode
         };
         
-        const { data, error } = await client
+        const { data: responseData, error } = await client
             .from('projects')
             .insert([insertData]);
         
@@ -748,41 +827,10 @@ async function performSaveAsNew(projectName) {
     if (modal) modal.remove();
 }
 
-// Atualizar projeto existente
+// Atualizar projeto existente - CHAMADA PARA AUTH.JS
 async function performUpdateProject(projectId) {
-    try {
-        if (!tasks || tasks.length === 0) {
-            showNotification('❌ A lista de tarefas está vazia! Adicione pelo menos uma tarefa antes de salvar.');
-            return;
-        }
-        
-        const tasksWithEmptyStage = tasks.filter(task => !task.stage || task.stage.trim() === '');
-        
-        if (tasksWithEmptyStage.length > 0) {
-            showNotification(`❌ Há ${tasksWithEmptyStage.length} tarefa(s) sem estágio definido! Preencha antes de salvar.`);
-            return;
-        }
-        
-        const projectData = {
-            evaluator_names: evaluatorNames,
-            tasks: tasks
-        };
-        
-        const { error } = await supabase
-            .from('projects')
-            .update({ data: projectData, updated_at: new Date().toISOString() })
-            .eq('id', projectId);
-        
-        if (error) {
-            showNotification('❌ Erro ao atualizar: ' + error.message);
-        } else {
-            showNotification('✅ Projeto atualizado com sucesso!');
-            const modal = document.getElementById('saveActionModal');
-            if (modal) modal.remove();
-        }
-    } catch (error) {
-        showNotification('❌ Erro: ' + error.message);
-    }
+    // Esta função delegada para auth.js que tem a versão correta
+    return await window.performUpdateProject ? window.performUpdateProject(projectId) : console.error('performUpdateProject de auth.js não disponível');
 }
 
 // Fechar modal de save

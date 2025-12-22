@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Supabase</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 10px;
+            font-size: 16px;
+            border: none;
+            border-radius: 6px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .output {
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .warning { color: #ffc107; }
+        .info { color: #17a2b8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste do Supabase</h1>
+        
+        <button onclick="testarInit()">1️⃣ Testar Inicialização</button>
+        <button onclick="testarAuth()">2️⃣ Testar Autenticação</button>
+        <button onclick="testarProjetos()">3️⃣ Testar Projetos</button>
+        <button onclick="testarRLS()">4️⃣ Testar RLS</button>
+        <button onclick="testarRPC()">5️⃣ Testar RPC</button>
+        <button onclick="rodarTudoAutomatico()" style="background: #28a745;">
+            ▶️ Rodar Todos os Testes
+        </button>
+        <button onclick="limpar()" style="background: #6c757d;">
+            🗑️ Limpar Saída
+        </button>
+
+        <div class="output" id="output">
+            Clique em um botão para começar...
+        </div>
+    </div>
+
+    <script>
+        const output = document.getElementById('output');
+        let client = null;
+        let session = null;
+
+        function log(msg, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type;
+            const line = `<div class="${className}">[${timestamp}] ${msg}</div>`;
+            output.innerHTML += line;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function limpar() {
+            output.innerHTML = '';
+        }
+
+        async function testarInit() {
+            limpar();
+            log('⏳ Inicializando Supabase...', 'info');
+            
+            try {
+                const result = await window.initSupabase();
+                log('✅ window.initSupabase() = ' + result, 'success');
+                
+                client = window.getClient();
+                log('✅ window.getClient() = ' + (client ? 'OK' : 'NULL'), 'success');
+                
+                if (client) {
+                    log('✅ client.auth existe? ' + (client.auth ? 'SIM' : 'NÃO'), 'success');
+                    log('✅ client.from existe? ' + (client.from ? 'SIM' : 'NÃO'), 'success');
+                }
+            } catch (e) {
+                log('❌ ERRO: ' + e.message, 'error');
+            }
+        }
+
+        async function testarAuth() {
+            limpar();
+            if (!client) {
+                log('❌ Cliente não inicializado. Rode TESTE 1 primeiro!', 'error');
+                return;
+            }
+
+            log('⏳ Verificando sessão...', 'info');
+            try {
+                const { data, error } = await client.auth.getSession();
+                
+                if (error) {
+                    log('❌ Erro: ' + error.message, 'error');
+                    return;
+                }
+
+                session = data?.session;
+                if (session) {
+                    log('✅ SESSÃO ATIVA!', 'success');
+                    log('   User ID: ' + session.user.id.substring(0, 8) + '...', 'success');
+                    log('   Email: ' + session.user.email, 'success');
+                } else {
+                    log('⚠️ Nenhuma sessão ativa (não logado)', 'warning');
+                }
+            } catch (e) {
+                log('❌ ERRO: ' + e.message, 'error');
+            }
+        }
+
+        async function testarProjetos() {
+            limpar();
+            if (!client) {
+                log('❌ Cliente não inicializado!', 'error');
+                return;
+            }
+
+            log('⏳ Carregando projetos...', 'info');
+            try {
+                const { data, error } = await client
+                    .from('projects')
+                    .select('id, name, project_code, created_at')
+                    .limit(5);
+
+                if (error) {
+                    log('❌ Erro: ' + error.message, 'error');
+                    return;
+                }
+
+                if (data && data.length > 0) {
+                    log('✅ Projetos encontrados: ' + data.length, 'success');
+                    data.forEach((p, i) => {
+                        log(`   ${i+1}. ${p.name} (${p.project_code || 'sem código'})`, 'info');
+                    });
+                } else {
+                    log('⚠️ Nenhum projeto encontrado', 'warning');
+                }
+            } catch (e) {
+                log('❌ ERRO: ' + e.message, 'error');
+            }
+        }
+
+        async function testarRLS() {
+            limpar();
+            if (!client || !session) {
+                log('⚠️ RLS requer autenticação', 'warning');
+                return;
+            }
+
+            log('⏳ Testando RLS...', 'info');
+            try {
+                const { data, error } = await client
+                    .from('projects')
+                    .select('id, user_id')
+                    .limit(100);
+
+                if (error) {
+                    log('✅ RLS ativo - não consegue ver projetos de outros', 'success');
+                } else {
+                    const otherUsers = data.filter(p => p.user_id !== session.user.id);
+                    if (otherUsers.length === 0) {
+                        log('✅ RLS funcionando - só vê próprios projetos', 'success');
+                    } else {
+                        log('⚠️ RLS pode ter problema - vendo projetos de outros', 'warning');
+                    }
+                }
+            } catch (e) {
+                log('❌ ERRO: ' + e.message, 'error');
+            }
+        }
+
+        async function testarRPC() {
+            limpar();
+            if (!client) {
+                log('❌ Cliente não inicializado!', 'error');
+                return;
+            }
+
+            log('⏳ Testando RPC...', 'info');
+            try {
+                const { data, error } = await client.rpc('get_project_by_code', { 
+                    p_code: 'TESTE'
+                });
+
+                if (error && error.message.includes('does not exist')) {
+                    log('⚠️ Função get_project_by_code não existe', 'warning');
+                    log('   Você precisa criar no Supabase SQL Editor', 'warning');
+                } else if (error) {
+                    log('⚠️ Erro: ' + error.message, 'warning');
+                } else {
+                    log('✅ RPC get_project_by_code disponível', 'success');
+                }
+            } catch (e) {
+                log('❌ ERRO: ' + e.message, 'error');
+            }
+        }
+
+        async function rodarTudoAutomatico() {
+            limpar();
+            log('🧪 INICIANDO TESTES AUTOMÁTICOS...', 'info');
+            log('', 'info');
+
+            await testarInit();
+            log('', 'info');
+            await testarAuth();
+            log('', 'info');
+            await testarProjetos();
+            log('', 'info');
+            await testarRLS();
+            log('', 'info');
+            await testarRPC();
+            
+            log('', 'info');
+            log('✅ TESTES COMPLETOS!', 'success');
+            log('', 'info');
+            log('Se há erros acima em VERMELHO (❌), copie a mensagem e envie para corrigir', 'warning');
+        }
+    </script>
+</body>
+</html>
