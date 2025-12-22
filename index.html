@@ -11,6 +11,63 @@
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-init.js?v=1735000002"></script>
+    <script>
+        // Funções críticas inline para evitar problemas de cache
+        async function handleLogout() {
+            const confirmLogout = confirm('Tem certeza que deseja sair?');
+            if (!confirmLogout) return;
+            
+            try {
+                const projectCode = localStorage.getItem('projectCode');
+                if (!projectCode) {
+                    await window.initSupabase();
+                    const client = window.getClient();
+                    if (client && client.auth) {
+                        await client.auth.signOut().catch(e => console.log('⚠️ Erro:', e?.message));
+                    }
+                }
+                localStorage.clear();
+                window.location.replace('auth.html?t=' + Date.now());
+            } catch (e) {
+                console.log('⚠️ Erro geral:', e?.message);
+                localStorage.clear();
+                window.location.replace('auth.html?t=' + Date.now());
+            }
+        }
+        
+        async function loadFromDatabase() {
+            try {
+                await window.initSupabase();
+                const client = window.getClient();
+                if (!client || !client.auth) {
+                    alert('❌ Erro: Supabase não inicializado. Recarregue a página.');
+                    return;
+                }
+                const { data, error: sessionError } = await client.auth.getSession();
+                if (!data?.session) {
+                    alert('❌ Você precisa estar logado para carregar projetos!');
+                    return;
+                }
+                const { data: projects, error } = await client
+                    .from('projects')
+                    .select('*')
+                    .eq('user_id', data.session.user.id)
+                    .order('created_at', { ascending: false })
+                    .limit(10);
+                if (error) {
+                    alert('❌ Erro ao carregar: ' + error.message);
+                    return;
+                }
+                if (!projects || projects.length === 0) {
+                    alert('Nenhum projeto encontrado para sua conta.');
+                    return;
+                }
+                showProjectSelection(projects);
+            } catch (error) {
+                alert('❌ Erro: ' + error.message);
+            }
+        }
+    </script>
     <script src="auth.js?v=1735000002"></script>
     <script src="app.js?v=1735000002"></script>
 </head>
