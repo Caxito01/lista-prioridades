@@ -7,9 +7,9 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js"></script>
-    <script src="auth.js"></script>
-    <script src="app.js"></script>
+    <script src="supabase-init.js?v=1735000000"></script>
+    <script src="auth.js?v=1735000000"></script>
+    <script src="app.js?v=1735000000"></script>
 </head>
 <body>
     <header>
@@ -162,7 +162,16 @@
                     <label>Avaliador 4:</label>
                     <input type="text" id="evaluator4" value="Avaliador 4">
                 </div>
-                <button class="btn btn-primary" onclick="saveEvaluatorNames()">Salvar Nomes</button>
+                <button class="btn btn-primary" onclick="
+                    console.log('🔘 Botão Salvar Nomes clicado');
+                    if (typeof saveEvaluatorNames === 'function') {
+                        console.log('✅ saveEvaluatorNames existe, executando...');
+                        saveEvaluatorNames();
+                    } else {
+                        console.error('❌ saveEvaluatorNames NÃO DEFINIDA!');
+                        alert('ERRO: Função saveEvaluatorNames não encontrada. Pressione Ctrl+Shift+Delete, limpe o cache e recarregue.');
+                    }
+                ">Salvar Nomes</button>
             </div>
         </section>
 

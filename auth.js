@@ -1,3 +1,6 @@
+// Versão de build para depuração em produção
+console.log('auth.js v20251222b carregado');
+
 // Verificar se usuário está logado
 async function checkAuth() {
     console.log('🔐 Verificando autenticação...');
@@ -20,9 +23,10 @@ async function checkAuth() {
     }
     
     try {
-        const { data: { session } } = await client.auth.getSession();
+        const { data, error: sessionError } = await client.auth.getSession();
+        const session = data?.session;
         
-        if (!session) {
+        if (sessionError || !session) {
             console.log('⚠️ Sem sessão, redirecionando...');
             window.location.href = 'auth.html';
             return null;
@@ -150,8 +154,17 @@ function clearUserData() {
 // Filtrar projetos apenas do usuário logado
 async function loadUserProjects() {
     try {
-        // Aguardar um pouco para garantir que a session está pronta
-        await new Promise(resolve => setTimeout(resolve, 300));
+        console.log('🔄 Carregando projetos do usuário...');
+        
+        // Aguardar inicialização do Supabase
+        await window.initSupabase();
+        const client = window.getClient();
+        
+        if (!client) {
+            console.error('❌ Supabase client não inicializou');
+            showNotification('❌ Erro ao conectar com o servidor');
+            return [];
+        }
         
         // Verificar se há acesso por código
         const projectCode = localStorage.getItem('projectCode');
@@ -159,7 +172,7 @@ async function loadUserProjects() {
             console.log('🔑 Tentando carregar projeto com código:', projectCode);
             
             // Tentar usar a função pública primeiro
-            const { data: project, error } = await supabase
+            const { data: project, error } = await client
                 .rpc('get_project_by_code', { p_code: projectCode });
             
             if (!error && project && project.length > 0) {
@@ -168,7 +181,7 @@ async function loadUserProjects() {
             } else {
                 console.log('⚠️ Função RPC falhou, tentando fallback...');
                 // Fallback: query direta (pode ser bloqueada por RLS)
-                const { data: fallbackProject, error: fallbackError } = await supabase
+                const { data: fallbackProject, error: fallbackError } = await client
                     .from('projects')
                     .select('*')
                     .eq('project_code', projectCode)
@@ -184,10 +197,18 @@ async function loadUserProjects() {
             }
         }
         
-        const { data: { session } } = await supabase.auth.getSession();
+        console.log('🔐 Verificando sessão...');
+        const { data, error: sessionError } = await client.auth.getSession();
+        const session = data?.session;
+        
+        if (sessionError) {
+            console.log('❌ Erro ao obter sessão:', sessionError.message);
+            showNotification('❌ Erro ao verificar autenticação: ' + sessionError.message);
+            return [];
+        }
         
         if (!session) {
-            console.log('❌ ERRO: Nenhuma sessão encontrada');
+            console.log('❌ Nenhuma sessão encontrada');
             showNotification('❌ Você precisa estar logado!');
             return [];
         }
@@ -199,7 +220,7 @@ async function loadUserProjects() {
         console.log('   Email:', userEmail);
         
         // Carregar APENAS os projetos do usuário logado
-        const { data: projects, error } = await supabase
+        const { data: projects, error } = await client
             .from('projects')
             .select('*')
             .eq('user_id', userId)
@@ -226,7 +247,21 @@ async function loadUserProjects() {
 // Salvar projeto com user_id
 async function saveToDatabaseWithAuth() {
     try {
-        const { data: { session } } = await supabase.auth.getSession();
+        await window.initSupabase();
+        const client = window.getClient();
+        
+        if (!client) {
+            showNotification('❌ Erro ao conectar com o servidor');
+            return;
+        }
+        
+        const { data, error: sessionError } = await client.auth.getSession();
+        const session = data?.session;
+        
+        if (sessionError) {
+            showNotification('❌ Erro ao verificar autenticação: ' + sessionError.message);
+            return;
+        }
         
         if (!session) {
             showNotification('❌ Você precisa estar logado para salvar!');
@@ -246,10 +281,29 @@ async function saveToDatabaseWithAuth() {
 // Salvar novo projeto com user_id
 async function performSaveProject(projectName) {
     try {
-        const { data: { session } } = await supabase.auth.getSession();
+        // Inicializar Supabase se não estiver
+        if (!window.getSupabase()) {
+            window.initSupabaseSimple();
+        }
+        
+        const client = window.getSupabase();
+        
+        if (!client) {
+            showNotification('❌ Erro ao conectar com o servidor');
+            return;
+        }
+        
+        const { data, error: sessionError } = await client.auth.getSession();
+        const session = data?.session;
+        
+        if (sessionError) {
+            console.log('❌ Erro ao verificar sessão:', sessionError.message);
+            showNotification('❌ Erro ao verificar autenticação: ' + sessionError.message);
+            return;
+        }
         
         if (!session) {
-            console.log('❌ ERRO: Nenhuma sessão ao tentar salvar');
+            console.log('❌ Nenhuma sessão ao tentar salvar');
             showNotification('❌ Você precisa estar logado!');
             return;
         }
@@ -269,7 +323,7 @@ async function performSaveProject(projectName) {
         
         const now = new Date();
         
-        const { data, error } = await supabase
+        const { data, error } = await client
             .from('projects')
             .insert([
                 {
@@ -297,7 +351,31 @@ async function performSaveProject(projectName) {
 // Atualizar projeto verificando user_id
 async function performUpdateProject(projectId) {
     try {
-        const { data: { session } } = await supabase.auth.getSession();
+        await window.initSupabase();
+        
+        // Retry loop - aguardar o client ficar disponível
+        let client = null;
+        let retries = 0;
+        while (!client && retries < 20) {
+            client = window.getClient();
+            if (!client) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                retries++;
+            }
+        }
+        
+        if (!client) {
+            showNotification('❌ Erro ao conectar com o servidor');
+            return;
+        }
+        
+        const { data, error: sessionError } = await client.auth.getSession();
+        const session = data?.session;
+        
+        if (sessionError) {
+            showNotification('❌ Erro ao verificar autenticação: ' + sessionError.message);
+            return;
+        }
         
         if (!session) {
             showNotification('❌ Você precisa estar logado!');
@@ -321,7 +399,7 @@ async function performUpdateProject(projectId) {
             tasks: tasks
         };
         
-        const { error } = await supabase
+        const { error } = await client
             .from('projects')
             .update({ data: projectData, updated_at: new Date().toISOString() })
             .eq('id', projectId)
@@ -342,10 +420,32 @@ async function performUpdateProject(projectId) {
 // Carregar projeto verificando user_id
 async function loadFromDatabase() {
     try {
-        // Aguardar um pouco para garantir que a session está pronta
-        await new Promise(resolve => setTimeout(resolve, 300));
+        console.log('📂 Carregando projetos do banco de dados...');
         
-        const { data: { session } } = await supabase.auth.getSession();
+        // Garante inicialização do SDK e do cliente
+        await window.initSupabase();
+        const client = window.getClient();
+        
+        if (!client) {
+            showNotification('❌ Erro: Supabase não inicializado');
+            return;
+        }
+        // Verificações adicionais para evitar TypeError em getSession
+        if (!client.auth || typeof client.auth.getSession !== 'function') {
+            console.warn('⚠️ client.auth indisponível. client=', client);
+            showNotification('❌ Erro: autenticação não disponível. Recarregue a página.');
+            return;
+        }
+        
+        console.log('✅ Cliente Supabase obtido');
+        
+        const { data, error: sessionError } = await client.auth.getSession();
+        const session = data?.session;
+        
+        if (sessionError) {
+            showNotification('❌ Erro ao verificar autenticação: ' + sessionError.message);
+            return;
+        }
         
         if (!session) {
             showNotification('❌ Você precisa estar logado para carregar projetos!');
@@ -360,7 +460,7 @@ async function loadFromDatabase() {
         console.log('   Email:', userEmail);
         
         // Carregar APENAS os projetos deste usuário (filtrado por user_id)
-        const { data: projects, error } = await supabase
+        const { data: projects, error } = await client
             .from('projects')
             .select('*')
             .eq('user_id', userId)

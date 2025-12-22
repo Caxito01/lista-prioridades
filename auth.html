@@ -240,7 +240,8 @@
             if (client && client.auth) {
                 try {
                     console.log('✅ Cliente pronto');
-                    const { data: { session } } = await client.auth.getSession();
+                    const { data, error: sessionError } = await client.auth.getSession();
+                    const session = data?.session;
                     if (session && !localStorage.getItem('projectCode')) {
                         console.log('✅ Sessão ativa, redirecionando...');
                         window.location.href = 'index.html';
