@@ -1,21 +1,20 @@
-// Funções de Autenticação
-
 // Verificar se usuário está logado
 async function checkAuth() {
     console.log('🔐 Verificando autenticação...');
     
-    const client = await waitForSupabase();
+    await window.initSupabase();
+    const client = window.getClient();
     if (!client) {
-        console.error('❌ Cliente Supabase não disponível');
+        console.error('❌ Cliente não inicializou');
         return null;
     }
     
-    // Verificar acesso por código primeiro
+    // Verificar acesso por código
     const projectCode = localStorage.getItem('projectCode');
     const projectId = localStorage.getItem('projectId');
     
     if (projectCode && projectId) {
-        console.log('✅ Código de acesso encontrado');
+        console.log('✅ Código de acesso detectado');
         displayProjectCode(projectCode);
         return { id: 'code-access', email: projectCode };
     }
@@ -39,7 +38,7 @@ async function checkAuth() {
         
         return session.user;
     } catch (error) {
-        console.error('❌ Erro ao verificar autenticação:', error);
+        console.error('❌ Erro:', error);
         return null;
     }
 }
@@ -106,31 +105,22 @@ function confirmLogout() {
 
 async function performLogout() {
     try {
-        console.log('🔐 Iniciando logout...');
+        console.log('🔐 Logout...');
         
         const projectCode = localStorage.getItem('projectCode');
         if (!projectCode) {
-            // Fazer logout no Supabase se não for acesso por código
-            try {
-                const client = await waitForSupabase();
-                if (client && client.auth) {
-                    await client.auth.signOut().catch(err => {
-                        console.log('⚠️ Erro ao desconectar:', err?.message);
-                    });
-                    console.log('✅ Logout do Supabase realizado');
-                }
-            } catch (err) {
-                console.log('⚠️ Erro ao fazer logout:', err?.message);
+            await window.initSupabase();
+            const client = window.getClient();
+            if (client && client.auth) {
+                await client.auth.signOut().catch(e => console.log('⚠️ Erro:', e?.message));
+                console.log('✅ Supabase logout');
             }
         }
     } catch (e) {
         console.log('⚠️ Erro geral:', e?.message);
     }
     
-    // Limpar localStorage
-    console.log('🧹 Limpando localStorage...');
     localStorage.clear();
-    
     console.log('✅ Desconectado');
     showNotification('✅ Desconectado com sucesso!');
     
