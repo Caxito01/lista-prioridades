@@ -1,5 +1,5 @@
 // Versão de build para depuração em produção
-console.log('auth.js v1735000001 carregado');
+console.log('auth.js v1735000002 carregado');
 
 // Verificar se usuário está logado
 async function checkAuth() {
@@ -323,7 +323,7 @@ async function performSaveProject(projectName) {
         
         const now = new Date();
         
-        const { data, error } = await client
+        const { data: insertData, error } = await client
             .from('projects')
             .insert([
                 {
@@ -339,7 +339,7 @@ async function performSaveProject(projectName) {
             showNotification('❌ Erro ao salvar: ' + error.message);
         } else {
             console.log('✅ Projeto salvo com sucesso!');
-            console.log('   Dados retornados:', data);
+            console.log('   Dados retornados:', insertData);
             showNotification('✅ Projeto salvo com sucesso!');
         }
     } catch (error) {
