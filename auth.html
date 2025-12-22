@@ -6,6 +6,7 @@
     <title>Login - Sistema de Gerenciamento de Prioridades</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
     <style>
         * {
             margin: 0;
@@ -232,12 +233,22 @@
     <script>
         // Verificar se usuário já está logado
         window.addEventListener('load', async function() {
-            // Se voltou da página de projeto, pode estar na aba de código
-            // Não redireciona se o usuário está na página de login intencional
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session && !localStorage.getItem('projectCode')) {
-                // Usuário logado por email, vai para a página principal
-                window.location.href = 'index.html';
+            console.log('📄 auth.html carregado');
+            const client = await waitForSupabase();
+            
+            if (client && client.auth) {
+                try {
+                    console.log('✅ Cliente Supabase pronto, verificando sessão...');
+                    const { data: { session } } = await client.auth.getSession();
+                    if (session && !localStorage.getItem('projectCode')) {
+                        console.log('✅ Sessão ativa, redirecionando para index.html');
+                        window.location.href = 'index.html';
+                    }
+                } catch (error) {
+                    console.log('⚠️ Erro ao verificar sessão:', error?.message);
+                }
+            } else {
+                console.error('❌ Cliente Supabase não inicializou');
             }
         });
 
@@ -306,7 +317,13 @@
             btn.innerHTML = '<span class="spinner"></span>Entrando...';
 
             try {
-                const { data, error } = await supabase.auth.signInWithPassword({
+                const client = await waitForSupabase();
+                if (!client || !client.auth) {
+                    showMessage('❌ Sistema não inicializou. Recarregue a página.', 'error');
+                    return;
+                }
+                
+                const { data, error } = await client.auth.signInWithPassword({
                     email: email,
                     password: password
                 });
@@ -314,7 +331,7 @@
                 if (error) {
                     showMessage('❌ ' + error.message, 'error');
                 } else {
-                    showMessage('✅ Login realizado com sucesso! Redirecionando...', 'success');
+                    showMessage('✅ Login realizado! Redirecionando...', 'success');
                     setTimeout(() => {
                         window.location.href = 'index.html';
                     }, 1500);
@@ -345,69 +362,53 @@
             btn.innerHTML = '<span class="spinner"></span>Acessando...';
 
             try {
+                const client = await waitForSupabase();
+                if (!client) {
+                    showMessage('❌ Sistema não inicializou. Recarregue a página.', 'error');
+                    return;
+                }
+                
                 console.log('🔍 Buscando projeto com código:', code);
                 
-                // Tentar buscar usando a função pública (recomendado)
                 let project = null;
-                const { data: functionResult, error: funcError } = await supabase
+                const { data: functionResult, error: funcError } = await client
                     .rpc('get_project_by_code', { p_code: code });
 
                 if (!funcError && functionResult && functionResult.length > 0) {
                     project = functionResult[0];
-                    console.log('✅ Função pública encontrou projeto:', project.name);
+                    console.log('✅ Projeto encontrado:', project.name);
                 } else {
-                    // Fallback: buscar todos os projetos (pode ser bloqueado por RLS)
-                    console.log('⚠️ Função pública não disponível, tentando fallback...');
-                    const { data: allProjects, error: listError } = await supabase
+                    console.log('⚠️ Buscando no fallback...');
+                    const { data: allProjects, error: listError } = await client
                         .from('projects')
                         .select('*');
 
                     if (listError) {
-                        console.log('❌ Erro ao listar projetos:', listError);
                         showMessage('❌ Erro ao acessar banco: ' + listError.message, 'error');
                         btn.disabled = false;
                         btn.innerHTML = 'Acessar Projeto';
                         return;
                     }
 
-                    console.log('📊 Total de projetos no banco:', allProjects?.length || 0);
-                    const codigosDisponiveis = allProjects?.map(p => p.project_code).filter(c => c) || [];
-                    console.log('Códigos disponíveis:', codigosDisponiveis);
-
-                    // Buscar projeto com código (case-insensitive)
                     project = allProjects?.find(p => 
                         p.project_code && 
                         p.project_code.trim().toUpperCase() === code.trim().toUpperCase()
                     );
-
-                    if (!project && codigosDisponiveis.length > 0) {
-                        console.log('Códigos no banco:', codigosDisponiveis);
-                    }
                 }
 
                 if (!project) {
-                    console.log('❌ Projeto não encontrado com código:', code);
-                    showMessage('❌ Código de projeto não encontrado!<br><small style="color: #dc3545; font-weight: bold;">⚠️ Verifique se o código está correto ou contacte o administrador.</small>', 'error');
+                    showMessage('❌ Código de projeto não encontrado!', 'error');
                 } else {
-                    console.log('✅ Projeto encontrado:', project.name, '- Código:', project.project_code);
-                    // Limpar dados anteriores para garantir que carrega o novo código
-                    localStorage.removeItem('projectCode');
-                    localStorage.removeItem('projectId');
-                    localStorage.removeItem('projectName');
-                    // Aguardar um pouco e depois salvar os novos dados
+                    console.log('✅ Projeto encontrado:', project.name);
+                    localStorage.setItem('projectCode', project.project_code);
+                    localStorage.setItem('projectId', project.id);
+                    localStorage.setItem('projectName', project.name);
+                    showMessage('✅ Acesso concedido! Abrindo...', 'success');
                     setTimeout(() => {
-                        localStorage.setItem('projectCode', project.project_code);
-                        localStorage.setItem('projectId', project.id);
-                        localStorage.setItem('projectName', project.name);
-                        console.log('💾 Dados do novo projeto salvos no localStorage');
-                        showMessage('✅ Acesso concedido! Abrindo projeto...', 'success');
-                        setTimeout(() => {
-                            window.location.href = 'index.html?t=' + Date.now(); // Adicionar timestamp para evitar cache
-                        }, 800);
-                    }, 200);
+                        window.location.href = 'index.html?t=' + Date.now();
+                    }, 800);
                 }
             } catch (error) {
-                console.log('❌ Erro geral:', error);
                 showMessage('❌ Erro ao acessar projeto: ' + error.message, 'error');
             } finally {
                 btn.disabled = false;
@@ -460,7 +461,13 @@
             btn.innerHTML = '<span class="spinner"></span>Cadastrando...';
 
             try {
-                const { data, error } = await supabase.auth.signUp({
+                const client = await waitForSupabase();
+                if (!client || !client.auth) {
+                    showMessage('❌ Sistema não inicializou. Recarregue a página.', 'error');
+                    return;
+                }
+                
+                const { data, error } = await client.auth.signUp({
                     email: email,
                     password: password,
                     options: {
@@ -471,7 +478,7 @@
                 if (error) {
                     showMessage('❌ ' + error.message, 'error');
                 } else {
-                    showMessage('✅ Cadastro realizado! Verifique seu email para confirmar a conta.', 'success');
+                    showMessage('✅ Cadastro realizado! Verifique seu email.', 'success');
                     setTimeout(() => {
                         switchTab('email');
                         document.getElementById('registerEmail').value = '';
