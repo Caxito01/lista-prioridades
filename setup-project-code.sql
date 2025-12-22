@@ -1,14 +1,5 @@
 -- -- SQL para adicionar coluna project_code na tabela projects
--- Execute OBRIGATORIAMENTE isso no SQL Editor do Supabase
--- 
--- PASSOS:
--- 1. Acesse: https://app.supabase.com
--- 2. Selecione seu projeto (vzfhsfrfucqoloecnvvu)
--- 3. Clique em "SQL Editor" (lado esquerdo)
--- 4. Clique em "New Query"
--- 5. Cole TUDO abaixo e clique em "Run" (Ctrl+Enter)
-
--- 1. Adicionar coluna project_code (VARCHAR 8 caracteres, UNIQUE)
+-- 1. Adicionar coluna project_code do tipo VARCHAR(8) com valor único
 ALTER TABLE public.projects 
 ADD COLUMN project_code VARCHAR(8) UNIQUE;
 

@@ -153,101 +153,42 @@ async function loadData() {
     renderTasks();
 }
 
-// Carregar tarefas - primeiro tenta do Supabase se houver projectId, depois do localStorage
+// Carregar tarefas - tenta Supabase se houver projectId, senão usa localStorage
 async function loadTasks() {
     const projectId = localStorage.getItem('projectId');
-    const projectCode = localStorage.getItem('projectCode');
     
-    console.log('📂 Iniciando loadTasks:');
-    console.log('   Project ID:', projectId);
-    console.log('   Project Code:', projectCode);
+    console.log('📂 Carregando tarefas... (projectId:', projectId, ')');
     
-    // Se houver projectId, carregar do Supabase
     if (projectId) {
         try {
-            console.log('🔄 Buscando projeto do Supabase com ID:', projectId);
-            const { data: project, error } = await supabase
+            const client = await waitForSupabase();
+            if (!client) {
+                console.log('⚠️ Supabase não disponível');
+                loadTasksFromLocalStorage();
+                return;
+            }
+            
+            const { data: project } = await client
                 .from('projects')
                 .select('*')
                 .eq('id', projectId)
                 .single();
             
-            if (error) {
-                console.log('❌ Erro ao carregar do Supabase:', error);
-                console.log('⚠️ Caindo para localStorage como fallback...');
-                loadTasksFromLocalStorage();
-                return;
-            }
-            
-            if (!project) {
-                console.log('⚠️ Projeto não encontrado no Supabase');
-                loadTasksFromLocalStorage();
-                return;
-            }
-            
-            console.log('✅ Projeto encontrado no Supabase:', project.name);
-            console.log('📊 Campo data:', project.data);
-            console.log('📊 Tipo de data:', typeof project.data);
-            
-            // Tentar diferentes formas de acessar os dados
-            if (project.data) {
-                let projectData = project.data;
-                
-                // Se data for string, fazer parse
-                if (typeof projectData === 'string') {
-                    console.log('🔄 Convertendo data de string para objeto...');
-                    try {
-                        projectData = JSON.parse(projectData);
-                    } catch (e) {
-                        console.log('❌ Erro ao fazer parse de data:', e);
-                        projectData = {};
-                    }
-                }
-                
-                console.log('📦 Dados processados:', projectData);
-                
-                // Procurar tarefas em diferentes locais
-                let foundTasks = null;
-                
-                if (projectData.tasks && Array.isArray(projectData.tasks)) {
-                    foundTasks = projectData.tasks;
-                    console.log('✅ Tarefas encontradas em data.tasks');
-                } else if (projectData.data && projectData.data.tasks && Array.isArray(projectData.data.tasks)) {
-                    foundTasks = projectData.data.tasks;
-                    console.log('✅ Tarefas encontradas em data.data.tasks');
-                } else if (Array.isArray(projectData)) {
-                    foundTasks = projectData;
-                    console.log('✅ Data é diretamente um array de tarefas');
-                }
-                
-                if (foundTasks) {
-                    tasks = foundTasks;
-                    console.log('✅ Tarefas carregadas:', tasks.length);
-                } else {
-                    console.log('⚠️ Nenhuma tarefa encontrada na estrutura esperada');
-                    console.log('Estrutura do objeto:', Object.keys(projectData));
-                    tasks = [];
-                }
-                
-                // Extrair nomes dos avaliadores (também em diferentes locais possíveis)
-                if (projectData.evaluator_names) {
-                    evaluatorNames = projectData.evaluator_names;
-                    console.log('✅ Nomes dos avaliadores carregados');
-                } else if (projectData.data && projectData.data.evaluator_names) {
-                    evaluatorNames = projectData.data.evaluator_names;
-                    console.log('✅ Nomes dos avaliadores carregados (nested)');
-                } else {
-                    console.log('⚠️ Nomes dos avaliadores não encontrados, usando padrão');
-                }
+            if (project && project.data) {
+                tasks = project.data;
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+                console.log('✅ Tarefas carregadas do Supabase:', tasks.length);
             } else {
-                console.log('⚠️ Campo "data" está vazio no projeto');
-                tasks = [];
+                loadTasksFromLocalStorage();
             }
         } catch (error) {
-            console.log('❌ ERRO ao carregar tarefas:', error);
-            console.log('Stack:', error.stack);
+            console.log('⚠️ Erro ao carregar do Supabase:', error.message);
             loadTasksFromLocalStorage();
         }
+    } else {
+        loadTasksFromLocalStorage();
+    }
+}
     } else {
         // Sem projectId, carregar do localStorage
         console.log('📱 Sem projectId, carregando do localStorage');
@@ -748,9 +689,13 @@ function closeNewProjectModal() {
 // Salvar novo projeto
 async function performSaveProject(projectName) {
     try {
-        // Obter a sessão do usuário
-        const { data: { session } } = await supabase.auth.getSession();
+        const client = await waitForSupabase();
+        if (!client) {
+            showNotification('❌ Sistema não inicializou. Recarregue a página.');
+            return;
+        }
         
+        const { data: { session } } = await client.auth.getSession();
         if (!session) {
             showNotification('❌ Você precisa estar logado para salvar!');
             return;
@@ -759,68 +704,36 @@ async function performSaveProject(projectName) {
         const userId = session.user.id;
         const projectCode = generateProjectCode();
         
-        console.log('💾 Salvando projeto em app.js:');
-        console.log('   Nome:', projectName);
-        console.log('   User ID:', userId);
-        console.log('   Código:', projectCode);
+        console.log('💾 Salvando projeto (nome:', projectName, ')');
         
         const projectData = {
             evaluator_names: evaluatorNames,
             tasks: tasks,
-            project_code: projectCode  // Guardar no JSON do projeto também
+            project_code: projectCode
         };
         
-        // Obter data/hora atual do navegador (já está em hora local)
         const now = new Date();
         
-        // Preparar objeto de inserção sem project_code (por enquanto)
         const insertData = {
             name: projectName,
             data: projectData,
             user_id: userId,
-            created_at: now.toISOString()
+            created_at: now.toISOString(),
+            project_code: projectCode
         };
         
-        // Tentar adicionar project_code se a coluna existir
-        // Será ignorado se a coluna não existir no banco
-        try {
-            insertData.project_code = projectCode;
-        } catch (e) {
-            console.log('⚠️ Coluna project_code não disponível ainda');
-        }
-        
-        const { data, error } = await supabase
+        const { data, error } = await client
             .from('projects')
             .insert([insertData]);
         
         if (error) {
-            console.log('❌ ERRO ao salvar:', error);
-            // Se o erro for sobre project_code, tenta sem ela
-            if (error.message.includes('project_code')) {
-                console.log('⚠️ Tentando salvar sem project_code...');
-                const { data: data2, error: error2 } = await supabase
-                    .from('projects')
-                    .insert([{
-                        name: projectName,
-                        data: projectData,
-                        user_id: userId,
-                        created_at: now.toISOString()
-                    }]);
-                
-                if (error2) {
-                    showNotification('❌ Erro ao salvar: ' + error2.message);
-                } else {
-                    showNotification(`✅ Projeto salvo! Código: ${projectCode}\n(Configure a coluna no banco para usar o código)`);
-                }
-            } else {
-                showNotification('❌ Erro ao salvar: ' + error.message);
-            }
+            showNotification('❌ Erro ao salvar: ' + error.message);
         } else {
-            console.log('✅ Projeto salvo com sucesso!');
+            console.log('✅ Projeto salvo!');
             showNotification(`✅ Projeto salvo! Código: ${projectCode}`);
         }
     } catch (error) {
-        console.log('❌ ERRO geral:', error);
+        console.log('❌ Erro ao salvar:', error);
         showNotification('❌ Erro: ' + error.message);
     }
 }

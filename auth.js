@@ -2,43 +2,46 @@
 
 // Verificar se usuário está logado
 async function checkAuth() {
-    // Primeiro, verificar se há acesso por código
+    console.log('🔐 Verificando autenticação...');
+    
+    const client = await waitForSupabase();
+    if (!client) {
+        console.error('❌ Cliente Supabase não disponível');
+        return null;
+    }
+    
+    // Verificar acesso por código primeiro
     const projectCode = localStorage.getItem('projectCode');
     const projectId = localStorage.getItem('projectId');
     
     if (projectCode && projectId) {
-        console.log('🔑 Acesso por código detectado:', projectCode);
-        // Validar que o código tem 8 caracteres e contém CXT
-        if (projectCode.length === 8 && projectCode.toUpperCase().includes('CXT')) {
-            displayProjectCode(projectCode);
-            return { id: 'code-access', email: projectCode };
-        } else {
-            console.log('⚠️ Código inválido no localStorage, limpando...');
-            localStorage.removeItem('projectCode');
-            localStorage.removeItem('projectId');
-            localStorage.removeItem('projectName');
-        }
+        console.log('✅ Código de acesso encontrado');
+        displayProjectCode(projectCode);
+        return { id: 'code-access', email: projectCode };
     }
     
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-        // Usuário não logado, redirecionar para auth
-        window.location.href = 'auth.html';
+    try {
+        const { data: { session } } = await client.auth.getSession();
+        
+        if (!session) {
+            console.log('⚠️ Sem sessão, redirecionando...');
+            window.location.href = 'auth.html';
+            return null;
+        }
+        
+        const currentUser = session.user.id;
+        const lastUser = localStorage.getItem('lastUserId');
+        
+        if (lastUser !== currentUser) {
+            clearUserData();
+            localStorage.setItem('lastUserId', currentUser);
+        }
+        
+        return session.user;
+    } catch (error) {
+        console.error('❌ Erro ao verificar autenticação:', error);
         return null;
     }
-    
-    // Verificar se é um novo usuário (primeira vez logando)
-    const currentUser = session.user.id;
-    const lastUser = localStorage.getItem('lastUserId');
-    
-    if (lastUser !== currentUser) {
-        // Novo usuário - limpar dados locais
-        clearUserData();
-        localStorage.setItem('lastUserId', currentUser);
-    }
-    
-    return session.user;
 }
 
 // Exibir código do projeto na página
@@ -105,46 +108,35 @@ async function performLogout() {
     try {
         console.log('🔐 Iniciando logout...');
         
-        // Tentar fazer logout no Supabase
-        await supabase.auth.signOut().catch(err => {
-            console.log('⚠️ Aviso ao desconectar:', err?.message);
-        });
-        
-        console.log('✅ Logout do Supabase realizado');
+        const projectCode = localStorage.getItem('projectCode');
+        if (!projectCode) {
+            // Fazer logout no Supabase se não for acesso por código
+            try {
+                const client = await waitForSupabase();
+                if (client && client.auth) {
+                    await client.auth.signOut().catch(err => {
+                        console.log('⚠️ Erro ao desconectar:', err?.message);
+                    });
+                    console.log('✅ Logout do Supabase realizado');
+                }
+            } catch (err) {
+                console.log('⚠️ Erro ao fazer logout:', err?.message);
+            }
+        }
     } catch (e) {
-        // Se houver exceção, continuar mesmo assim
-        console.log('⚠️ Exceção ao fazer logout:', e?.message);
+        console.log('⚠️ Erro geral:', e?.message);
     }
     
-    // Limpar TODOS os dados do localStorage (SEMPRE fazer, independente do erro)
+    // Limpar localStorage
     console.log('🧹 Limpando localStorage...');
-    localStorage.removeItem('projectCode');
-    localStorage.removeItem('projectId');
-    localStorage.removeItem('projectName');
-    localStorage.removeItem('currentProjectCode');
-    localStorage.removeItem('lastUserId');
-    localStorage.removeItem('tasks');
+    localStorage.clear();
     
-    // Limpar tudo (force clear)
-    try {
-        localStorage.clear();
-    } catch (e) {
-        console.log('⚠️ Não conseguiu fazer clear:', e?.message);
-    }
-    
-    console.log('🧹 localStorage limpo completamente');
-    
+    console.log('✅ Desconectado');
     showNotification('✅ Desconectado com sucesso!');
     
-    // Aguardar um pouco e depois redirecionar
     setTimeout(() => {
-        console.log('🔄 Redirecionando para auth.html...');
-        // Fazer redirect com cache buster
-        const timestamp = Date.now();
-        window.location.href = 'auth.html?t=' + timestamp;
-        // Force reload se necessário
-        window.location.reload(true);
-    }, 1500);
+        window.location.replace('auth.html?t=' + Date.now());
+    }, 1000);
 }
 
 function closeLogoutModal() {
@@ -410,4 +402,18 @@ async function loadFromDatabase() {
         console.log('❌ ERRO geral em loadFromDatabase:', error);
         showNotification('Erro: ' + error.message);
     }
+}
+
+// Mostrar notificação
+function showNotification(message) {
+    const notification = document.createElement('div');
+    notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #28a745; color: white; padding: 15px 25px; border-radius: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 10000; animation: fadeIn 0.3s ease-in;';
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.3s ease-out';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
 }
