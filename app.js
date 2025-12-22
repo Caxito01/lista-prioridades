@@ -153,15 +153,16 @@ async function loadData() {
     renderTasks();
 }
 
-// Carregar tarefas - tenta Supabase se houver projectId, senão usa localStorage
+// Carregar tarefas
 async function loadTasks() {
     const projectId = localStorage.getItem('projectId');
     
-    console.log('📂 Carregando tarefas... (projectId:', projectId, ')');
+    console.log('📂 Carregando tarefas...');
     
     if (projectId) {
         try {
-            const client = await waitForSupabase();
+            await window.initSupabase();
+            const client = window.getClient();
             if (!client) {
                 console.log('⚠️ Supabase não disponível');
                 loadTasksFromLocalStorage();
@@ -177,12 +178,12 @@ async function loadTasks() {
             if (project && project.data) {
                 tasks = project.data;
                 localStorage.setItem('tasks', JSON.stringify(tasks));
-                console.log('✅ Tarefas carregadas do Supabase:', tasks.length);
+                console.log('✅ Tarefas carregadas:', tasks.length);
             } else {
                 loadTasksFromLocalStorage();
             }
         } catch (error) {
-            console.log('⚠️ Erro ao carregar do Supabase:', error.message);
+            console.log('⚠️ Erro:', error.message);
             loadTasksFromLocalStorage();
         }
     } else {
@@ -689,7 +690,8 @@ function closeNewProjectModal() {
 // Salvar novo projeto
 async function performSaveProject(projectName) {
     try {
-        const client = await waitForSupabase();
+        await window.initSupabase();
+        const client = window.getClient();
         if (!client) {
             showNotification('❌ Sistema não inicializou. Recarregue a página.');
             return;
@@ -704,7 +706,7 @@ async function performSaveProject(projectName) {
         const userId = session.user.id;
         const projectCode = generateProjectCode();
         
-        console.log('💾 Salvando projeto (nome:', projectName, ')');
+        console.log('💾 Salvando projeto...');
         
         const projectData = {
             evaluator_names: evaluatorNames,
@@ -727,13 +729,13 @@ async function performSaveProject(projectName) {
             .insert([insertData]);
         
         if (error) {
-            showNotification('❌ Erro ao salvar: ' + error.message);
+            showNotification('❌ Erro: ' + error.message);
         } else {
             console.log('✅ Projeto salvo!');
             showNotification(`✅ Projeto salvo! Código: ${projectCode}`);
         }
     } catch (error) {
-        console.log('❌ Erro ao salvar:', error);
+        console.log('❌ Erro:', error);
         showNotification('❌ Erro: ' + error.message);
     }
 }

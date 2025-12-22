@@ -234,21 +234,20 @@
         // Verificar se usuário já está logado
         window.addEventListener('load', async function() {
             console.log('📄 auth.html carregado');
-            const client = await waitForSupabase();
+            await window.initSupabase();
+            const client = window.getClient();
             
             if (client && client.auth) {
                 try {
-                    console.log('✅ Cliente Supabase pronto, verificando sessão...');
+                    console.log('✅ Cliente pronto');
                     const { data: { session } } = await client.auth.getSession();
                     if (session && !localStorage.getItem('projectCode')) {
-                        console.log('✅ Sessão ativa, redirecionando para index.html');
+                        console.log('✅ Sessão ativa, redirecionando...');
                         window.location.href = 'index.html';
                     }
                 } catch (error) {
                     console.log('⚠️ Erro ao verificar sessão:', error?.message);
                 }
-            } else {
-                console.error('❌ Cliente Supabase não inicializou');
             }
         });
 
@@ -317,9 +316,10 @@
             btn.innerHTML = '<span class="spinner"></span>Entrando...';
 
             try {
-                const client = await waitForSupabase();
-                if (!client || !client.auth) {
-                    showMessage('❌ Sistema não inicializou. Recarregue a página.', 'error');
+                await window.initSupabase();
+                const client = window.getClient();
+                if (!client) {
+                    showMessage('❌ Sistema não inicializou. Recarregue.', 'error');
                     return;
                 }
                 
@@ -337,7 +337,7 @@
                     }, 1500);
                 }
             } catch (error) {
-                showMessage('❌ Erro ao fazer login: ' + error.message, 'error');
+                showMessage('❌ Erro: ' + error.message, 'error');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = 'Entrar';
@@ -349,12 +349,12 @@
             const btn = document.getElementById('codeBtn');
 
             if (!code) {
-                showMessage('❌ Digite o código do projeto!', 'error');
+                showMessage('❌ Digite o código!', 'error');
                 return;
             }
 
             if (!validarCodigoProject(code)) {
-                showMessage('❌ Código inválido! Deve conter "CXT" + 5 dígitos', 'error');
+                showMessage('❌ Código inválido!', 'error');
                 return;
             }
 
@@ -362,54 +362,42 @@
             btn.innerHTML = '<span class="spinner"></span>Acessando...';
 
             try {
-                const client = await waitForSupabase();
+                await window.initSupabase();
+                const client = window.getClient();
                 if (!client) {
-                    showMessage('❌ Sistema não inicializou. Recarregue a página.', 'error');
+                    showMessage('❌ Sistema não inicializou. Recarregue.', 'error');
                     return;
                 }
                 
-                console.log('🔍 Buscando projeto com código:', code);
+                console.log('🔍 Buscando código:', code);
                 
                 let project = null;
-                const { data: functionResult, error: funcError } = await client
-                    .rpc('get_project_by_code', { p_code: code });
+                const { data: result } = await client.rpc('get_project_by_code', { p_code: code });
 
-                if (!funcError && functionResult && functionResult.length > 0) {
-                    project = functionResult[0];
-                    console.log('✅ Projeto encontrado:', project.name);
+                if (result && result.length > 0) {
+                    project = result[0];
+                    console.log('✅ Projeto encontrado');
                 } else {
-                    console.log('⚠️ Buscando no fallback...');
-                    const { data: allProjects, error: listError } = await client
-                        .from('projects')
-                        .select('*');
-
-                    if (listError) {
-                        showMessage('❌ Erro ao acessar banco: ' + listError.message, 'error');
-                        btn.disabled = false;
-                        btn.innerHTML = 'Acessar Projeto';
-                        return;
-                    }
-
+                    // Fallback
+                    const { data: allProjects } = await client.from('projects').select('*');
                     project = allProjects?.find(p => 
-                        p.project_code && 
-                        p.project_code.trim().toUpperCase() === code.trim().toUpperCase()
+                        p.project_code?.toUpperCase() === code.toUpperCase()
                     );
                 }
 
                 if (!project) {
-                    showMessage('❌ Código de projeto não encontrado!', 'error');
+                    showMessage('❌ Código não encontrado!', 'error');
                 } else {
-                    console.log('✅ Projeto encontrado:', project.name);
                     localStorage.setItem('projectCode', project.project_code);
                     localStorage.setItem('projectId', project.id);
                     localStorage.setItem('projectName', project.name);
-                    showMessage('✅ Acesso concedido! Abrindo...', 'success');
+                    showMessage('✅ Acesso concedido!', 'success');
                     setTimeout(() => {
                         window.location.href = 'index.html?t=' + Date.now();
                     }, 800);
                 }
             } catch (error) {
-                showMessage('❌ Erro ao acessar projeto: ' + error.message, 'error');
+                showMessage('❌ Erro: ' + error.message, 'error');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = 'Acessar Projeto';
@@ -461,9 +449,10 @@
             btn.innerHTML = '<span class="spinner"></span>Cadastrando...';
 
             try {
-                const client = await waitForSupabase();
-                if (!client || !client.auth) {
-                    showMessage('❌ Sistema não inicializou. Recarregue a página.', 'error');
+                await window.initSupabase();
+                const client = window.getClient();
+                if (!client) {
+                    showMessage('❌ Sistema não inicializou. Recarregue.', 'error');
                     return;
                 }
                 
