@@ -1,5 +1,5 @@
 // Versão de build para depuração
-console.log('app.js v1735000003 carregado');
+console.log('app.js v1735000004 carregado');
 
 // Estado da aplicação
 let tasks = [];
@@ -49,13 +49,26 @@ function displayProjectCode(code) {
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('📄 DOMContentLoaded - iniciando app.js...');
     
+    // PRIMEIRO: Carregar tasks do localStorage
+    const savedTasks = localStorage.getItem('tasks');
+    if (savedTasks) {
+        try {
+            tasks = JSON.parse(savedTasks);
+            console.log('✅ Tasks carregadas do localStorage:', tasks.length);
+        } catch (e) {
+            console.error('❌ Erro ao parsear tasks:', e);
+            tasks = [];
+        }
+    } else {
+        console.log('⚠️ Nenhuma task no localStorage');
+        tasks = [];
+    }
+    
     // Garantir que Supabase está inicializado
     await window.initSupabase();
     
     loadEvaluatorNames();
-    await loadTasks();
     updateEvaluatorLabels();
-    renderTasks();
     
     // Verificar acesso por código
     const projectCode = localStorage.getItem('projectCode');
@@ -67,10 +80,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('projectCodeDisplay').textContent = projectCode;
     }
     
+    // RENDERIZAR TASKS (já carregadas acima)
+    renderTasks();
+    
     // Event listener para o formulário
     document.getElementById('taskForm').addEventListener('submit', handleFormSubmit);
     
     console.log('✅ App.js inicializado com sucesso!');
+    console.log('✅ Total de tasks:', tasks.length);
 });
 
 // Carregar nomes dos avaliadores do localStorage
