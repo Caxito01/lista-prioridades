@@ -930,11 +930,17 @@ async function confirmLoadProject(projectId) {
         evaluatorNames = project.data.evaluator_names || evaluatorNames;
         tasks = project.data.tasks || [];
         
+        // Salvar no localStorage
+        localStorage.setItem('evaluatorNames', JSON.stringify(evaluatorNames));
+        localStorage.setItem('tasks', JSON.stringify(tasks));
+        localStorage.setItem('projectId', project.id);
+        
         // Exibir código do projeto se houver
         if (project.project_code) {
             console.log('🔑 Código do projeto:', project.project_code);
             displayProjectCode(project.project_code);
             localStorage.setItem('currentProjectCode', project.project_code);
+            localStorage.setItem('projectCode', project.project_code);
         }
         
         // Atualizar interface
@@ -946,6 +952,10 @@ async function confirmLoadProject(projectId) {
         updateEvaluatorLabels();
         renderTasks();
         
+        console.log('✅ Projeto carregado:', project.name);
+        console.log('   Tarefas:', tasks.length);
+        console.log('   Avaliadores:', evaluatorNames);
+        
         showNotification('✅ Projeto carregado com sucesso!');
         
         // Remover modais
@@ -954,6 +964,9 @@ async function confirmLoadProject(projectId) {
         
         const actionModal = document.getElementById('saveActionModal');
         if (actionModal) actionModal.remove();
+    } else {
+        console.error('❌ Projeto não encontrado ou sem dados');
+        showNotification('❌ Erro ao carregar projeto');
     }
 }
 
