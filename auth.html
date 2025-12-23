@@ -389,9 +389,29 @@
                 if (!project) {
                     showMessage('❌ Código não encontrado!', 'error');
                 } else {
+                    // Salvar informações do projeto no localStorage
                     localStorage.setItem('projectCode', project.project_code);
                     localStorage.setItem('projectId', project.id);
                     localStorage.setItem('projectName', project.name);
+                    
+                    // Carregar dados do projeto para a interface
+                    if (project.data) {
+                        const evaluatorNames = project.data.evaluator_names || {
+                            eval1: 'Avaliador 1',
+                            eval2: 'Avaliador 2',
+                            eval3: 'Avaliador 3',
+                            eval4: 'Avaliador 4'
+                        };
+                        const tasks = project.data.tasks || [];
+                        
+                        localStorage.setItem('evaluatorNames', JSON.stringify(evaluatorNames));
+                        localStorage.setItem('tasks', JSON.stringify(tasks));
+                        
+                        console.log('✅ Dados do projeto salvos no localStorage');
+                        console.log('   Tarefas:', tasks.length);
+                        console.log('   Avaliadores:', evaluatorNames);
+                    }
+                    
                     showMessage('✅ Acesso concedido!', 'success');
                     setTimeout(() => {
                         window.location.href = 'index.html?t=' + Date.now();
