@@ -1,5 +1,5 @@
 // Versão de build para depuração
-console.log('app.js v1735330000 carregado - DEBUG ATUALIZAR PROJETO');
+console.log('app.js v1735330200 carregado - FIX ONCLICK LISTENERS');
 
 // Estado da aplicação
 let tasks = [];
@@ -659,8 +659,13 @@ function showSaveProjectSelection(projects) {
 
 // Selecionar projeto para salvar
 function selectProjectToSave(projectId, projectName) {
+    console.log('📋 selectProjectToSave chamado:', projectId, projectName);
+    
     const modal = document.getElementById('saveSaveProjectModal');
     if (modal) modal.remove();
+    
+    // Escapar aspas no projectName para evitar quebra do HTML
+    const safeProjectName = projectName.replace(/'/g, "\\'");
     
     // Perguntar o que fazer
     const confirmModal = document.createElement('div');
@@ -683,15 +688,35 @@ function selectProjectToSave(projectId, projectName) {
             <h2 style="margin-top: 0; color: #333;">📋 ${projectName}</h2>
             <p style="color: #666;">O que deseja fazer?</p>
             <div style="display: flex; flex-direction: column; gap: 10px;">
-                <button onclick="performUpdateProject('${projectId}')" style="width: 100%; padding: 12px; background: #17ec10ff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">🔄 Atualizar este Projeto</button>
-                <button onclick="performSaveAsNew('${projectName}')" style="width: 100%; padding: 12px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">💾 Salvar Como Novo</button>
-                <button onclick="confirmLoadProject('${projectId}')" style="width: 100%; padding: 12px; background: #A183C0; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">📥 Carregar este Projeto</button>
-                <button onclick="closeSaveActionModal()" style="width: 100%; padding: 12px; background: #cc2121ff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">✖ Cancelar</button>
+                <button id="btnUpdateProject" data-project-id="${projectId}" style="width: 100%; padding: 12px; background: #17ec10ff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">🔄 Atualizar este Projeto</button>
+                <button id="btnSaveAsNew" data-project-name="${safeProjectName}" style="width: 100%; padding: 12px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">💾 Salvar Como Novo</button>
+                <button id="btnLoadProject" data-project-id="${projectId}" style="width: 100%; padding: 12px; background: #A183C0; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">📥 Carregar este Projeto</button>
+                <button id="btnCancel" style="width: 100%; padding: 12px; background: #cc2121ff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">✖ Cancelar</button>
             </div>
         </div>
     `;
     
     document.body.appendChild(confirmModal);
+    
+    // Adicionar event listeners após adicionar ao DOM
+    document.getElementById('btnUpdateProject').addEventListener('click', function() {
+        console.log('🖱️ Clique em Atualizar detectado!');
+        const pid = this.getAttribute('data-project-id');
+        console.log('🆔 Project ID:', pid);
+        performUpdateProject(pid);
+    });
+    
+    document.getElementById('btnSaveAsNew').addEventListener('click', function() {
+        const pname = this.getAttribute('data-project-name');
+        performSaveAsNew(pname);
+    });
+    
+    document.getElementById('btnLoadProject').addEventListener('click', function() {
+        const pid = this.getAttribute('data-project-id');
+        confirmLoadProject(pid);
+    });
+    
+    document.getElementById('btnCancel').addEventListener('click', closeSaveActionModal);
 }
 
 // Criar novo projeto

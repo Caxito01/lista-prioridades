@@ -1,5 +1,5 @@
 // Versão de build para depuração em produção
-console.log('auth.js v1735330000 carregado - DEBUG ATUALIZAR PROJETO');
+console.log('auth.js v1735330200 carregado - FIX ONCLICK LISTENERS');
 
 // Verificar se usuário está logado
 async function checkAuth() {
