@@ -1,5 +1,5 @@
 // Versão de build para depuração
-console.log('app.js v1735330600 carregado - PROTEÇÃO ANTI-TRAVAMENTO');
+console.log('app.js v1735330800 carregado - FIX FUNÇÕES GLOBAIS');
 
 // Estado da aplicação - EXPOR NO ESCOPO GLOBAL
 window.tasks = [];
@@ -606,8 +606,17 @@ function printToPDF() {
 
 // Salvar dados no Supabase
 async function saveToDatabase() {
-    // Esta função chama a versão do auth.js que filtra por usuário
-    await saveToDatabaseWithAuth();
+    console.log('💾 saveToDatabase chamado');
+    
+    // Verificar se a função existe
+    if (typeof window.saveToDatabaseWithAuth === 'function') {
+        await window.saveToDatabaseWithAuth();
+    } else if (typeof saveToDatabaseWithAuth === 'function') {
+        await saveToDatabaseWithAuth();
+    } else {
+        console.error('❌ saveToDatabaseWithAuth não encontrada!');
+        showNotification('❌ Erro ao salvar. Recarregue a página.');
+    }
 }
 
 // Mostrar seleção de projetos para salvar
@@ -1050,12 +1059,29 @@ async function confirmLoadProject(projectId) {
 
 // Verificação de autenticação ao carregar a página
 window.addEventListener('load', async function() {
-    const user = await checkAuth();
+    console.log('🎯 Iniciando verificação de autenticação...');
+    
+    // Usar a função checkAuth do window se existir
+    const checkAuthFn = window.checkAuth || checkAuth;
+    
+    if (typeof checkAuthFn !== 'function') {
+        console.error('❌ checkAuth não encontrada!');
+        return;
+    }
+    
+    const user = await checkAuthFn();
+    console.log('👤 Usuário retornado:', user);
+    
     if (user) {
         // Mostrar email do usuário no header (ou código se acesso por código)
         const headerButtons = document.querySelector('.header-buttons');
         if (headerButtons) {
+            // Remover userInfo anterior se existir
+            const existingUserInfo = headerButtons.querySelector('.user-info');
+            if (existingUserInfo) existingUserInfo.remove();
+            
             const userInfo = document.createElement('span');
+            userInfo.className = 'user-info';
             userInfo.style.cssText = 'color: #666; font-size: 13px; margin-right: 15px; display: flex; align-items: center;';
             
             // Se for acesso por código, mostrar o código
@@ -1063,18 +1089,24 @@ window.addEventListener('load', async function() {
             if (projectCode) {
                 userInfo.innerHTML = `🔑 ${projectCode}`;
                 displayProjectCode(projectCode);
-            } else {
-                // Se for email, procurar por código do projeto armazenado
+            } else if (user.email) {
+                // Se for email normal
+                userInfo.innerHTML = `👤 ${user.email}`;
+                
+                // Verificar se há código do projeto armazenado
                 const currentProjectCode = localStorage.getItem('currentProjectCode');
                 if (currentProjectCode) {
-                    userInfo.innerHTML = `🔑 ${currentProjectCode}`;
                     displayProjectCode(currentProjectCode);
-                } else {
-                    userInfo.innerHTML = `👤 ${user.email}`;
                 }
+            } else if (user.id === 'code-access') {
+                // Acesso por código
+                userInfo.innerHTML = `🔑 Acesso por Código`;
             }
             
             headerButtons.insertBefore(userInfo, headerButtons.firstChild);
+            console.log('✅ User info adicionada ao header');
+        } else {
+            console.warn('⚠️ .header-buttons não encontrado');
         }
         
         // Carregar dados (aguardar se for do Supabase)
