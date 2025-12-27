@@ -2,26 +2,15 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Gerenciamento de Prioridades</title>
-    <meta name="description" content="Sistema de gerenciamento e priorização de projetos">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    
-    <!-- PWA Meta Tags -->
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Prioridades">
-    <meta name="theme-color" content="#667eea">
-    <link rel="manifest" href="manifest.json">
-    
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' fill='%23667eea'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='100' fill='white'>📊</text></svg>">
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-init.js?v=1735335100"></script>
+    <script src="supabase-init.js?v=1735000002"></script>
     <script>
         // Funções críticas inline para evitar problemas de cache
         async function handleLogout() {
@@ -79,8 +68,8 @@
             }
         }
     </script>
-    <script src="auth.js?v=1735335100"></script>
-    <script src="app.js?v=1735335100"></script>
+    <script src="auth.js?v=1735000002"></script>
+    <script src="app.js?v=1735000002"></script>
 </head>
 <body>
     <header>
@@ -370,28 +359,5 @@
             <p>&copy; CECM - 2025 Sistema de Gerenciamento de Prioridades. Todos os direitos reservados.</p>
         </div>
     </footer>
-
-    <!-- Service Worker Registration -->
-    <script>
-        // DESABILITAR Service Worker temporariamente para forçar atualização
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
-                    console.log('🗑️ Removendo Service Worker antigo...');
-                    registration.unregister();
-                }
-            });
-            
-            // Limpar todos os caches
-            caches.keys().then(function(names) {
-                for (let name of names) {
-                    console.log('🗑️ Removendo cache:', name);
-                    caches.delete(name);
-                }
-            });
-            
-            console.log('✅ Service Workers e caches removidos. Recarregue a página.');
-        }
-    </script>
 </body>
 </html>

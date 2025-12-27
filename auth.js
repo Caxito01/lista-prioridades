@@ -1,13 +1,8 @@
 // Versão de build para depuração em produção
-console.log('auth.js v1735335100 - EXPOSIÇÃO IMEDIATA');
-
-// Declaração antecipada das funções para exposição global
-let checkAuth, saveToDatabaseWithAuth, loadFromDatabase, performUpdateProject;
-
-console.log('📋 Variáveis declaradas, aguardando definições...');
+console.log('auth.js v1735000002 carregado');
 
 // Verificar se usuário está logado
-checkAuth = async function() {
+async function checkAuth() {
     console.log('🔐 Verificando autenticação...');
     
     await window.initSupabase();
@@ -50,10 +45,7 @@ checkAuth = async function() {
         console.error('❌ Erro:', error);
         return null;
     }
-};
-
-// Expor imediatamente
-window.checkAuth = checkAuth;
+}
 
 // Exibir código do projeto na página
 function displayProjectCode(code) {
@@ -148,17 +140,13 @@ function closeLogoutModal() {
 
 // Limpar dados do usuário anterior
 function clearUserData() {
-    if (window.evaluatorNames) {
-        window.evaluatorNames = {
-            eval1: 'Avaliador 1',
-            eval2: 'Avaliador 2',
-            eval3: 'Avaliador 3',
-            eval4: 'Avaliador 4'
-        };
-    }
-    if (window.tasks) {
-        window.tasks = [];
-    }
+    evaluatorNames = {
+        eval1: 'Avaliador 1',
+        eval2: 'Avaliador 2',
+        eval3: 'Avaliador 3',
+        eval4: 'Avaliador 4'
+    };
+    tasks = [];
     localStorage.removeItem('evaluatorNames');
     localStorage.removeItem('tasks');
 }
@@ -183,48 +171,30 @@ async function loadUserProjects() {
         if (projectCode) {
             console.log('🔑 Tentando carregar projeto com código:', projectCode);
             
-            try {
-                // Criar uma Promise com timeout para a requisição RPC
-                const rpcPromise = client.rpc('get_project_by_code', { p_code: projectCode });
-                const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Timeout RPC')), 5000)
-                );
-                
-                const { data: project, error } = await Promise.race([rpcPromise, timeoutPromise]);
-                
-                if (!error && project && project.length > 0) {
-                    console.log('✅ Projeto acessado por código:', projectCode, project[0].name);
-                    return [project[0]];
-                }
-            } catch (rpcError) {
-                console.log('⚠️ Função RPC falhou:', rpcError.message);
-            }
+            // Tentar usar a função pública primeiro
+            const { data: project, error } = await client
+                .rpc('get_project_by_code', { p_code: projectCode });
             
-            // Fallback: query direta com timeout
-            console.log('⚠️ Tentando fallback direto...');
-            try {
-                const fallbackPromise = client
+            if (!error && project && project.length > 0) {
+                console.log('✅ Projeto acessado por código:', projectCode, project[0].name);
+                return [project[0]];
+            } else {
+                console.log('⚠️ Função RPC falhou, tentando fallback...');
+                // Fallback: query direta (pode ser bloqueada por RLS)
+                const { data: fallbackProject, error: fallbackError } = await client
                     .from('projects')
                     .select('*')
                     .eq('project_code', projectCode)
-                    .limit(1);
-                    
-                const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Timeout fallback')), 5000)
-                );
+                    .single();
                 
-                const { data: fallbackProject, error: fallbackError } = await Promise.race([fallbackPromise, timeoutPromise]);
-                
-                if (!fallbackError && fallbackProject && fallbackProject.length > 0) {
+                if (!fallbackError && fallbackProject) {
                     console.log('✅ Projeto acessado por código (fallback):', projectCode);
-                    return fallbackProject;
+                    return [fallbackProject];
+                } else {
+                    console.log('❌ Projeto não encontrado com código:', projectCode);
+                    return [];
                 }
-            } catch (fallbackErr) {
-                console.log('❌ Erro no fallback:', fallbackErr.message);
             }
-            
-            console.log('❌ Projeto não encontrado com código:', projectCode);
-            return [];
         }
         
         console.log('🔐 Verificando sessão...');
@@ -275,42 +245,13 @@ async function loadUserProjects() {
 }
 
 // Salvar projeto com user_id
-saveToDatabaseWithAuth = async function() {
+async function saveToDatabaseWithAuth() {
     try {
-        // Mostrar feedback imediato ao usuário
-        showNotification('⏳ Carregando...');
-        
         await window.initSupabase();
         const client = window.getClient();
         
         if (!client) {
             showNotification('❌ Erro ao conectar com o servidor');
-            return;
-        }
-        
-        // Verificar se está acessando por código
-        const projectCode = localStorage.getItem('projectCode');
-        const projectId = localStorage.getItem('projectId');
-        
-        if (projectCode && projectId) {
-            // Usuário acessou via código - perguntar se quer atualizar ou criar novo
-            try {
-                const projectsPromise = loadUserProjects();
-                const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Timeout ao carregar projetos')), 10000)
-                );
-                
-                const projects = await Promise.race([projectsPromise, timeoutPromise]);
-                
-                if (projects && projects.length > 0) {
-                    showSaveProjectSelection(projects);
-                } else {
-                    showNotification('❌ Não foi possível carregar o projeto. Tente novamente.');
-                }
-            } catch (timeoutError) {
-                console.error('❌ Timeout:', timeoutError);
-                showNotification('❌ Tempo esgotado ao carregar projeto. Verifique sua conexão.');
-            }
             return;
         }
         
@@ -327,28 +268,15 @@ saveToDatabaseWithAuth = async function() {
             return;
         }
         
-        // Buscar projetos do usuário com timeout
-        try {
-            const projectsPromise = loadUserProjects();
-            const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Timeout ao carregar projetos')), 10000)
-            );
-            
-            const projects = await Promise.race([projectsPromise, timeoutPromise]);
-            showSaveProjectSelection(projects);
-        } catch (timeoutError) {
-            console.error('❌ Timeout:', timeoutError);
-            showNotification('❌ Tempo esgotado. Verifique sua conexão.');
-        }
+        // Buscar projetos do usuário
+        const projects = await loadUserProjects();
+        
+        // Mostrar lista de projetos ou criar novo
+        showSaveProjectSelection(projects);
     } catch (error) {
-        console.error('❌ Erro em saveToDatabaseWithAuth:', error);
         showNotification('❌ Erro: ' + error.message);
     }
-};
-
-// Expor imediatamente
-window.saveToDatabaseWithAuth = saveToDatabaseWithAuth;
-console.log('✅ saveToDatabaseWithAuth exposta no window');
+}
 
 // Salvar novo projeto com user_id
 async function performSaveProject(projectName) {
@@ -421,153 +349,76 @@ async function performSaveProject(projectName) {
 }
 
 // Atualizar projeto verificando user_id
-performUpdateProject = async function(projectId) {
-    console.log('🔄 performUpdateProject INICIADO', projectId);
-    
-    // Prevenir múltiplas execuções simultâneas
-    if (window._isUpdating) {
-        console.warn('⚠️ Atualização já em andamento, ignorando...');
-        return;
-    }
-    window._isUpdating = true;
-    
+async function performUpdateProject(projectId) {
     try {
-        // Mostrar feedback imediato
-        console.log('📢 Mostrando notificação...');
-        showNotification('⏳ Atualizando projeto...');
-        
-        console.log('🔌 Inicializando Supabase...');
         await window.initSupabase();
         
-        console.log('🔍 Buscando client...');
-        const client = window.getClient();
+        // Retry loop - aguardar o client ficar disponível
+        let client = null;
+        let retries = 0;
+        while (!client && retries < 20) {
+            client = window.getClient();
+            if (!client) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                retries++;
+            }
+        }
         
         if (!client) {
-            console.error('❌ Client não disponível');
             showNotification('❌ Erro ao conectar com o servidor');
-            window._isUpdating = false;
             return;
         }
         
-        console.log('✅ Client obtido');
+        const { data, error: sessionError } = await client.auth.getSession();
+        const session = data?.session;
         
-        // Verificar se está acessando por código
-        const projectCode = localStorage.getItem('projectCode');
-        const projectIdFromCode = localStorage.getItem('projectId');
-        
-        console.log('📦 Dados localStorage:', { projectCode, projectIdFromCode, projectId });
-        
-        // Se acessou por código, usar o projectId do localStorage
-        const finalProjectId = (projectCode && projectIdFromCode) ? projectIdFromCode : projectId;
-        console.log('🎯 ID final do projeto:', finalProjectId);
-        
-        // Validar se há sessão (apenas para usuários autenticados)
-        let userId = null;
-        if (!projectCode) {
-            console.log('🔐 Verificando sessão (sem código)...');
-            const { data, error: sessionError } = await client.auth.getSession();
-            const session = data?.session;
-            
-            if (sessionError) {
-                console.error('❌ Erro na sessão:', sessionError);
-                showNotification('❌ Erro ao verificar autenticação: ' + sessionError.message);
-                window._isUpdating = false;
-                return;
-            }
-            
-            if (!session) {
-                console.error('❌ Sem sessão');
-                showNotification('❌ Você precisa estar logado!');
-                window._isUpdating = false;
-                return;
-            }
-            
-            userId = session.user.id;
-            console.log('✅ Sessão válida, userId:', userId);
-        } else {
-            console.log('🔑 Acesso por código, pulando verificação de sessão');
+        if (sessionError) {
+            showNotification('❌ Erro ao verificar autenticação: ' + sessionError.message);
+            return;
         }
         
-        console.log('📋 Validando tasks...');
-        const tasks = window.tasks || [];
-        const evaluatorNames = window.evaluatorNames || {};
-        
-        console.log('📦 Tasks do window:', tasks.length);
-        console.log('📦 EvaluatorNames do window:', evaluatorNames);
+        if (!session) {
+            showNotification('❌ Você precisa estar logado!');
+            return;
+        }
         
         if (!tasks || tasks.length === 0) {
-            console.error('❌ Lista de tarefas vazia');
             showNotification('❌ A lista de tarefas está vazia! Adicione pelo menos uma tarefa antes de salvar.');
-            window._isUpdating = false;
             return;
         }
-        
-        console.log('✅ Tasks válidas:', tasks.length);
         
         const tasksWithEmptyStage = tasks.filter(task => !task.stage || task.stage.trim() === '');
         
         if (tasksWithEmptyStage.length > 0) {
-            console.error('❌ Tasks sem estágio:', tasksWithEmptyStage.length);
             showNotification(`❌ Há ${tasksWithEmptyStage.length} tarefa(s) sem estágio definido! Preencha antes de salvar.`);
-            window._isUpdating = false;
             return;
         }
         
-        console.log('📦 Preparando dados do projeto...');
         const projectData = {
             evaluator_names: evaluatorNames,
             tasks: tasks
         };
         
-        console.log('🔄 Montando query de atualização...');
-        // Atualizar com ou sem filtro de user_id dependendo do tipo de acesso
-        let updateQuery = client
+        const { error } = await client
             .from('projects')
             .update({ data: projectData, updated_at: new Date().toISOString() })
-            .eq('id', finalProjectId);
-        
-        // Se não acessou por código, filtrar por user_id
-        if (userId) {
-            console.log('🔒 Adicionando filtro user_id:', userId);
-            updateQuery = updateQuery.eq('user_id', userId);
-        } else {
-            console.log('🔓 Sem filtro user_id (acesso por código)');
-        }
-        
-        console.log('🚀 Executando atualização...');
-        const { error } = await updateQuery;
-        
-        console.log('📥 Resposta recebida');
+            .eq('id', projectId)
+            .eq('user_id', session.user.id);
         
         if (error) {
-            console.error('❌ Erro do Supabase:', error);
             showNotification('❌ Erro ao atualizar: ' + error.message);
         } else {
-            console.log('✅ Atualização bem-sucedida!');
             showNotification('✅ Projeto atualizado com sucesso!');
             const modal = document.getElementById('saveActionModal');
-            if (modal) {
-                console.log('🚪 Fechando modal');
-                modal.remove();
-            }
+            if (modal) modal.remove();
         }
     } catch (error) {
-        console.error('❌ ERRO CAPTURADO em performUpdateProject:', error);
-        console.error('Stack trace:', error.stack);
         showNotification('❌ Erro: ' + error.message);
-    } finally {
-        // Sempre liberar o lock
-        window._isUpdating = false;
-        console.log('🔓 Lock liberado');
     }
-};
-
-// Expor imediatamente
-window.performUpdateProject = performUpdateProject;
-console.log('✅ performUpdateProject exposta no window');
+}
 
 // Carregar projeto verificando user_id
-loadFromDatabase = async function() {
+async function loadFromDatabase() {
     try {
         console.log('📂 Carregando projetos do banco de dados...');
         
@@ -641,11 +492,7 @@ loadFromDatabase = async function() {
         console.log('❌ ERRO geral em loadFromDatabase:', error);
         showNotification('Erro: ' + error.message);
     }
-};
-
-// Expor imediatamente
-window.loadFromDatabase = loadFromDatabase;
-console.log('✅ loadFromDatabase exposta no window');
+}
 
 // Mostrar notificação
 function showNotification(message) {
@@ -660,11 +507,3 @@ function showNotification(message) {
         setTimeout(() => notification.remove(), 300);
     }, 3000);
 }
-
-// Confirmação final de exposição (as funções já foram expostas imediatamente após definição)
-console.log('📋 Funções do auth.js disponíveis:', {
-    checkAuth: typeof window.checkAuth,
-    saveToDatabaseWithAuth: typeof window.saveToDatabaseWithAuth,
-    performUpdateProject: typeof window.performUpdateProject,
-    loadFromDatabase: typeof window.loadFromDatabase
-});

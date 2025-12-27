@@ -1,23 +1,20 @@
 // Versão de build para depuração
-console.log('app.js v1735335100 - CORREÇÃO LOOP CHECKAUTH');
+console.log('app.js v1735000001 carregado');
 
-// Estado da aplicação - EXPOR NO ESCOPO GLOBAL
-window.tasks = [];
-window.evaluatorNames = {
+// Estado da aplicação
+let tasks = [];
+let editingTaskId = null;
+let currentSortOrder = 'priority'; // 'priority' ou 'alphabetical'
+let currentFilter = '';
+let currentProjectCode = null; // Código do projeto acessado
+
+// Nomes dos avaliadores
+let evaluatorNames = {
     eval1: 'Avaliador 1',
     eval2: 'Avaliador 2',
     eval3: 'Avaliador 3',
     eval4: 'Avaliador 4'
 };
-
-// Aliases locais para compatibilidade
-let tasks = window.tasks;
-let evaluatorNames = window.evaluatorNames;
-
-let editingTaskId = null;
-let currentSortOrder = 'priority'; // 'priority' ou 'alphabetical'
-let currentFilter = '';
-let currentProjectCode = null; // Código do projeto acessado
 
 // Gerar código de projeto (CXT + 5 números aleatórios)
 function generateProjectCode() {
@@ -52,29 +49,13 @@ function displayProjectCode(code) {
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('📄 DOMContentLoaded - iniciando app.js...');
     
-    // PRIMEIRO: Carregar tasks do localStorage
-    const savedTasks = localStorage.getItem('tasks');
-    if (savedTasks) {
-        try {
-            window.tasks = JSON.parse(savedTasks);
-            tasks = window.tasks;
-            console.log('✅ Tasks carregadas do localStorage:', tasks.length);
-        } catch (e) {
-            console.error('❌ Erro ao parsear tasks:', e);
-            window.tasks = [];
-            tasks = window.tasks;
-        }
-    } else {
-        console.log('⚠️ Nenhuma task no localStorage');
-        window.tasks = [];
-        tasks = window.tasks;
-    }
-    
     // Garantir que Supabase está inicializado
     await window.initSupabase();
     
     loadEvaluatorNames();
+    await loadTasks();
     updateEvaluatorLabels();
+    renderTasks();
     
     // Verificar acesso por código
     const projectCode = localStorage.getItem('projectCode');
@@ -86,22 +67,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('projectCodeDisplay').textContent = projectCode;
     }
     
-    // RENDERIZAR TASKS (já carregadas acima)
-    renderTasks();
-    
     // Event listener para o formulário
     document.getElementById('taskForm').addEventListener('submit', handleFormSubmit);
     
     console.log('✅ App.js inicializado com sucesso!');
-    console.log('✅ Total de tasks:', tasks.length);
 });
 
 // Carregar nomes dos avaliadores do localStorage
 function loadEvaluatorNames() {
     const saved = localStorage.getItem('evaluatorNames');
     if (saved) {
-        window.evaluatorNames = JSON.parse(saved);
-        evaluatorNames = window.evaluatorNames;
+        evaluatorNames = JSON.parse(saved);
         document.getElementById('evaluator1').value = evaluatorNames.eval1;
         document.getElementById('evaluator2').value = evaluatorNames.eval2;
         document.getElementById('evaluator3').value = evaluatorNames.eval3;
@@ -606,36 +582,8 @@ function printToPDF() {
 
 // Salvar dados no Supabase
 async function saveToDatabase() {
-    console.log('💾 saveToDatabase chamado');
-    console.log('🔍 Verificando window.saveToDatabaseWithAuth:', typeof window.saveToDatabaseWithAuth);
-    
-    // Aguardar a função estar disponível (máximo 10 segundos)
-    let attempts = 0;
-    while ((!window.saveToDatabaseWithAuth || window.saveToDatabaseWithAuth === null) && attempts < 100) {
-        console.log(`⏳ Aguardando saveToDatabaseWithAuth... (${attempts + 1}/100), tipo atual: ${typeof window.saveToDatabaseWithAuth}`);
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-    }
-    
-    // Verificar se a função existe e não é null
-    if (typeof window.saveToDatabaseWithAuth === 'function') {
-        console.log('✅ saveToDatabaseWithAuth encontrada, executando...');
-        await window.saveToDatabaseWithAuth();
-    } else {
-        console.error('❌ saveToDatabaseWithAuth não encontrada após 10 segundos!');
-        console.error('   Tipo:', typeof window.saveToDatabaseWithAuth);
-        console.error('   Valor:', window.saveToDatabaseWithAuth);
-        
-        // Listar todas as funções disponíveis no window
-        console.log('📋 Funções disponíveis no window:', {
-            checkAuth: typeof window.checkAuth,
-            saveToDatabaseWithAuth: typeof window.saveToDatabaseWithAuth,
-            performUpdateProject: typeof window.performUpdateProject,
-            loadFromDatabase: typeof window.loadFromDatabase
-        });
-        
-        showNotification('❌ Erro ao salvar. Recarregue a página completamente (Ctrl+F5).');
-    }
+    // Esta função chama a versão do auth.js que filtra por usuário
+    await saveToDatabaseWithAuth();
 }
 
 // Mostrar seleção de projetos para salvar
@@ -694,13 +642,8 @@ function showSaveProjectSelection(projects) {
 
 // Selecionar projeto para salvar
 function selectProjectToSave(projectId, projectName) {
-    console.log('📋 selectProjectToSave chamado:', projectId, projectName);
-    
     const modal = document.getElementById('saveSaveProjectModal');
     if (modal) modal.remove();
-    
-    // Escapar aspas no projectName para evitar quebra do HTML
-    const safeProjectName = projectName.replace(/'/g, "\\'");
     
     // Perguntar o que fazer
     const confirmModal = document.createElement('div');
@@ -723,60 +666,15 @@ function selectProjectToSave(projectId, projectName) {
             <h2 style="margin-top: 0; color: #333;">📋 ${projectName}</h2>
             <p style="color: #666;">O que deseja fazer?</p>
             <div style="display: flex; flex-direction: column; gap: 10px;">
-                <button id="btnUpdateProject" data-project-id="${projectId}" style="width: 100%; padding: 12px; background: #17ec10ff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">🔄 Atualizar este Projeto</button>
-                <button id="btnSaveAsNew" data-project-name="${safeProjectName}" style="width: 100%; padding: 12px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">💾 Salvar Como Novo</button>
-                <button id="btnLoadProject" data-project-id="${projectId}" style="width: 100%; padding: 12px; background: #A183C0; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">📥 Carregar este Projeto</button>
-                <button id="btnCancel" style="width: 100%; padding: 12px; background: #cc2121ff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">✖ Cancelar</button>
+                <button onclick="performUpdateProject('${projectId}')" style="width: 100%; padding: 12px; background: #17ec10ff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">🔄 Atualizar este Projeto</button>
+                <button onclick="performSaveAsNew('${projectName}')" style="width: 100%; padding: 12px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">💾 Salvar Como Novo</button>
+                <button onclick="confirmLoadProject('${projectId}')" style="width: 100%; padding: 12px; background: #A183C0; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">📥 Carregar este Projeto</button>
+                <button onclick="closeSaveActionModal()" style="width: 100%; padding: 12px; background: #cc2121ff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">✖ Cancelar</button>
             </div>
         </div>
     `;
     
     document.body.appendChild(confirmModal);
-    
-    // Adicionar event listeners após adicionar ao DOM - COM PROTEÇÃO ONCE
-    const btnUpdate = document.getElementById('btnUpdateProject');
-    if (btnUpdate) {
-        btnUpdate.addEventListener('click', function handleUpdateClick() {
-            console.log('🖱️ Clique em Atualizar detectado!');
-            
-            // Remover listener para evitar múltiplos cliques
-            btnUpdate.removeEventListener('click', handleUpdateClick);
-            
-            const pid = this.getAttribute('data-project-id');
-            console.log('🆔 Project ID:', pid);
-            
-            // Chamar com timeout para evitar travamento
-            setTimeout(() => {
-                if (window.performUpdateProject) {
-                    window.performUpdateProject(pid);
-                } else {
-                    console.error('❌ performUpdateProject não encontrada!');
-                    showNotification('❌ Erro ao atualizar. Recarregue a página.');
-                }
-            }, 100);
-        }, { once: true });
-    }
-    
-    const btnSaveNew = document.getElementById('btnSaveAsNew');
-    if (btnSaveNew) {
-        btnSaveNew.addEventListener('click', function() {
-            const pname = this.getAttribute('data-project-name');
-            setTimeout(() => performSaveAsNew(pname), 100);
-        }, { once: true });
-    }
-    
-    const btnLoad = document.getElementById('btnLoadProject');
-    if (btnLoad) {
-        btnLoad.addEventListener('click', function() {
-            const pid = this.getAttribute('data-project-id');
-            setTimeout(() => confirmLoadProject(pid), 100);
-        }, { once: true });
-    }
-    
-    const btnCancel = document.getElementById('btnCancel');
-    if (btnCancel) {
-        btnCancel.addEventListener('click', closeSaveActionModal, { once: true });
-    }
 }
 
 // Criar novo projeto
@@ -1028,25 +926,15 @@ async function confirmLoadProject(projectId) {
     const project = window.projectsList.find(p => p.id == projectId);
     
     if (project && project.data) {
-        // Carregar dados no escopo global
-        window.evaluatorNames = project.data.evaluator_names || window.evaluatorNames;
-        window.tasks = project.data.tasks || [];
-        
-        // Atualizar aliases locais
-        evaluatorNames = window.evaluatorNames;
-        tasks = window.tasks;
-        
-        // Salvar no localStorage
-        localStorage.setItem('evaluatorNames', JSON.stringify(evaluatorNames));
-        localStorage.setItem('tasks', JSON.stringify(tasks));
-        localStorage.setItem('projectId', project.id);
+        // Carregar dados
+        evaluatorNames = project.data.evaluator_names || evaluatorNames;
+        tasks = project.data.tasks || [];
         
         // Exibir código do projeto se houver
         if (project.project_code) {
             console.log('🔑 Código do projeto:', project.project_code);
             displayProjectCode(project.project_code);
             localStorage.setItem('currentProjectCode', project.project_code);
-            localStorage.setItem('projectCode', project.project_code);
         }
         
         // Atualizar interface
@@ -1058,10 +946,6 @@ async function confirmLoadProject(projectId) {
         updateEvaluatorLabels();
         renderTasks();
         
-        console.log('✅ Projeto carregado:', project.name);
-        console.log('   Tarefas:', tasks.length);
-        console.log('   Avaliadores:', evaluatorNames);
-        
         showNotification('✅ Projeto carregado com sucesso!');
         
         // Remover modais
@@ -1070,45 +954,17 @@ async function confirmLoadProject(projectId) {
         
         const actionModal = document.getElementById('saveActionModal');
         if (actionModal) actionModal.remove();
-    } else {
-        console.error('❌ Projeto não encontrado ou sem dados');
-        showNotification('❌ Erro ao carregar projeto');
     }
 }
 
 // Verificação de autenticação ao carregar a página
 window.addEventListener('load', async function() {
-    console.log('🎯 Iniciando verificação de autenticação...');
-    
-    // Aguardar checkAuth estar disponível
-    let attempts = 0;
-    while ((!window.checkAuth || window.checkAuth === null || typeof window.checkAuth !== 'function') && attempts < 100) {
-        console.log(`⏳ Aguardando checkAuth... (${attempts + 1}/100)`);
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-    }
-    
-    if (!window.checkAuth || typeof window.checkAuth !== 'function') {
-        console.error('❌ checkAuth não disponível após 10 segundos!');
-        console.error('   Tipo atual:', typeof window.checkAuth);
-        console.error('   Valor:', window.checkAuth);
-        return;
-    }
-    
-    console.log('✅ checkAuth disponível, chamando...');
-    const user = await window.checkAuth();
-    console.log('👤 Usuário retornado:', user);
-    
+    const user = await checkAuth();
     if (user) {
         // Mostrar email do usuário no header (ou código se acesso por código)
         const headerButtons = document.querySelector('.header-buttons');
         if (headerButtons) {
-            // Remover userInfo anterior se existir
-            const existingUserInfo = headerButtons.querySelector('.user-info');
-            if (existingUserInfo) existingUserInfo.remove();
-            
             const userInfo = document.createElement('span');
-            userInfo.className = 'user-info';
             userInfo.style.cssText = 'color: #666; font-size: 13px; margin-right: 15px; display: flex; align-items: center;';
             
             // Se for acesso por código, mostrar o código
@@ -1116,24 +972,18 @@ window.addEventListener('load', async function() {
             if (projectCode) {
                 userInfo.innerHTML = `🔑 ${projectCode}`;
                 displayProjectCode(projectCode);
-            } else if (user.email) {
-                // Se for email normal
-                userInfo.innerHTML = `👤 ${user.email}`;
-                
-                // Verificar se há código do projeto armazenado
+            } else {
+                // Se for email, procurar por código do projeto armazenado
                 const currentProjectCode = localStorage.getItem('currentProjectCode');
                 if (currentProjectCode) {
+                    userInfo.innerHTML = `🔑 ${currentProjectCode}`;
                     displayProjectCode(currentProjectCode);
+                } else {
+                    userInfo.innerHTML = `👤 ${user.email}`;
                 }
-            } else if (user.id === 'code-access') {
-                // Acesso por código
-                userInfo.innerHTML = `🔑 Acesso por Código`;
             }
             
             headerButtons.insertBefore(userInfo, headerButtons.firstChild);
-            console.log('✅ User info adicionada ao header');
-        } else {
-            console.warn('⚠️ .header-buttons não encontrado');
         }
         
         // Carregar dados (aguardar se for do Supabase)
