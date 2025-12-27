@@ -1,5 +1,5 @@
 // Versão de build para depuração em produção
-console.log('auth.js v1735331600 carregado - PLACEHOLDERS');
+console.log('auth.js v1735332000 carregado - SEM SERVICE WORKER');
 
 // Declaração antecipada das funções para exposição global
 let checkAuth, saveToDatabaseWithAuth, loadFromDatabase, performUpdateProject;
