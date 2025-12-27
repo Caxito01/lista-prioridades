@@ -1,5 +1,5 @@
 // Versão de build para depuração
-console.log('app.js v1735331200 carregado');
+console.log('app.js v1735331400 carregado - AGUARDA CHECKAUTH');
 
 // Estado da aplicação - EXPOR NO ESCOPO GLOBAL
 window.tasks = [];
@@ -1068,15 +1068,21 @@ async function confirmLoadProject(projectId) {
 window.addEventListener('load', async function() {
     console.log('🎯 Iniciando verificação de autenticação...');
     
-    // Usar a função checkAuth do window se existir
-    const checkAuthFn = window.checkAuth || checkAuth;
+    // Aguardar checkAuth estar disponível
+    let attempts = 0;
+    while (typeof window.checkAuth !== 'function' && attempts < 100) {
+        console.log(`⏳ Aguardando checkAuth... (${attempts + 1}/100)`);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+    }
     
-    if (typeof checkAuthFn !== 'function') {
-        console.error('❌ checkAuth não encontrada!');
+    if (typeof window.checkAuth !== 'function') {
+        console.error('❌ checkAuth não disponível após 10 segundos!');
         return;
     }
     
-    const user = await checkAuthFn();
+    console.log('✅ checkAuth disponível, chamando...');
+    const user = await window.checkAuth();
     console.log('👤 Usuário retornado:', user);
     
     if (user) {
