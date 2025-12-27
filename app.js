@@ -1,5 +1,5 @@
 // Versão de build para depuração
-console.log('app.js v1735331000 carregado - AGUARDA FUNÇÕES AUTH');
+console.log('app.js v1735331200 carregado');
 
 // Estado da aplicação - EXPOR NO ESCOPO GLOBAL
 window.tasks = [];

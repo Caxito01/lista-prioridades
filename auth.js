@@ -1,5 +1,5 @@
 // Versão de build para depuração em produção
-console.log('auth.js v1735331000 carregado - FUNÇÕES EXPOSTAS IMEDIATAMENTE');
+console.log('auth.js v1735331200 carregado - SEM DUPLICAÇÕES');
 
 // Declaração antecipada das funções para exposição global
 let checkAuth, saveToDatabaseWithAuth, loadFromDatabase, performUpdateProject;
@@ -415,7 +415,7 @@ async function performSaveProject(projectName) {
 }
 
 // Atualizar projeto verificando user_id
-async function performUpdateProject(projectId) {
+performUpdateProject = async function(projectId) {
     console.log('🔄 performUpdateProject INICIADO', projectId);
     
     // Prevenir múltiplas execuções simultâneas
@@ -554,13 +554,14 @@ async function performUpdateProject(projectId) {
         window._isUpdating = false;
         console.log('🔓 Lock liberado');
     }
-}
-        showNotification('❌ Erro: ' + error.message);
-    }
-}
+};
+
+// Expor imediatamente
+window.performUpdateProject = performUpdateProject;
+console.log('✅ performUpdateProject exposta no window');
 
 // Carregar projeto verificando user_id
-async function loadFromDatabase() {
+loadFromDatabase = async function() {
     try {
         console.log('📂 Carregando projetos do banco de dados...');
         
@@ -634,7 +635,11 @@ async function loadFromDatabase() {
         console.log('❌ ERRO geral em loadFromDatabase:', error);
         showNotification('Erro: ' + error.message);
     }
-}
+};
+
+// Expor imediatamente
+window.loadFromDatabase = loadFromDatabase;
+console.log('✅ loadFromDatabase exposta no window');
 
 // Mostrar notificação
 function showNotification(message) {
@@ -650,8 +655,10 @@ function showNotification(message) {
     }, 3000);
 }
 
-// Expor funções no escopo global
-window.performUpdateProject = performUpdateProject;
-window.saveToDatabaseWithAuth = saveToDatabaseWithAuth;
-window.loadFromDatabase = loadFromDatabase;
-window.checkAuth = checkAuth;
+// Confirmação final de exposição (as funções já foram expostas imediatamente após definição)
+console.log('📋 Funções do auth.js disponíveis:', {
+    checkAuth: typeof window.checkAuth,
+    saveToDatabaseWithAuth: typeof window.saveToDatabaseWithAuth,
+    performUpdateProject: typeof window.performUpdateProject,
+    loadFromDatabase: typeof window.loadFromDatabase
+});
