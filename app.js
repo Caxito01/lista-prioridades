@@ -1,5 +1,5 @@
 // Versão de build para depuração
-console.log('app.js v1735329600 carregado - CORREÇÃO TRAVAMENTO SALVAR');
+console.log('app.js v1735330000 carregado - DEBUG ATUALIZAR PROJETO');
 
 // Estado da aplicação
 let tasks = [];
