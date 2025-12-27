@@ -1,5 +1,5 @@
 // Versão de build para depuração em produção
-console.log('auth.js v1735332000 carregado - SEM SERVICE WORKER');
+console.log('auth.js v1735335000 - VERSÃO LIMPA');
 
 // Declaração antecipada das funções para exposição global
 let checkAuth, saveToDatabaseWithAuth, loadFromDatabase, performUpdateProject;
