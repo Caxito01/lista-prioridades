@@ -1,5 +1,5 @@
 // Versão de build para depuração em produção
-console.log('auth.js v1735330600 carregado - PROTEÇÃO ANTI-TRAVAMENTO');
+console.log('auth.js v1735330800 carregado - FIX FUNÇÕES GLOBAIS');
 
 // Verificar se usuário está logado
 async function checkAuth() {
@@ -642,3 +642,6 @@ function showNotification(message) {
 
 // Expor funções no escopo global
 window.performUpdateProject = performUpdateProject;
+window.saveToDatabaseWithAuth = saveToDatabaseWithAuth;
+window.loadFromDatabase = loadFromDatabase;
+window.checkAuth = checkAuth;
