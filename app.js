@@ -1,5 +1,5 @@
 // Versão de build para depuração
-console.log('app.js v1735335000 - VERSÃO LIMPA');
+console.log('app.js v1735335100 - CORREÇÃO LOOP CHECKAUTH');
 
 // Estado da aplicação - EXPOR NO ESCOPO GLOBAL
 window.tasks = [];
@@ -1082,14 +1082,16 @@ window.addEventListener('load', async function() {
     
     // Aguardar checkAuth estar disponível
     let attempts = 0;
-    while (typeof window.checkAuth !== 'function' && attempts < 100) {
+    while ((!window.checkAuth || window.checkAuth === null || typeof window.checkAuth !== 'function') && attempts < 100) {
         console.log(`⏳ Aguardando checkAuth... (${attempts + 1}/100)`);
         await new Promise(resolve => setTimeout(resolve, 100));
         attempts++;
     }
     
-    if (typeof window.checkAuth !== 'function') {
+    if (!window.checkAuth || typeof window.checkAuth !== 'function') {
         console.error('❌ checkAuth não disponível após 10 segundos!');
+        console.error('   Tipo atual:', typeof window.checkAuth);
+        console.error('   Valor:', window.checkAuth);
         return;
     }
     
