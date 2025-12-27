@@ -417,6 +417,9 @@ async function performUpdateProject(projectId) {
     }
 }
 
+// Expor função de atualização para ser usada pelo app.js
+window.performUpdateProject = performUpdateProject;
+
 // Carregar projeto verificando user_id
 async function loadFromDatabase() {
     try {
