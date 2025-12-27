@@ -1,8 +1,16 @@
 // Versão de build para depuração em produção
-console.log('auth.js v1735331400 carregado - FIX CLEARUSERDATA');
+console.log('auth.js v1735331600 carregado - PLACEHOLDERS');
 
 // Declaração antecipada das funções para exposição global
 let checkAuth, saveToDatabaseWithAuth, loadFromDatabase, performUpdateProject;
+
+// Expor funções ANTES de definir para garantir disponibilidade
+window.checkAuth = null;
+window.saveToDatabaseWithAuth = null;
+window.loadFromDatabase = null;
+window.performUpdateProject = null;
+
+console.log('📋 Placeholders criados no window');
 
 // Verificar se usuário está logado
 checkAuth = async function() {

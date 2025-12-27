@@ -1,5 +1,5 @@
 // Versão de build para depuração
-console.log('app.js v1735331400 carregado - AGUARDA CHECKAUTH');
+console.log('app.js v1735331600 carregado - LOGS DETALHADOS');
 
 // Estado da aplicação - EXPOR NO ESCOPO GLOBAL
 window.tasks = [];
@@ -607,22 +607,34 @@ function printToPDF() {
 // Salvar dados no Supabase
 async function saveToDatabase() {
     console.log('💾 saveToDatabase chamado');
+    console.log('🔍 Verificando window.saveToDatabaseWithAuth:', typeof window.saveToDatabaseWithAuth);
     
-    // Aguardar a função estar disponível (máximo 5 segundos)
+    // Aguardar a função estar disponível (máximo 10 segundos)
     let attempts = 0;
-    while (!window.saveToDatabaseWithAuth && attempts < 50) {
-        console.log(`⏳ Aguardando saveToDatabaseWithAuth... (${attempts + 1}/50)`);
+    while ((!window.saveToDatabaseWithAuth || window.saveToDatabaseWithAuth === null) && attempts < 100) {
+        console.log(`⏳ Aguardando saveToDatabaseWithAuth... (${attempts + 1}/100), tipo atual: ${typeof window.saveToDatabaseWithAuth}`);
         await new Promise(resolve => setTimeout(resolve, 100));
         attempts++;
     }
     
-    // Verificar se a função existe
+    // Verificar se a função existe e não é null
     if (typeof window.saveToDatabaseWithAuth === 'function') {
         console.log('✅ saveToDatabaseWithAuth encontrada, executando...');
         await window.saveToDatabaseWithAuth();
     } else {
-        console.error('❌ saveToDatabaseWithAuth não encontrada após 5 segundos!');
-        showNotification('❌ Erro ao salvar. Recarregue a página (F5).');
+        console.error('❌ saveToDatabaseWithAuth não encontrada após 10 segundos!');
+        console.error('   Tipo:', typeof window.saveToDatabaseWithAuth);
+        console.error('   Valor:', window.saveToDatabaseWithAuth);
+        
+        // Listar todas as funções disponíveis no window
+        console.log('📋 Funções disponíveis no window:', {
+            checkAuth: typeof window.checkAuth,
+            saveToDatabaseWithAuth: typeof window.saveToDatabaseWithAuth,
+            performUpdateProject: typeof window.performUpdateProject,
+            loadFromDatabase: typeof window.loadFromDatabase
+        });
+        
+        showNotification('❌ Erro ao salvar. Recarregue a página completamente (Ctrl+F5).');
     }
 }
 
