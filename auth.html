@@ -2,19 +2,9 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Sistema de Gerenciamento de Prioridades</title>
-    
-    <!-- PWA Meta Tags -->
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Prioridades">
-    <meta name="theme-color" content="#667eea">
-    <link rel="manifest" href="manifest.json">
-    
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' fill='%23667eea'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='100' fill='white'>📊</text></svg>">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
     <style>
@@ -172,151 +162,6 @@
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
-        }
-
-        /* =================================
-           RESPONSIVE MOBILE STYLES
-           ================================= */
-        
-        /* Touch improvements */
-        * {
-            -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
-            touch-action: manipulation;
-        }
-
-        button {
-            min-height: 44px;
-        }
-
-        /* Mobile (max-width: 768px) */
-        @media screen and (max-width: 768px) {
-            body {
-                padding: 15px;
-                padding-top: env(safe-area-inset-top, 15px);
-                padding-bottom: env(safe-area-inset-bottom, 15px);
-            }
-
-            .auth-container {
-                padding: 25px;
-                max-width: 100%;
-            }
-
-            .auth-header h1 {
-                font-size: 24px;
-            }
-
-            .auth-header p {
-                font-size: 13px;
-            }
-
-            input {
-                font-size: 16px; /* Previne zoom no iOS */
-                padding: 14px 12px;
-            }
-
-            .btn-submit {
-                padding: 14px;
-                font-size: 16px;
-            }
-
-            .form-group {
-                margin-bottom: 18px;
-            }
-
-            label {
-                font-size: 15px;
-            }
-        }
-
-        /* Mobile pequeno (max-width: 480px) */
-        @media screen and (max-width: 480px) {
-            body {
-                padding: 10px;
-            }
-
-            .auth-container {
-                padding: 20px;
-                border-radius: 12px;
-            }
-
-            .auth-header {
-                margin-bottom: 20px;
-            }
-
-            .auth-header h1 {
-                font-size: 22px;
-            }
-
-            .auth-header p {
-                font-size: 12px;
-            }
-
-            input {
-                padding: 12px 10px;
-            }
-
-            .btn-submit {
-                padding: 12px;
-            }
-
-            .toggle-form {
-                font-size: 13px;
-            }
-
-            button[onclick^="switchTab"] {
-                padding: 10px;
-                font-size: 14px;
-            }
-        }
-
-        /* Landscape mobile */
-        @media screen and (max-width: 768px) and (orientation: landscape) {
-            body {
-                padding: 10px;
-            }
-
-            .auth-container {
-                padding: 20px;
-            }
-
-            .auth-header {
-                margin-bottom: 15px;
-            }
-
-            .form-group {
-                margin-bottom: 12px;
-            }
-        }
-
-        /* PWA standalone mode */
-        @media (display-mode: standalone) {
-            body {
-                padding-top: calc(15px + env(safe-area-inset-top));
-                padding-bottom: calc(15px + env(safe-area-inset-bottom));
-            }
-        }
-
-        /* Hover apenas para desktop */
-        @media (hover: hover) and (pointer: fine) {
-            .btn-submit:hover {
-                background: #5568d3;
-            }
-
-            .toggle-form a:hover {
-                text-decoration: underline;
-            }
-        }
-
-        /* Remove hover em touch devices */
-        @media (hover: none) {
-            .btn-submit:hover {
-                background: #667eea;
-            }
-
-            .btn-submit:active {
-                transform: scale(0.98);
-                transition: transform 0.1s;
-            }
         }
     </style>
 </head>
@@ -544,29 +389,9 @@
                 if (!project) {
                     showMessage('❌ Código não encontrado!', 'error');
                 } else {
-                    // Salvar informações do projeto no localStorage
                     localStorage.setItem('projectCode', project.project_code);
                     localStorage.setItem('projectId', project.id);
                     localStorage.setItem('projectName', project.name);
-                    
-                    // Carregar dados do projeto para a interface
-                    if (project.data) {
-                        const evaluatorNames = project.data.evaluator_names || {
-                            eval1: 'Avaliador 1',
-                            eval2: 'Avaliador 2',
-                            eval3: 'Avaliador 3',
-                            eval4: 'Avaliador 4'
-                        };
-                        const tasks = project.data.tasks || [];
-                        
-                        localStorage.setItem('evaluatorNames', JSON.stringify(evaluatorNames));
-                        localStorage.setItem('tasks', JSON.stringify(tasks));
-                        
-                        console.log('✅ Dados do projeto salvos no localStorage');
-                        console.log('   Tarefas:', tasks.length);
-                        console.log('   Avaliadores:', evaluatorNames);
-                    }
-                    
                     showMessage('✅ Acesso concedido!', 'success');
                     setTimeout(() => {
                         window.location.href = 'index.html?t=' + Date.now();
@@ -675,19 +500,6 @@
                 }
             }
         });
-
-        // Service Worker Registration
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(registration => {
-                        console.log('✅ Service Worker registrado:', registration.scope);
-                    })
-                    .catch(err => {
-                        console.log('⚠️ Service Worker não registrado:', err);
-                    });
-            });
-        }
     </script>
 </body>
 </html>
