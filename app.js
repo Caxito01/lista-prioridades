@@ -1,5 +1,5 @@
 // Versão de build para depuração
-console.log('app.js v1735330800 carregado - FIX FUNÇÕES GLOBAIS');
+console.log('app.js v1735331000 carregado - AGUARDA FUNÇÕES AUTH');
 
 // Estado da aplicação - EXPOR NO ESCOPO GLOBAL
 window.tasks = [];
@@ -608,14 +608,21 @@ function printToPDF() {
 async function saveToDatabase() {
     console.log('💾 saveToDatabase chamado');
     
+    // Aguardar a função estar disponível (máximo 5 segundos)
+    let attempts = 0;
+    while (!window.saveToDatabaseWithAuth && attempts < 50) {
+        console.log(`⏳ Aguardando saveToDatabaseWithAuth... (${attempts + 1}/50)`);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+    }
+    
     // Verificar se a função existe
     if (typeof window.saveToDatabaseWithAuth === 'function') {
+        console.log('✅ saveToDatabaseWithAuth encontrada, executando...');
         await window.saveToDatabaseWithAuth();
-    } else if (typeof saveToDatabaseWithAuth === 'function') {
-        await saveToDatabaseWithAuth();
     } else {
-        console.error('❌ saveToDatabaseWithAuth não encontrada!');
-        showNotification('❌ Erro ao salvar. Recarregue a página.');
+        console.error('❌ saveToDatabaseWithAuth não encontrada após 5 segundos!');
+        showNotification('❌ Erro ao salvar. Recarregue a página (F5).');
     }
 }
 
