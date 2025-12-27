@@ -1,5 +1,5 @@
 // Service Worker para PWA
-const CACHE_NAME = 'prioridades-v1';
+const CACHE_NAME = 'prioridades-v1735329600';
 const urlsToCache = [
   '/',
   '/index.html',
