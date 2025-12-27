@@ -1,5 +1,5 @@
 // Versão de build para depuração em produção
-console.log('auth.js v1735330400 carregado - VARIÁVEIS NO ESCOPO GLOBAL');
+console.log('auth.js v1735330600 carregado - PROTEÇÃO ANTI-TRAVAMENTO');
 
 // Verificar se usuário está logado
 async function checkAuth() {
@@ -408,6 +408,13 @@ async function performSaveProject(projectName) {
 async function performUpdateProject(projectId) {
     console.log('🔄 performUpdateProject INICIADO', projectId);
     
+    // Prevenir múltiplas execuções simultâneas
+    if (window._isUpdating) {
+        console.warn('⚠️ Atualização já em andamento, ignorando...');
+        return;
+    }
+    window._isUpdating = true;
+    
     try {
         // Mostrar feedback imediato
         console.log('📢 Mostrando notificação...');
@@ -417,21 +424,12 @@ async function performUpdateProject(projectId) {
         await window.initSupabase();
         
         console.log('🔍 Buscando client...');
-        // Retry loop com timeout - aguardar o client ficar disponível
-        let client = null;
-        let retries = 0;
-        while (!client && retries < 20) {
-            client = window.getClient();
-            if (!client) {
-                console.log(`⏳ Tentativa ${retries + 1}/20...`);
-                await new Promise(resolve => setTimeout(resolve, 100));
-                retries++;
-            }
-        }
+        const client = window.getClient();
         
         if (!client) {
-            console.error('❌ Client não disponível após 20 tentativas');
+            console.error('❌ Client não disponível');
             showNotification('❌ Erro ao conectar com o servidor');
+            window._isUpdating = false;
             return;
         }
         
@@ -457,12 +455,14 @@ async function performUpdateProject(projectId) {
             if (sessionError) {
                 console.error('❌ Erro na sessão:', sessionError);
                 showNotification('❌ Erro ao verificar autenticação: ' + sessionError.message);
+                window._isUpdating = false;
                 return;
             }
             
             if (!session) {
                 console.error('❌ Sem sessão');
                 showNotification('❌ Você precisa estar logado!');
+                window._isUpdating = false;
                 return;
             }
             
@@ -473,15 +473,16 @@ async function performUpdateProject(projectId) {
         }
         
         console.log('📋 Validando tasks...');
-        const tasks = window.tasks;
-        const evaluatorNames = window.evaluatorNames;
+        const tasks = window.tasks || [];
+        const evaluatorNames = window.evaluatorNames || {};
         
-        console.log('📦 Tasks do window:', tasks);
+        console.log('📦 Tasks do window:', tasks.length);
         console.log('📦 EvaluatorNames do window:', evaluatorNames);
         
         if (!tasks || tasks.length === 0) {
             console.error('❌ Lista de tarefas vazia');
             showNotification('❌ A lista de tarefas está vazia! Adicione pelo menos uma tarefa antes de salvar.');
+            window._isUpdating = false;
             return;
         }
         
@@ -492,6 +493,7 @@ async function performUpdateProject(projectId) {
         if (tasksWithEmptyStage.length > 0) {
             console.error('❌ Tasks sem estágio:', tasksWithEmptyStage.length);
             showNotification(`❌ Há ${tasksWithEmptyStage.length} tarefa(s) sem estágio definido! Preencha antes de salvar.`);
+            window._isUpdating = false;
             return;
         }
         
@@ -536,6 +538,13 @@ async function performUpdateProject(projectId) {
     } catch (error) {
         console.error('❌ ERRO CAPTURADO em performUpdateProject:', error);
         console.error('Stack trace:', error.stack);
+        showNotification('❌ Erro: ' + error.message);
+    } finally {
+        // Sempre liberar o lock
+        window._isUpdating = false;
+        console.log('🔓 Lock liberado');
+    }
+}
         showNotification('❌ Erro: ' + error.message);
     }
 }

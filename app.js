@@ -1,5 +1,5 @@
 // Versão de build para depuração
-console.log('app.js v1735330400 carregado - VARIÁVEIS NO ESCOPO GLOBAL');
+console.log('app.js v1735330600 carregado - PROTEÇÃO ANTI-TRAVAMENTO');
 
 // Estado da aplicação - EXPOR NO ESCOPO GLOBAL
 window.tasks = [];
@@ -705,25 +705,50 @@ function selectProjectToSave(projectId, projectName) {
     
     document.body.appendChild(confirmModal);
     
-    // Adicionar event listeners após adicionar ao DOM
-    document.getElementById('btnUpdateProject').addEventListener('click', function() {
-        console.log('🖱️ Clique em Atualizar detectado!');
-        const pid = this.getAttribute('data-project-id');
-        console.log('🆔 Project ID:', pid);
-        performUpdateProject(pid);
-    });
+    // Adicionar event listeners após adicionar ao DOM - COM PROTEÇÃO ONCE
+    const btnUpdate = document.getElementById('btnUpdateProject');
+    if (btnUpdate) {
+        btnUpdate.addEventListener('click', function handleUpdateClick() {
+            console.log('🖱️ Clique em Atualizar detectado!');
+            
+            // Remover listener para evitar múltiplos cliques
+            btnUpdate.removeEventListener('click', handleUpdateClick);
+            
+            const pid = this.getAttribute('data-project-id');
+            console.log('🆔 Project ID:', pid);
+            
+            // Chamar com timeout para evitar travamento
+            setTimeout(() => {
+                if (window.performUpdateProject) {
+                    window.performUpdateProject(pid);
+                } else {
+                    console.error('❌ performUpdateProject não encontrada!');
+                    showNotification('❌ Erro ao atualizar. Recarregue a página.');
+                }
+            }, 100);
+        }, { once: true });
+    }
     
-    document.getElementById('btnSaveAsNew').addEventListener('click', function() {
-        const pname = this.getAttribute('data-project-name');
-        performSaveAsNew(pname);
-    });
+    const btnSaveNew = document.getElementById('btnSaveAsNew');
+    if (btnSaveNew) {
+        btnSaveNew.addEventListener('click', function() {
+            const pname = this.getAttribute('data-project-name');
+            setTimeout(() => performSaveAsNew(pname), 100);
+        }, { once: true });
+    }
     
-    document.getElementById('btnLoadProject').addEventListener('click', function() {
-        const pid = this.getAttribute('data-project-id');
-        confirmLoadProject(pid);
-    });
+    const btnLoad = document.getElementById('btnLoadProject');
+    if (btnLoad) {
+        btnLoad.addEventListener('click', function() {
+            const pid = this.getAttribute('data-project-id');
+            setTimeout(() => confirmLoadProject(pid), 100);
+        }, { once: true });
+    }
     
-    document.getElementById('btnCancel').addEventListener('click', closeSaveActionModal);
+    const btnCancel = document.getElementById('btnCancel');
+    if (btnCancel) {
+        btnCancel.addEventListener('click', closeSaveActionModal, { once: true });
+    }
 }
 
 // Criar novo projeto
