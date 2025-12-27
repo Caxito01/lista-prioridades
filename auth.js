@@ -1,5 +1,5 @@
 // Versão de build para depuração em produção
-console.log('auth.js v1735329600 carregado - CORREÇÃO TRAVAMENTO SALVAR');
+console.log('auth.js v1735330000 carregado - DEBUG ATUALIZAR PROJETO');
 
 // Verificar se usuário está logado
 async function checkAuth() {
@@ -406,71 +406,96 @@ async function performSaveProject(projectName) {
 
 // Atualizar projeto verificando user_id
 async function performUpdateProject(projectId) {
+    console.log('🔄 performUpdateProject INICIADO', projectId);
+    
     try {
         // Mostrar feedback imediato
+        console.log('📢 Mostrando notificação...');
         showNotification('⏳ Atualizando projeto...');
         
+        console.log('🔌 Inicializando Supabase...');
         await window.initSupabase();
         
+        console.log('🔍 Buscando client...');
         // Retry loop com timeout - aguardar o client ficar disponível
         let client = null;
         let retries = 0;
         while (!client && retries < 20) {
             client = window.getClient();
             if (!client) {
+                console.log(`⏳ Tentativa ${retries + 1}/20...`);
                 await new Promise(resolve => setTimeout(resolve, 100));
                 retries++;
             }
         }
         
         if (!client) {
+            console.error('❌ Client não disponível após 20 tentativas');
             showNotification('❌ Erro ao conectar com o servidor');
             return;
         }
+        
+        console.log('✅ Client obtido');
         
         // Verificar se está acessando por código
         const projectCode = localStorage.getItem('projectCode');
         const projectIdFromCode = localStorage.getItem('projectId');
         
+        console.log('📦 Dados localStorage:', { projectCode, projectIdFromCode, projectId });
+        
         // Se acessou por código, usar o projectId do localStorage
         const finalProjectId = (projectCode && projectIdFromCode) ? projectIdFromCode : projectId;
+        console.log('🎯 ID final do projeto:', finalProjectId);
         
         // Validar se há sessão (apenas para usuários autenticados)
         let userId = null;
         if (!projectCode) {
+            console.log('🔐 Verificando sessão (sem código)...');
             const { data, error: sessionError } = await client.auth.getSession();
             const session = data?.session;
             
             if (sessionError) {
+                console.error('❌ Erro na sessão:', sessionError);
                 showNotification('❌ Erro ao verificar autenticação: ' + sessionError.message);
                 return;
             }
             
             if (!session) {
+                console.error('❌ Sem sessão');
                 showNotification('❌ Você precisa estar logado!');
                 return;
             }
             
             userId = session.user.id;
+            console.log('✅ Sessão válida, userId:', userId);
+        } else {
+            console.log('🔑 Acesso por código, pulando verificação de sessão');
         }
         
+        console.log('📋 Validando tasks...');
         if (!tasks || tasks.length === 0) {
+            console.error('❌ Lista de tarefas vazia');
             showNotification('❌ A lista de tarefas está vazia! Adicione pelo menos uma tarefa antes de salvar.');
             return;
         }
         
+        console.log('✅ Tasks válidas:', tasks.length);
+        
         const tasksWithEmptyStage = tasks.filter(task => !task.stage || task.stage.trim() === '');
         
         if (tasksWithEmptyStage.length > 0) {
+            console.error('❌ Tasks sem estágio:', tasksWithEmptyStage.length);
             showNotification(`❌ Há ${tasksWithEmptyStage.length} tarefa(s) sem estágio definido! Preencha antes de salvar.`);
             return;
         }
         
+        console.log('📦 Preparando dados do projeto...');
         const projectData = {
             evaluator_names: evaluatorNames,
             tasks: tasks
         };
         
+        console.log('🔄 Montando query de atualização...');
         // Atualizar com ou sem filtro de user_id dependendo do tipo de acesso
         let updateQuery = client
             .from('projects')
@@ -479,20 +504,32 @@ async function performUpdateProject(projectId) {
         
         // Se não acessou por código, filtrar por user_id
         if (userId) {
+            console.log('🔒 Adicionando filtro user_id:', userId);
             updateQuery = updateQuery.eq('user_id', userId);
+        } else {
+            console.log('🔓 Sem filtro user_id (acesso por código)');
         }
         
+        console.log('🚀 Executando atualização...');
         const { error } = await updateQuery;
         
+        console.log('📥 Resposta recebida');
+        
         if (error) {
+            console.error('❌ Erro do Supabase:', error);
             showNotification('❌ Erro ao atualizar: ' + error.message);
         } else {
+            console.log('✅ Atualização bem-sucedida!');
             showNotification('✅ Projeto atualizado com sucesso!');
             const modal = document.getElementById('saveActionModal');
-            if (modal) modal.remove();
+            if (modal) {
+                console.log('🚪 Fechando modal');
+                modal.remove();
+            }
         }
     } catch (error) {
-        console.error('❌ Erro em performUpdateProject:', error);
+        console.error('❌ ERRO CAPTURADO em performUpdateProject:', error);
+        console.error('Stack trace:', error.stack);
         showNotification('❌ Erro: ' + error.message);
     }
 }
