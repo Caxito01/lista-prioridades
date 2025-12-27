@@ -1,20 +1,23 @@
 // Versão de build para depuração
-console.log('app.js v1735330200 carregado - FIX ONCLICK LISTENERS');
+console.log('app.js v1735330400 carregado - VARIÁVEIS NO ESCOPO GLOBAL');
 
-// Estado da aplicação
-let tasks = [];
-let editingTaskId = null;
-let currentSortOrder = 'priority'; // 'priority' ou 'alphabetical'
-let currentFilter = '';
-let currentProjectCode = null; // Código do projeto acessado
-
-// Nomes dos avaliadores
-let evaluatorNames = {
+// Estado da aplicação - EXPOR NO ESCOPO GLOBAL
+window.tasks = [];
+window.evaluatorNames = {
     eval1: 'Avaliador 1',
     eval2: 'Avaliador 2',
     eval3: 'Avaliador 3',
     eval4: 'Avaliador 4'
 };
+
+// Aliases locais para compatibilidade
+let tasks = window.tasks;
+let evaluatorNames = window.evaluatorNames;
+
+let editingTaskId = null;
+let currentSortOrder = 'priority'; // 'priority' ou 'alphabetical'
+let currentFilter = '';
+let currentProjectCode = null; // Código do projeto acessado
 
 // Gerar código de projeto (CXT + 5 números aleatórios)
 function generateProjectCode() {
@@ -53,15 +56,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     const savedTasks = localStorage.getItem('tasks');
     if (savedTasks) {
         try {
-            tasks = JSON.parse(savedTasks);
+            window.tasks = JSON.parse(savedTasks);
+            tasks = window.tasks;
             console.log('✅ Tasks carregadas do localStorage:', tasks.length);
         } catch (e) {
             console.error('❌ Erro ao parsear tasks:', e);
-            tasks = [];
+            window.tasks = [];
+            tasks = window.tasks;
         }
     } else {
         console.log('⚠️ Nenhuma task no localStorage');
-        tasks = [];
+        window.tasks = [];
+        tasks = window.tasks;
     }
     
     // Garantir que Supabase está inicializado
@@ -94,7 +100,8 @@ document.addEventListener('DOMContentLoaded', async function() {
 function loadEvaluatorNames() {
     const saved = localStorage.getItem('evaluatorNames');
     if (saved) {
-        evaluatorNames = JSON.parse(saved);
+        window.evaluatorNames = JSON.parse(saved);
+        evaluatorNames = window.evaluatorNames;
         document.getElementById('evaluator1').value = evaluatorNames.eval1;
         document.getElementById('evaluator2').value = evaluatorNames.eval2;
         document.getElementById('evaluator3').value = evaluatorNames.eval3;
@@ -968,9 +975,13 @@ async function confirmLoadProject(projectId) {
     const project = window.projectsList.find(p => p.id == projectId);
     
     if (project && project.data) {
-        // Carregar dados
-        evaluatorNames = project.data.evaluator_names || evaluatorNames;
-        tasks = project.data.tasks || [];
+        // Carregar dados no escopo global
+        window.evaluatorNames = project.data.evaluator_names || window.evaluatorNames;
+        window.tasks = project.data.tasks || [];
+        
+        // Atualizar aliases locais
+        evaluatorNames = window.evaluatorNames;
+        tasks = window.tasks;
         
         // Salvar no localStorage
         localStorage.setItem('evaluatorNames', JSON.stringify(evaluatorNames));
