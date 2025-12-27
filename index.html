@@ -79,8 +79,8 @@
             }
         }
     </script>
-    <script src="auth.js?v=1735331600"></script>
-    <script src="app.js?v=1735331600"></script>
+    <script src="auth.js?v=1735332000"></script>
+    <script src="app.js?v=1735332000"></script>
 </head>
 <body>
     <header>
@@ -373,33 +373,24 @@
 
     <!-- Service Worker Registration -->
     <script>
+        // DESABILITAR Service Worker temporariamente para forçar atualização
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(registration => {
-                        console.log('✅ Service Worker registrado:', registration.scope);
-                        
-                        // Verificar atualizações a cada 10 segundos
-                        setInterval(() => {
-                            registration.update();
-                        }, 10000);
-                        
-                        // Verificar atualizações
-                        registration.addEventListener('updatefound', () => {
-                            const newWorker = registration.installing;
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    console.log('🔄 Nova versão disponível - recarregando...');
-                                    // Forçar reload para aplicar nova versão
-                                    window.location.reload(true);
-                                }
-                            });
-                        });
-                    })
-                    .catch(err => {
-                        console.log('⚠️ Service Worker não registrado:', err);
-                    });
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    console.log('🗑️ Removendo Service Worker antigo...');
+                    registration.unregister();
+                }
             });
+            
+            // Limpar todos os caches
+            caches.keys().then(function(names) {
+                for (let name of names) {
+                    console.log('🗑️ Removendo cache:', name);
+                    caches.delete(name);
+                }
+            });
+            
+            console.log('✅ Service Workers e caches removidos. Recarregue a página.');
         }
     </script>
 </body>
