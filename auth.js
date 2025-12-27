@@ -1,5 +1,5 @@
 // Versão de build para depuração em produção
-console.log('auth.js v1735330200 carregado - FIX ONCLICK LISTENERS');
+console.log('auth.js v1735330400 carregado - VARIÁVEIS NO ESCOPO GLOBAL');
 
 // Verificar se usuário está logado
 async function checkAuth() {
@@ -473,6 +473,12 @@ async function performUpdateProject(projectId) {
         }
         
         console.log('📋 Validando tasks...');
+        const tasks = window.tasks;
+        const evaluatorNames = window.evaluatorNames;
+        
+        console.log('📦 Tasks do window:', tasks);
+        console.log('📦 EvaluatorNames do window:', evaluatorNames);
+        
         if (!tasks || tasks.length === 0) {
             console.error('❌ Lista de tarefas vazia');
             showNotification('❌ A lista de tarefas está vazia! Adicione pelo menos uma tarefa antes de salvar.');
