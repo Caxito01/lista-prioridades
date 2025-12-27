@@ -1,5 +1,5 @@
 // Versão de build para depuração
-console.log('app.js v1735332000 carregado - SEM SERVICE WORKER');
+console.log('app.js v1735335000 - VERSÃO LIMPA');
 
 // Estado da aplicação - EXPOR NO ESCOPO GLOBAL
 window.tasks = [];
