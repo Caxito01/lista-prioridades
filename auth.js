@@ -1,8 +1,11 @@
 // Versão de build para depuração em produção
-console.log('auth.js v1735330800 carregado - FIX FUNÇÕES GLOBAIS');
+console.log('auth.js v1735331000 carregado - FUNÇÕES EXPOSTAS IMEDIATAMENTE');
+
+// Declaração antecipada das funções para exposição global
+let checkAuth, saveToDatabaseWithAuth, loadFromDatabase, performUpdateProject;
 
 // Verificar se usuário está logado
-async function checkAuth() {
+checkAuth = async function() {
     console.log('🔐 Verificando autenticação...');
     
     await window.initSupabase();
@@ -45,7 +48,10 @@ async function checkAuth() {
         console.error('❌ Erro:', error);
         return null;
     }
-}
+};
+
+// Expor imediatamente
+window.checkAuth = checkAuth;
 
 // Exibir código do projeto na página
 function displayProjectCode(code) {
@@ -263,7 +269,7 @@ async function loadUserProjects() {
 }
 
 // Salvar projeto com user_id
-async function saveToDatabaseWithAuth() {
+saveToDatabaseWithAuth = async function() {
     try {
         // Mostrar feedback imediato ao usuário
         showNotification('⏳ Carregando...');
@@ -332,7 +338,11 @@ async function saveToDatabaseWithAuth() {
         console.error('❌ Erro em saveToDatabaseWithAuth:', error);
         showNotification('❌ Erro: ' + error.message);
     }
-}
+};
+
+// Expor imediatamente
+window.saveToDatabaseWithAuth = saveToDatabaseWithAuth;
+console.log('✅ saveToDatabaseWithAuth exposta no window');
 
 // Salvar novo projeto com user_id
 async function performSaveProject(projectName) {
