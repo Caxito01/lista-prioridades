@@ -224,11 +224,20 @@ async function loadTasks() {
             }
             
             if (project && project.data) {
-                tasks = project.data;
+                // Estrutura nova: tudo vem em project.data
+                const data = project.data;
+                const loadedTasks = Array.isArray(data.tasks) ? data.tasks : [];
+                const loadedEvaluators = data.evaluator_names || evaluatorNames;
+
+                tasks = loadedTasks;
+                evaluatorNames = loadedEvaluators;
+
                 localStorage.setItem('tasks', JSON.stringify(tasks));
+                localStorage.setItem('evaluatorNames', JSON.stringify(evaluatorNames));
+
                 console.log('✅ Tarefas carregadas do Supabase:', tasks.length);
-            } else if (project && project.tasks) {
-                // Compatibilidade com estrutura alternativa
+            } else if (project && Array.isArray(project.tasks)) {
+                // Compatibilidade com estrutura alternativa antiga
                 tasks = project.tasks;
                 localStorage.setItem('tasks', JSON.stringify(tasks));
                 console.log('✅ Tarefas carregadas (alt):', tasks.length);
