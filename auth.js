@@ -1,5 +1,5 @@
 // Versão de build para depuração em produção
-console.log('auth.js v1735331200 carregado - SEM DUPLICAÇÕES');
+console.log('auth.js v1735331400 carregado - FIX CLEARUSERDATA');
 
 // Declaração antecipada das funções para exposição global
 let checkAuth, saveToDatabaseWithAuth, loadFromDatabase, performUpdateProject;
@@ -146,13 +146,17 @@ function closeLogoutModal() {
 
 // Limpar dados do usuário anterior
 function clearUserData() {
-    evaluatorNames = {
-        eval1: 'Avaliador 1',
-        eval2: 'Avaliador 2',
-        eval3: 'Avaliador 3',
-        eval4: 'Avaliador 4'
-    };
-    tasks = [];
+    if (window.evaluatorNames) {
+        window.evaluatorNames = {
+            eval1: 'Avaliador 1',
+            eval2: 'Avaliador 2',
+            eval3: 'Avaliador 3',
+            eval4: 'Avaliador 4'
+        };
+    }
+    if (window.tasks) {
+        window.tasks = [];
+    }
     localStorage.removeItem('evaluatorNames');
     localStorage.removeItem('tasks');
 }
