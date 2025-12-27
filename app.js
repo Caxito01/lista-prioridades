@@ -827,12 +827,6 @@ async function performSaveAsNew(projectName) {
     if (modal) modal.remove();
 }
 
-// Atualizar projeto existente - CHAMADA PARA AUTH.JS
-async function performUpdateProject(projectId) {
-    // Esta função delegada para auth.js que tem a versão correta
-    return await window.performUpdateProject ? window.performUpdateProject(projectId) : console.error('performUpdateProject de auth.js não disponível');
-}
-
 // Fechar modal de save
 function closeSaveModal() {
     const modal = document.getElementById('saveProjectModal');
