@@ -27,28 +27,28 @@ DROP POLICY IF EXISTS "Admin can view all users" ON public.users;
 DROP POLICY IF EXISTS "Admin can update all users" ON public.users;
 DROP POLICY IF EXISTS "Admin can delete all users" ON public.users;
 
--- 4) Política de SELECT: usuário vê o próprio registro; admin vê todos
-CREATE POLICY "Users or admin can view users" ON public.users
+-- 4) Política de SELECT: APENAS o admin pode ver usuários
+CREATE POLICY "Admin can view users" ON public.users
 FOR SELECT
 USING (
-  auth.uid() = id OR public.is_admin()
+  public.is_admin()
 );
 
--- 5) Política de UPDATE: usuário atualiza o próprio; admin pode atualizar todos
-CREATE POLICY "Users or admin can update users" ON public.users
+-- 5) Política de UPDATE: APENAS o admin pode atualizar usuários
+CREATE POLICY "Admin can update users" ON public.users
 FOR UPDATE
 USING (
-  auth.uid() = id OR public.is_admin()
+  public.is_admin()
 )
 WITH CHECK (
-  auth.uid() = id OR public.is_admin()
+  public.is_admin()
 );
 
--- 6) Política de DELETE: usuário pode deletar só o próprio; admin pode deletar todos
-CREATE POLICY "Users or admin can delete users" ON public.users
+-- 6) Política de DELETE: APENAS o admin pode deletar usuários
+CREATE POLICY "Admin can delete users" ON public.users
 FOR DELETE
 USING (
-  auth.uid() = id OR public.is_admin()
+  public.is_admin()
 );
 
 -- Depois de rodar este script no SQL Editor do Supabase,
