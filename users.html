@@ -149,7 +149,7 @@
 <body>
 	<div class="users-container">
 		<div class="users-header">
-			<h1><span>👥</span> Usuários cadastrados</h1>
+			<h1><span>👥</span> Usuários cadastrados <span id="adminBadge" style="display:none;" class="badge badge-admin">Admin</span></h1>
 			<div class="users-actions">
 				<button class="btn-small btn-secondary" onclick="window.location.href='index.html'">⬅ Voltar</button>
 				<button class="btn-small btn-primary" id="btnReload" onclick="loadUsers()">🔄 Recarregar</button>
@@ -175,6 +175,8 @@
 	</div>
 
 	<script>
+		const ADMIN_EMAIL = 'carloscaxito@yahoo.com.br';
+
 		function showUsersMessage(type, text) {
 			const container = document.getElementById('messageContainer');
 			container.innerHTML = '';
@@ -276,6 +278,12 @@
 					showUsersMessage('error', 'Erro ao carregar usuários: ' + error.message);
 					renderUsers([], null);
 					return;
+				}
+
+				// Se for o admin, exibe badge visual
+				if (currentSessionUser.email === ADMIN_EMAIL) {
+					const badge = document.getElementById('adminBadge');
+					if (badge) badge.style.display = 'inline-block';
 				}
 
 				renderUsers(data || [], currentSessionUser.id || null);
