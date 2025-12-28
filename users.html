@@ -163,13 +163,12 @@
 				<tr>
 					<th>Email</th>
 					<th>Criado em</th>
-					<th>Último login</th>
 					<th class="text-center">Ações</th>
 				</tr>
 			</thead>
 			<tbody id="usersTbody">
 				<tr>
-					<td colspan="4" class="text-center">Carregando usuários...</td>
+					<td colspan="3" class="text-center">Carregando usuários...</td>
 				</tr>
 			</tbody>
 		</table>
@@ -205,7 +204,7 @@
 			if (!users || users.length === 0) {
 				const tr = document.createElement('tr');
 				const td = document.createElement('td');
-				td.colSpan = 4;
+				td.colSpan = 3;
 				td.className = 'text-center';
 				td.textContent = 'Nenhum usuário encontrado.';
 				tr.appendChild(td);
@@ -223,10 +222,6 @@
 				const tdCreated = document.createElement('td');
 				tdCreated.textContent = formatDateTime(user.created_at);
 				tr.appendChild(tdCreated);
-
-				const tdLastLogin = document.createElement('td');
-				tdLastLogin.textContent = formatDateTime(user.last_login);
-				tr.appendChild(tdLastLogin);
 
 				const tdActions = document.createElement('td');
 				tdActions.className = 'text-center';
@@ -273,7 +268,7 @@
 				// Lista usuários da tabela pública "users" (espelho de auth.users)
 				const { data, error } = await client
 					.from('users')
-					.select('id, email, created_at, last_login')
+					.select('id, email, created_at')
 					.order('created_at', { ascending: false });
 
 				if (error) {
