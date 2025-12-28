@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Usuários - Sistema de Gerenciamento de Prioridades</title>
+	<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+	<link rel="stylesheet" href="styles.css">
+
+	<!-- Supabase e inicialização (mesmo padrão do auth.html) -->
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+	<script src="supabase-config.js"></script>
+	<script src="auth.js?v=1735000002"></script>
+
+	<style>
+		body {
+			background: #f5f7fb;
+		}
+
+		.users-container {
+			max-width: 1000px;
+			margin: 40px auto;
+			background: #ffffff;
+			border-radius: 10px;
+			box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+			padding: 24px 28px;
+		}
+
+		.users-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 20px;
+		}
+
+		.users-header h1 {
+			font-size: 22px;
+			color: #333;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+
+		.users-header h1 span {
+			font-size: 24px;
+		}
+
+		.users-actions {
+			display: flex;
+			gap: 10px;
+		}
+
+		.btn-small {
+			padding: 8px 14px;
+			border-radius: 6px;
+			border: none;
+			cursor: pointer;
+			font-size: 13px;
+			font-weight: 500;
+		}
+
+		.btn-primary {
+			background: #667eea;
+			color: #fff;
+		}
+
+		.btn-secondary {
+			background: #e0e0e0;
+			color: #333;
+		}
+
+		.btn-danger {
+			background: #e53935;
+			color: #fff;
+		}
+
+		.btn-small:disabled {
+			opacity: 0.7;
+			cursor: not-allowed;
+		}
+
+		.message {
+			padding: 10px 12px;
+			border-radius: 6px;
+			margin-bottom: 15px;
+			font-size: 13px;
+		}
+
+		.message.info {
+			background: #e3f2fd;
+			color: #0d47a1;
+			border: 1px solid #bbdefb;
+		}
+
+		.message.error {
+			background: #ffebee;
+			color: #b71c1c;
+			border: 1px solid #ffcdd2;
+		}
+
+		.message.success {
+			background: #e8f5e9;
+			color: #1b5e20;
+			border: 1px solid #c8e6c9;
+		}
+
+		table.users-table {
+			width: 100%;
+			border-collapse: collapse;
+			margin-top: 10px;
+		}
+
+		table.users-table th,
+		table.users-table td {
+			padding: 10px 8px;
+			border-bottom: 1px solid #e0e0e0;
+			font-size: 13px;
+			text-align: left;
+		}
+
+		table.users-table th {
+			background: #f1f3f7;
+			font-weight: 600;
+			color: #555;
+		}
+
+		table.users-table tbody tr:hover {
+			background: #f9fafc;
+		}
+
+		.text-center {
+			text-align: center;
+		}
+
+		.badge {
+			display: inline-block;
+			padding: 2px 6px;
+			border-radius: 4px;
+			font-size: 11px;
+		}
+
+		.badge-admin {
+			background: #fff3e0;
+			color: #ef6c00;
+			border: 1px solid #ffe0b2;
+		}
+	</style>
+</head>
+<body>
+	<div class="users-container">
+		<div class="users-header">
+			<h1><span>👥</span> Usuários cadastrados</h1>
+			<div class="users-actions">
+				<button class="btn-small btn-secondary" onclick="window.location.href='index.html'">⬅ Voltar</button>
+				<button class="btn-small btn-primary" id="btnReload" onclick="loadUsers()">🔄 Recarregar</button>
+			</div>
+		</div>
+
+		<div id="messageContainer"></div>
+
+		<table class="users-table">
+			<thead>
+				<tr>
+					<th>Email</th>
+					<th>Criado em</th>
+					<th>Último login</th>
+					<th class="text-center">Ações</th>
+				</tr>
+			</thead>
+			<tbody id="usersTbody">
+				<tr>
+					<td colspan="4" class="text-center">Carregando usuários...</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+
+	<script>
+		function showUsersMessage(type, text) {
+			const container = document.getElementById('messageContainer');
+			container.innerHTML = '';
+			if (!text) return;
+
+			const div = document.createElement('div');
+			div.className = 'message ' + type;
+			div.textContent = text;
+			container.appendChild(div);
+		}
+
+		function formatDateTime(value) {
+			if (!value) return '-';
+			try {
+				const d = new Date(value);
+				if (Number.isNaN(d.getTime())) return value;
+				return d.toLocaleString('pt-BR');
+			} catch (e) {
+				return value;
+			}
+		}
+
+		function renderUsers(users, currentUserId) {
+			const tbody = document.getElementById('usersTbody');
+			tbody.innerHTML = '';
+
+			if (!users || users.length === 0) {
+				const tr = document.createElement('tr');
+				const td = document.createElement('td');
+				td.colSpan = 4;
+				td.className = 'text-center';
+				td.textContent = 'Nenhum usuário encontrado.';
+				tr.appendChild(td);
+				tbody.appendChild(tr);
+				return;
+			}
+
+			users.forEach(user => {
+				const tr = document.createElement('tr');
+
+				const tdEmail = document.createElement('td');
+				tdEmail.textContent = user.email || '-';
+				tr.appendChild(tdEmail);
+
+				const tdCreated = document.createElement('td');
+				tdCreated.textContent = formatDateTime(user.created_at);
+				tr.appendChild(tdCreated);
+
+				const tdLastLogin = document.createElement('td');
+				tdLastLogin.textContent = formatDateTime(user.last_login);
+				tr.appendChild(tdLastLogin);
+
+				const tdActions = document.createElement('td');
+				tdActions.className = 'text-center';
+
+				const btnDelete = document.createElement('button');
+				btnDelete.className = 'btn-small btn-danger';
+				btnDelete.textContent = '🗑 Excluir';
+				btnDelete.onclick = () => confirmDeleteUser(user.id, user.email);
+
+				// Evitar que o usuário delete a si mesmo por engano
+				if (currentUserId && user.id === currentUserId) {
+					btnDelete.disabled = true;
+					btnDelete.title = 'Não é possível excluir o usuário atualmente logado.';
+				}
+
+				tdActions.appendChild(btnDelete);
+				tr.appendChild(tdActions);
+
+				tbody.appendChild(tr);
+			});
+		}
+
+		async function loadUsers() {
+			const btnReload = document.getElementById('btnReload');
+			if (btnReload) btnReload.disabled = true;
+
+			try {
+				showUsersMessage('info', 'Carregando usuários...');
+
+				await window.initSupabase();
+				const client = window.getClient();
+				if (!client) {
+					showUsersMessage('error', 'Erro ao inicializar Supabase. Recarregue a página.');
+					return;
+				}
+
+				// Garante que existe sessão (usa lógica do auth.js)
+				const currentSessionUser = await checkAuth();
+				if (!currentSessionUser) {
+					// checkAuth já redireciona para auth.html se necessário
+					return;
+				}
+
+				// Lista usuários da tabela pública "users" (espelho de auth.users)
+				const { data, error } = await client
+					.from('users')
+					.select('id, email, created_at, last_login')
+					.order('created_at', { ascending: false });
+
+				if (error) {
+					console.error('Erro ao carregar usuários:', error);
+					showUsersMessage('error', 'Erro ao carregar usuários: ' + error.message);
+					renderUsers([], null);
+					return;
+				}
+
+				renderUsers(data || [], currentSessionUser.id || null);
+				showUsersMessage('', '');
+			} catch (e) {
+				console.error('Erro geral ao carregar usuários:', e);
+				showUsersMessage('error', 'Erro inesperado ao carregar usuários: ' + (e.message || e));
+			} finally {
+				if (btnReload) btnReload.disabled = false;
+			}
+		}
+
+		async function confirmDeleteUser(userId, email) {
+			if (!userId) return;
+
+			const sure = confirm('Tem certeza que deseja excluir o usuário "' + (email || userId) + '"? Esta ação não pode ser desfeita.');
+			if (!sure) return;
+
+			await deleteUser(userId, email);
+		}
+
+		async function deleteUser(userId, email) {
+			try {
+				showUsersMessage('info', 'Excluindo usuário ' + (email || '') + '...');
+
+				await window.initSupabase();
+				const client = window.getClient();
+				if (!client) {
+					showUsersMessage('error', 'Erro ao inicializar Supabase.');
+					return;
+				}
+
+				// Exclusão na tabela pública "users" (espelho)
+				const { error } = await client
+					.from('users')
+					.delete()
+					.eq('id', userId);
+
+				if (error) {
+					console.error('Erro ao excluir usuário:', error);
+					showUsersMessage('error', 'Erro ao excluir usuário: ' + error.message);
+					return;
+				}
+
+				showUsersMessage('success', 'Usuário ' + (email || '') + ' excluído com sucesso da tabela pública.');
+				await loadUsers();
+			} catch (e) {
+				console.error('Erro geral ao excluir usuário:', e);
+				showUsersMessage('error', 'Erro inesperado ao excluir usuário: ' + (e.message || e));
+			}
+		}
+
+		document.addEventListener('DOMContentLoaded', async function () {
+			// Garante que apenas usuários autenticados acessem a página
+			const user = await checkAuth();
+			if (!user) return;
+			loadUsers();
+		});
+	</script>
+</body>
+</html>
+
