@@ -356,9 +356,18 @@
 		}
 
 		document.addEventListener('DOMContentLoaded', async function () {
-			// Garante que apenas usuários autenticados acessem a página
+			// Garante que apenas o admin acesse a página
 			const user = await checkAuth();
 			if (!user) return;
+
+			if (user.email !== ADMIN_EMAIL) {
+				showUsersMessage('error', 'Acesso restrito: apenas o administrador pode visualizar esta página.');
+				setTimeout(() => {
+					window.location.href = 'index.html';
+				}, 2000);
+				return;
+			}
+
 			loadUsers();
 		});
 	</script>
