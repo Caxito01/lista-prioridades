@@ -330,7 +330,13 @@
                 });
 
                 if (error) {
-                    showMessage('❌ ' + error.message, 'error');
+                    let userMessage = error.message || '';
+
+                    if (userMessage === 'Invalid login credentials') {
+                        userMessage = 'Credenciais inválidas. Verifique seu email e senha.';
+                    }
+
+                    showMessage('❌ ' + userMessage, 'error');
                 } else {
                     showMessage('✅ Login realizado! Redirecionando...', 'success');
                     setTimeout(() => {
