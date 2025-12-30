@@ -303,6 +303,40 @@
             document.getElementById('messageContainer').innerHTML = '';
         }
 
+        function translateAuthError(message) {
+            if (!message) {
+                return 'Erro de autenticação. Tente novamente.';
+            }
+
+            const text = message.toLowerCase();
+
+            if (text.includes('invalid login credentials')) {
+                return 'Credenciais inválidas. Verifique seu email e senha.';
+            }
+
+            if (text.includes('email not confirmed')) {
+                return 'Seu email ainda não foi confirmado. Verifique sua caixa de entrada.';
+            }
+
+            if (text.includes('user already registered') || text.includes('user already exists') || text.includes('already registered')) {
+                return 'Já existe uma conta registrada com este email.';
+            }
+
+            if (text.includes('password should be at least') || text.includes('password length')) {
+                return 'A senha deve ter no mínimo 6 caracteres.';
+            }
+
+            if (text.includes('invalid email') || text.includes('validate email')) {
+                return 'Email inválido. Verifique o endereço digitado.';
+            }
+
+            if (text.includes('rate limit')) {
+                return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
+            }
+
+            return message;
+        }
+
         async function handleLogin() {
             const email = document.getElementById('loginEmail').value.trim();
             const password = document.getElementById('loginPassword').value;
@@ -330,12 +364,7 @@
                 });
 
                 if (error) {
-                    let userMessage = error.message || '';
-
-                    if (userMessage === 'Invalid login credentials') {
-                        userMessage = 'Credenciais inválidas. Verifique seu email e senha.';
-                    }
-
+                    const userMessage = translateAuthError(error.message || '');
                     showMessage('❌ ' + userMessage, 'error');
                 } else {
                     showMessage('✅ Login realizado! Redirecionando...', 'success');
@@ -472,7 +501,8 @@
                 });
 
                 if (error) {
-                    showMessage('❌ ' + error.message, 'error');
+                    const userMessage = translateAuthError(error.message || '');
+                    showMessage('❌ ' + userMessage, 'error');
                 } else {
                     showMessage('✅ Cadastro realizado! Verifique seu email.', 'success');
                     setTimeout(() => {
