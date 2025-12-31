@@ -1,5 +1,5 @@
 // Versão de build para depuração em produção
-console.log('auth.js v1735000002 carregado');
+console.log('auth.js v1735000004 carregado');
 
 // Verificar se usuário está logado
 async function checkAuth() {
@@ -108,8 +108,9 @@ function confirmLogout() {
     performLogout();
 }
 
-// Modal informando que é necessário estar logado para salvar
-function showLoginRequiredModal() {
+// Modal informando que é necessário estar logado
+// customMessage permite personalizar o texto para salvar/carregar
+function showLoginRequiredModal(customMessage) {
     const existing = document.getElementById('loginRequiredModal');
     if (existing) existing.remove();
 
@@ -128,10 +129,12 @@ function showLoginRequiredModal() {
         z-index: 2000;
     `;
 
+    const message = customMessage || 'Você precisa estar logado para salvar suas tarefas no banco de dados.';
+
     loginModal.innerHTML = `
         <div style="background: white; border-radius: 15px; padding: 30px; max-width: 400px; width: 90%; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3); text-align: center;">
             <h2 style="color: #f44336; margin-bottom: 20px; font-size: 1.5rem;">⚠️ Autenticação Necessária</h2>
-            <p style="color: #666; margin-bottom: 30px; font-size: 1rem; line-height: 1.5;">Você precisa estar logado para salvar suas tarefas no banco de dados.</p>
+            <p style="color: #666; margin-bottom: 30px; font-size: 1rem; line-height: 1.5;">${message}</p>
             <div style="display: flex; gap: 10px; justify-content: center;">
                 <button onclick="goToLoginFromModal()" style="flex: 1; padding: 12px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.3s;"
                 onmouseover="this.style.background='#43a047'" onmouseout="this.style.background='#4CAF50'">Ir para Login</button>
@@ -503,7 +506,7 @@ async function loadFromDatabase() {
         
         if (!session) {
             if (typeof showLoginRequiredModal === 'function') {
-                showLoginRequiredModal();
+                showLoginRequiredModal('Você precisa estar logado para carregar suas tarefas no banco de dados.');
             } else {
                 showNotification('❌ Você precisa estar logado para carregar projetos!');
             }
