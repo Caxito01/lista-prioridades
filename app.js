@@ -862,18 +862,30 @@ function formatSupabaseDate(dateString) {
     return date.toLocaleString('pt-BR', options);
 }
 
-// Mostrar seleção de projetos
+// Mostrar seleção de projetos (mesmo layout do "Salvar Tarefa")
 function showProjectSelection(projects) {
-    let options = '<select id="projectSelect" style="padding: 10px; font-size: 1rem; margin: 10px 0; width: 100%; box-sizing: border-box;">\n<option value="">Escolha um projeto...</option>\n';
-    
-    projects.forEach(project => {
-        const date = formatSupabaseDate(project.created_at);
-        options += `<option value="${project.id}">${project.name} - ${date}</option>\n`;
-    });
-    
-    options += '</select>';
-    
-    // Modal centralizado
+    let projectsList = '';
+
+    if (projects && projects.length > 0) {
+        projectsList = '<div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 15px;">';
+        
+        projects.forEach(project => {
+            const date = formatSupabaseDate(project.created_at);
+            const projectCode = project.project_code ? `<br><small style="color: #667eea; font-weight: bold;">🔑 ${project.project_code}</small>` : '';
+            projectsList += `
+                <div onclick="confirmLoadProject('${project.id}')" style="padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s; background: #f9f9f9;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='#f9f9f9'">
+                    <strong style="color: #333;">${project.name}</strong><br>
+                    <small style="color: #999;">${date}</small>
+                    ${projectCode}
+                </div>
+            `;
+        });
+        
+        projectsList += '</div>';
+    } else {
+        projectsList = '<p style="color: #666; margin-bottom: 15px;">Nenhum projeto encontrado para sua conta.</p>';
+    }
+
     const modal = document.createElement('div');
     modal.id = 'loadProjectModal';
     modal.style.cssText = `
@@ -890,12 +902,11 @@ function showProjectSelection(projects) {
     `;
     
     modal.innerHTML = `
-        <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); max-width: 400px; width: 90%;">
-            <h2 style="margin-top: 0; color: #333;">📥 Carregar Projeto</h2>
-            <p style="color: #666;">Selecione um projeto:</p>
-            ${options}
-            <div style="margin-top: 20px; display: flex; gap: 10px;">
-                <button onclick="confirmLoadProject()" style="flex: 1; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">Carregar</button>
+        <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); max-width: 450px; width: 90%;">
+            <h2 style="margin-top: 0; color: #333;">📥 Carregar Tarefa</h2>
+            <p style="color: #666; margin-bottom: 15px;">Clique em um projeto para carregar:</p>
+            ${projectsList}
+            <div style="display: flex; gap: 10px;">
                 <button onclick="closeLoadModal()" style="flex: 1; padding: 12px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">Cancelar</button>
             </div>
         </div>
