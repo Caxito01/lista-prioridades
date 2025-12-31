@@ -932,6 +932,15 @@ async function confirmLoadProject(projectId) {
         // Carregar dados
         evaluatorNames = project.data.evaluator_names || evaluatorNames;
         tasks = project.data.tasks || [];
+
+        // Persistir projeto atual para recarregar corretamente após F5
+        try {
+            localStorage.setItem('projectId', project.id);
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            localStorage.setItem('evaluatorNames', JSON.stringify(evaluatorNames));
+        } catch (e) {
+            console.log('⚠️ Erro ao salvar dados do projeto no localStorage:', e?.message);
+        }
         
         // Exibir código do projeto se houver
         if (project.project_code) {
@@ -964,25 +973,28 @@ async function confirmLoadProject(projectId) {
 window.addEventListener('load', async function() {
     const user = await checkAuth();
     if (user) {
-        // Mostrar email do usuário no header (ou código se acesso por código)
+        // Mostrar informação do usuário no header (email ou código em modo acesso-por-código)
         const headerButtons = document.querySelector('.header-buttons');
         if (headerButtons) {
             const userInfo = document.createElement('span');
             userInfo.style.cssText = 'color: #666; font-size: 13px; margin-right: 15px; display: flex; align-items: center;';
-            
-            // Se for acesso por código, mostrar o código
+
             const projectCode = localStorage.getItem('projectCode');
-            if (projectCode) {
-                userInfo.innerHTML = `🔑 ${projectCode}`;
-                displayProjectCode(projectCode);
+            const currentProjectCode = localStorage.getItem('currentProjectCode');
+
+            if (user.id === 'code-access') {
+                // Acesso sem login, mostrar apenas o código do projeto
+                const codeToShow = projectCode || currentProjectCode || user.email;
+                userInfo.innerHTML = `🔑 ${codeToShow}`;
+                if (codeToShow) {
+                    displayProjectCode(codeToShow);
+                }
             } else {
-                // Se for email, procurar por código do projeto armazenado
-                const currentProjectCode = localStorage.getItem('currentProjectCode');
-                if (currentProjectCode) {
-                    userInfo.innerHTML = `🔑 ${currentProjectCode}`;
-                    displayProjectCode(currentProjectCode);
-                } else {
-                    userInfo.innerHTML = `👤 ${user.email}`;
+                // Usuário autenticado por email: manter email visível e mostrar código só no banner verde
+                userInfo.innerHTML = `👤 ${user.email}`;
+                const codeToShow = projectCode || currentProjectCode;
+                if (codeToShow) {
+                    displayProjectCode(codeToShow);
                 }
             }
             
