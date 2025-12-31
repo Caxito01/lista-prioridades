@@ -12,35 +12,36 @@ async function checkAuth() {
         return null;
     }
     
-    // Verificar acesso por código
-    const projectCode = localStorage.getItem('projectCode');
-    const projectId = localStorage.getItem('projectId');
-    
-    if (projectCode && projectId) {
-        console.log('✅ Código de acesso detectado');
-        displayProjectCode(projectCode);
-        return { id: 'code-access', email: projectCode };
-    }
-    
     try {
         const { data, error: sessionError } = await client.auth.getSession();
         const session = data?.session;
         
-        if (sessionError || !session) {
-            console.log('⚠️ Sem sessão, redirecionando...');
-            window.location.href = 'auth.html';
-            return null;
+        // Se houver sessão válida, sempre priorizar o usuário autenticado
+        if (!sessionError && session) {
+            const currentUser = session.user.id;
+            const lastUser = localStorage.getItem('lastUserId');
+            
+            if (lastUser !== currentUser) {
+                clearUserData();
+                localStorage.setItem('lastUserId', currentUser);
+            }
+            
+            return session.user;
         }
-        
-        const currentUser = session.user.id;
-        const lastUser = localStorage.getItem('lastUserId');
-        
-        if (lastUser !== currentUser) {
-            clearUserData();
-            localStorage.setItem('lastUserId', currentUser);
+
+        // Sem sessão válida: tentar acesso somente por código de projeto
+        const projectCode = localStorage.getItem('projectCode');
+        const projectId = localStorage.getItem('projectId');
+
+        if (projectCode && projectId) {
+            console.log('✅ Código de acesso detectado (sem sessão)');
+            displayProjectCode(projectCode);
+            return { id: 'code-access', email: projectCode };
         }
-        
-        return session.user;
+
+        console.log('⚠️ Sem sessão e sem código, redirecionando...');
+        window.location.href = 'auth.html';
+        return null;
     } catch (error) {
         console.error('❌ Erro:', error);
         return null;
@@ -105,6 +106,56 @@ function showLogoutModal() {
 function confirmLogout() {
     closeLogoutModal();
     performLogout();
+}
+
+// Modal informando que é necessário estar logado para salvar
+function showLoginRequiredModal() {
+    const existing = document.getElementById('loginRequiredModal');
+    if (existing) existing.remove();
+
+    const loginModal = document.createElement('div');
+    loginModal.id = 'loginRequiredModal';
+    loginModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+    `;
+
+    loginModal.innerHTML = `
+        <div style="background: white; border-radius: 15px; padding: 30px; max-width: 400px; width: 90%; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3); text-align: center;">
+            <h2 style="color: #f44336; margin-bottom: 20px; font-size: 1.5rem;">⚠️ Autenticação Necessária</h2>
+            <p style="color: #666; margin-bottom: 30px; font-size: 1rem; line-height: 1.5;">Você precisa estar logado para salvar suas tarefas no banco de dados.</p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button onclick="goToLoginFromModal()" style="flex: 1; padding: 12px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.3s;"
+                onmouseover="this.style.background='#43a047'" onmouseout="this.style.background='#4CAF50'">Ir para Login</button>
+                <button onclick="closeLoginRequiredModal()" style="flex: 1; padding: 12px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.3s;"
+                onmouseover="this.style.background='#5a6268'" onmouseout="this.style.background='#6c757d'">Cancelar</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(loginModal);
+
+    loginModal.onclick = (e) => {
+        if (e.target === loginModal) closeLoginRequiredModal();
+    };
+}
+
+function closeLoginRequiredModal() {
+    const modal = document.getElementById('loginRequiredModal');
+    if (modal) modal.remove();
+}
+
+function goToLoginFromModal() {
+    closeLoginRequiredModal();
+    window.location.href = 'auth.html?t=' + Date.now();
 }
 
 async function performLogout() {
@@ -264,7 +315,7 @@ async function saveToDatabaseWithAuth() {
         }
         
         if (!session) {
-            showNotification('❌ Você precisa estar logado para salvar!');
+            showLoginRequiredModal();
             return;
         }
         
