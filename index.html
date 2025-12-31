@@ -45,7 +45,11 @@
                 }
                 const { data, error: sessionError } = await client.auth.getSession();
                 if (!data?.session) {
-                    alert('❌ Você precisa estar logado para carregar projetos!');
+                    if (typeof showLoginRequiredModal === 'function') {
+                        showLoginRequiredModal();
+                    } else {
+                        alert('❌ Você precisa estar logado para carregar projetos!');
+                    }
                     return;
                 }
                 const { data: projects, error } = await client
