@@ -786,7 +786,11 @@ async function performSaveProject(projectName) {
         }
         
         if (!session) {
-            showNotification('❌ Você precisa estar logado para salvar!');
+            if (typeof showLoginRequiredModal === 'function') {
+                showLoginRequiredModal();
+            } else {
+                showNotification('❌ Você precisa estar logado para salvar!');
+            }
             return;
         }
         
