@@ -502,7 +502,11 @@ async function loadFromDatabase() {
         }
         
         if (!session) {
-            showNotification('❌ Você precisa estar logado para carregar projetos!');
+            if (typeof showLoginRequiredModal === 'function') {
+                showLoginRequiredModal();
+            } else {
+                showNotification('❌ Você precisa estar logado para carregar projetos!');
+            }
             return;
         }
         
