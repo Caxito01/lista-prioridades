@@ -240,6 +240,22 @@
             </div>
         </div>
 
+        <!-- Form de Nova Senha (recuperação) -->
+        <div id="resetForm" class="form-section">
+            <div style="text-align:center; margin-bottom: 16px; color: #555; font-size: 14px;">
+                🔐 Digite sua nova senha abaixo
+            </div>
+            <div class="form-group">
+                <label for="newPassword">Nova Senha:</label>
+                <input type="password" id="newPassword" placeholder="Mínimo 6 caracteres" required>
+            </div>
+            <div class="form-group">
+                <label for="newPasswordConfirm">Confirmar Nova Senha:</label>
+                <input type="password" id="newPasswordConfirm" placeholder="Confirme a nova senha" required>
+            </div>
+            <button class="btn-submit" onclick="handleResetPassword()" id="resetBtn">Salvar Nova Senha</button>
+        </div>
+
         <!-- Form de Cadastro -->
         <div id="registerForm" class="form-section">
             <div class="form-group">
@@ -263,13 +279,29 @@
 
     <script src="supabase-config.js"></script>
     <script>
-        // Verificar se usuário já está logado
+        // Verificar se usuário já está logado ou em modo de recuperação
         window.addEventListener('load', async function() {
             console.log('📄 auth.html carregado');
             await window.initSupabase();
             const client = window.getClient();
+
+            // Detectar link de recuperação de senha via hash da URL
+            const hash = window.location.hash;
+            if (hash && hash.includes('type=recovery')) {
+                console.log('🔐 Token de recuperação detectado na URL');
+                switchToResetPassword();
+                return;
+            }
             
             if (client && client.auth) {
+                // Ouvir evento PASSWORD_RECOVERY do Supabase
+                client.auth.onAuthStateChange((event, session) => {
+                    if (event === 'PASSWORD_RECOVERY') {
+                        console.log('🔐 Evento PASSWORD_RECOVERY recebido');
+                        switchToResetPassword();
+                    }
+                });
+
                 try {
                     console.log('✅ Cliente pronto');
                     const { data, error: sessionError } = await client.auth.getSession();
@@ -292,6 +324,7 @@
             const codeForm = document.getElementById('codeForm');
             const registerForm = document.getElementById('registerForm');
             const forgotForm = document.getElementById('forgotForm');
+            const resetForm = document.getElementById('resetForm');
             const emailTab = document.getElementById('emailTab');
             const codeTab = document.getElementById('codeTab');
 
@@ -299,6 +332,7 @@
             codeForm.classList.remove('active');
             registerForm.classList.remove('active');
             forgotForm.classList.remove('active');
+            resetForm.classList.remove('active');
             emailTab.style.background = '#e0e0e0';
             emailTab.style.color = '#666';
             codeTab.style.background = '#e0e0e0';
@@ -317,10 +351,24 @@
             clearMessages();
         }
 
+        function switchToResetPassword() {
+            document.getElementById('emailForm').classList.remove('active');
+            document.getElementById('codeForm').classList.remove('active');
+            document.getElementById('forgotForm').classList.remove('active');
+            document.getElementById('registerForm').classList.remove('active');
+            document.getElementById('resetForm').classList.add('active');
+            document.getElementById('emailTab').style.background = '#e0e0e0';
+            document.getElementById('emailTab').style.color = '#666';
+            document.getElementById('codeTab').style.background = '#e0e0e0';
+            document.getElementById('codeTab').style.color = '#666';
+            clearMessages();
+        }
+
         function switchToRegister() {
             document.getElementById('emailForm').classList.remove('active');
             document.getElementById('codeForm').classList.remove('active');
             document.getElementById('forgotForm').classList.remove('active');
+            document.getElementById('resetForm').classList.remove('active');
             document.getElementById('registerForm').classList.add('active');
             document.getElementById('emailTab').style.background = '#e0e0e0';
             document.getElementById('emailTab').style.color = '#666';
@@ -333,6 +381,7 @@
             document.getElementById('emailForm').classList.remove('active');
             document.getElementById('codeForm').classList.remove('active');
             document.getElementById('registerForm').classList.remove('active');
+            document.getElementById('resetForm').classList.remove('active');
             document.getElementById('forgotForm').classList.add('active');
             document.getElementById('emailTab').style.background = '#e0e0e0';
             document.getElementById('emailTab').style.color = '#666';
@@ -505,6 +554,57 @@
             
             console.log('✅ Código válido');
             return true;
+        }
+
+        async function handleResetPassword() {
+            const newPassword = document.getElementById('newPassword').value;
+            const newPasswordConfirm = document.getElementById('newPasswordConfirm').value;
+            const btn = document.getElementById('resetBtn');
+
+            if (!newPassword || !newPasswordConfirm) {
+                showMessage('❌ Preencha todos os campos!', 'error');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                showMessage('❌ A senha deve ter no mínimo 6 caracteres!', 'error');
+                return;
+            }
+
+            if (newPassword !== newPasswordConfirm) {
+                showMessage('❌ As senhas não conferem!', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Salvando...';
+
+            try {
+                await window.initSupabase();
+                const client = window.getClient();
+                if (!client) {
+                    showMessage('❌ Sistema não inicializou. Recarregue.', 'error');
+                    return;
+                }
+
+                const { error } = await client.auth.updateUser({ password: newPassword });
+
+                if (error) {
+                    showMessage('❌ ' + translateAuthError(error.message || ''), 'error');
+                } else {
+                    showMessage('✅ Senha alterada com sucesso! Redirecionando...', 'success');
+                    // Limpar hash da URL
+                    history.replaceState(null, '', window.location.pathname);
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 2000);
+                }
+            } catch (error) {
+                showMessage('❌ Erro: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Salvar Nova Senha';
+            }
         }
 
         async function handleForgotPassword() {
