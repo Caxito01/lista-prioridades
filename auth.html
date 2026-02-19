@@ -115,6 +115,23 @@
             text-decoration: underline;
         }
 
+        .forgot-link {
+            text-align: right;
+            margin-top: -10px;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+
+        .forgot-link a {
+            color: #667eea;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .forgot-link a:hover {
+            text-decoration: underline;
+        }
+
         .form-section {
             display: none;
         }
@@ -184,11 +201,14 @@
         <div id="emailForm" class="form-section active">
             <div class="form-group">
                 <label for="loginEmail">Email:</label>
-                <input type="email" id="loginEmail" placeholder="suporte@caxito.com.br" required>
+                <input type="email" id="loginEmail" placeholder="seu@email.com.br" required>
             </div>
             <div class="form-group">
                 <label for="loginPassword">Senha:</label>
                 <input type="password" id="loginPassword" placeholder="Sua senha" required>
+            </div>
+            <div class="forgot-link">
+                <a onclick="switchToForgotPassword()">Esqueci minha senha</a>
             </div>
             <button class="btn-submit" onclick="handleLogin()" id="loginBtn">Entrar</button>
             <div class="toggle-form">
@@ -205,6 +225,18 @@
             <button class="btn-submit" onclick="handleCodeLogin()" id="codeBtn">Acessar Projeto</button>
             <div class="toggle-form">
                 Novo por aqui? <a onclick="switchToRegister()">Crie uma conta</a>
+            </div>
+        </div>
+
+        <!-- Form de Esqueci Senha -->
+        <div id="forgotForm" class="form-section">
+            <div class="form-group">
+                <label for="forgotEmail">Email cadastrado:</label>
+                <input type="email" id="forgotEmail" placeholder="seu@email.com" required>
+            </div>
+            <button class="btn-submit" onclick="handleForgotPassword()" id="forgotBtn">Enviar link de recuperação</button>
+            <div class="toggle-form">
+                Lembrou a senha? <a onclick="switchTab('email')">Voltar ao login</a>
             </div>
         </div>
 
@@ -259,12 +291,14 @@
             const emailForm = document.getElementById('emailForm');
             const codeForm = document.getElementById('codeForm');
             const registerForm = document.getElementById('registerForm');
+            const forgotForm = document.getElementById('forgotForm');
             const emailTab = document.getElementById('emailTab');
             const codeTab = document.getElementById('codeTab');
 
             emailForm.classList.remove('active');
             codeForm.classList.remove('active');
             registerForm.classList.remove('active');
+            forgotForm.classList.remove('active');
             emailTab.style.background = '#e0e0e0';
             emailTab.style.color = '#666';
             codeTab.style.background = '#e0e0e0';
@@ -286,7 +320,20 @@
         function switchToRegister() {
             document.getElementById('emailForm').classList.remove('active');
             document.getElementById('codeForm').classList.remove('active');
+            document.getElementById('forgotForm').classList.remove('active');
             document.getElementById('registerForm').classList.add('active');
+            document.getElementById('emailTab').style.background = '#e0e0e0';
+            document.getElementById('emailTab').style.color = '#666';
+            document.getElementById('codeTab').style.background = '#e0e0e0';
+            document.getElementById('codeTab').style.color = '#666';
+            clearMessages();
+        }
+
+        function switchToForgotPassword() {
+            document.getElementById('emailForm').classList.remove('active');
+            document.getElementById('codeForm').classList.remove('active');
+            document.getElementById('registerForm').classList.remove('active');
+            document.getElementById('forgotForm').classList.add('active');
             document.getElementById('emailTab').style.background = '#e0e0e0';
             document.getElementById('emailTab').style.color = '#666';
             document.getElementById('codeTab').style.background = '#e0e0e0';
@@ -458,6 +505,44 @@
             
             console.log('✅ Código válido');
             return true;
+        }
+
+        async function handleForgotPassword() {
+            const email = document.getElementById('forgotEmail').value.trim();
+            const btn = document.getElementById('forgotBtn');
+
+            if (!email) {
+                showMessage('❌ Digite seu email!', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Enviando...';
+
+            try {
+                await window.initSupabase();
+                const client = window.getClient();
+                if (!client) {
+                    showMessage('❌ Sistema não inicializou. Recarregue.', 'error');
+                    return;
+                }
+
+                const { error } = await client.auth.resetPasswordForEmail(email, {
+                    redirectTo: 'https://caxito01.github.io/lista-prioridades/auth.html'
+                });
+
+                if (error) {
+                    showMessage('❌ ' + translateAuthError(error.message || ''), 'error');
+                } else {
+                    showMessage('✅ Link de recuperação enviado! Verifique sua caixa de entrada.', 'success');
+                    document.getElementById('forgotEmail').value = '';
+                }
+            } catch (error) {
+                showMessage('❌ Erro: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Enviar link de recuperação';
+            }
         }
 
         async function handleRegister() {
