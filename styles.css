@@ -1028,19 +1028,40 @@ body.dark-mode tbody tr:hover {
 body.dark-mode .modal-content {
     background: #1e1e2e;
     color: #e0e0e0;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
 }
 
 body.dark-mode .modal-content h2 {
-    color: #a89be8;
-    border-bottom-color: #a89be8;
+    color: #c4b8f5;
+    border-bottom-color: #4a4a6a;
+}
+
+body.dark-mode .help-section {
+    background: #252540;
+    border-left-color: #7c6fd4;
+    border-radius: 10px;
+}
+
+body.dark-mode .help-section h3 {
+    color: #c4b8f5;
+}
+
+body.dark-mode .help-section p,
+body.dark-mode .help-section li {
+    color: #c8c8d8;
+    line-height: 1.7;
+}
+
+body.dark-mode .help-section strong {
+    color: #e0dcff;
 }
 
 body.dark-mode .close {
-    color: #888;
+    color: #777;
 }
 
 body.dark-mode .close:hover {
-    color: #a89be8;
+    color: #c4b8f5;
 }
 
 body.dark-mode footer {
