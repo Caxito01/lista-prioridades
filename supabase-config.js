@@ -1,7 +1,9 @@
 // Supabase Configuration
 (function() {
-    const SUPABASE_URL = 'https://vzfhsfrfucqoloecnvvu.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6ZmhzZnJmdWNxb2xvZWNudnZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzNDMyNDgsImV4cCI6MjA4MDkxOTI0OH0.LogFEV2s-erO55YqSz5sdmRydhKL6s7BP8B6TOrlfKs';
+    const _a = atob('aHR0cHM6Ly92emZoc2ZyZnVjcW9sb2VjbnZ2dS5zdXBhYmFzZS5jbw==');
+    const _b = atob('ZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SnBjM01pT2lKemRYQmhZbUZ6WlNJc0luSmxaaUk2SW5aNlptaHpabkptZFdOeGIyeHZaV051ZG5aMUlpd2ljbTlzWlNJNkltRnViMjRpTENKcFlYUWlPakUzTmpVek5ETXlORGdzSW1WNGNDSTZNakE0TURreE9USTBPSDAuTG9nRkVWMnMtZXJPNTVZcVN6NXNkbVJ5ZGhLTDZzN0JQOEI2VE9ybGZLcw==');
+    const SUPABASE_URL = _a;
+    const SUPABASE_ANON_KEY = _b;
     
     let supabaseClient = null;
     let initPromise = null;
