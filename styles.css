@@ -921,3 +921,145 @@ th:nth-child(9),
 td:nth-child(9) {
     width: 110px;
 }
+
+/* ============================================================
+   DARK MODE
+   ============================================================ */
+.btn-darkmode {
+    background: #444;
+    color: #fff;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.btn-darkmode:hover {
+    background: #222;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+body.dark-mode {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: #e0e0e0;
+}
+
+body.dark-mode header {
+    background: rgba(30, 30, 50, 0.97);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+}
+
+body.dark-mode .logo h1 {
+    color: #a89be8;
+}
+
+body.dark-mode .logo .subtitle {
+    color: #aaa;
+}
+
+body.dark-mode main {
+    background: #1e1e2e;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+    color: #e0e0e0;
+}
+
+body.dark-mode section h2 {
+    color: #a89be8;
+    border-bottom-color: #333;
+}
+
+body.dark-mode .config-section,
+body.dark-mode .controls-section,
+body.dark-mode .help-section,
+body.dark-mode .legend-container {
+    background: #252535;
+    border-left-color: #a89be8;
+}
+
+body.dark-mode .form-section {
+    background: #1e1e2e;
+    border-color: #333;
+}
+
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode .stage-select,
+body.dark-mode .filter-group select,
+body.dark-mode .evaluator-input input,
+body.dark-mode .form-group input,
+body.dark-mode .form-group select {
+    background: #2a2a3e;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+body.dark-mode input:focus,
+body.dark-mode select:focus {
+    border-color: #a89be8;
+}
+
+body.dark-mode input::placeholder {
+    color: #888;
+}
+
+body.dark-mode label,
+body.dark-mode .evaluator-input label,
+body.dark-mode .form-group label,
+body.dark-mode .filter-group label {
+    color: #bbb;
+}
+
+body.dark-mode table {
+    background: #1e1e2e;
+}
+
+body.dark-mode td {
+    border-bottom-color: #333;
+    color: #e0e0e0;
+}
+
+body.dark-mode tbody tr:hover {
+    background-color: #252535;
+}
+
+body.dark-mode .modal-content {
+    background: #1e1e2e;
+    color: #e0e0e0;
+}
+
+body.dark-mode .modal-content h2 {
+    color: #a89be8;
+    border-bottom-color: #a89be8;
+}
+
+body.dark-mode .close {
+    color: #888;
+}
+
+body.dark-mode .close:hover {
+    color: #a89be8;
+}
+
+body.dark-mode footer {
+    background: rgba(30, 30, 50, 0.97);
+    color: #aaa;
+}
+
+body.dark-mode .evaluator-name {
+    color: #a89be8;
+}
+
+body.dark-mode .legend-item {
+    color: #ccc;
+}
+
+body.dark-mode .btn-darkmode {
+    background: #667eea;
+    color: #fff;
+}
+body.dark-mode .btn-darkmode:hover {
+    background: #5568d3;
+}
