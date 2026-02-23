@@ -163,38 +163,161 @@
 			color: #ef6c00;
 			border: 1px solid #ffe0b2;
 		}
+
+		.section-tabs {
+			display: flex;
+			gap: 8px;
+			margin-bottom: 20px;
+			border-bottom: 2px solid #e0e0e0;
+			padding-bottom: 0;
+		}
+		.tab-btn {
+			padding: 10px 22px;
+			border: none;
+			border-radius: 8px 8px 0 0;
+			font-size: 13px;
+			font-weight: 600;
+			cursor: pointer;
+			background: #e0e0e0;
+			color: #666;
+			transition: all 0.2s;
+		}
+		.tab-btn.active {
+			background: #667eea;
+			color: #fff;
+		}
+
+		.tab-section { display: none; }
+		.tab-section.active { display: block; }
+
+		/* Project Cards */
+		.projects-grid {
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+			margin-top: 10px;
+		}
+		.project-card {
+			background: #f9fafc;
+			border: 1px solid #e5e7ef;
+			border-radius: 8px;
+			padding: 14px 18px;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			gap: 10px;
+		}
+		.project-card:hover {
+			background: #f1f3fb;
+		}
+		.project-card-info {
+			display: flex;
+			flex-direction: column;
+			gap: 3px;
+		}
+		.project-card-name {
+			font-weight: 700;
+			font-size: 14px;
+			color: #222;
+		}
+		.project-card-date {
+			font-size: 11px;
+			color: #888;
+		}
+		.project-card-code {
+			font-size: 12px;
+			color: #667eea;
+			font-weight: 700;
+		}
+		.project-card-email {
+			font-size: 12px;
+			color: #555;
+		}
+		.project-card-actions {
+			flex-shrink: 0;
+		}
+
+		/* Dark mode para users.html */
+		body.dark-mode { background: #12121e; color: #e0e0e0; }
+		body.dark-mode .users-container { background: #1e1e2e; box-shadow: 0 4px 18px rgba(0,0,0,0.4); }
+		body.dark-mode .users-header h1 { color: #c4b8f5; }
+		body.dark-mode table.users-table th { background: #252535; color: #bbb; }
+		body.dark-mode table.users-table th,
+		body.dark-mode table.users-table td { border-bottom-color: #333; color: #ddd; }
+		body.dark-mode table.users-table tbody tr:hover { background: #252535; }
+		body.dark-mode .message.info { background: #1a2a3a; color: #90caf9; border-color: #1e3a5f; }
+		body.dark-mode .message.error { background: #2a1a1a; color: #ef9a9a; border-color: #4a1a1a; }
+		body.dark-mode .message.success { background: #1a2a1a; color: #a5d6a7; border-color: #1b4a1b; }
+		body.dark-mode .section-tabs { border-bottom-color: #333; }
+		body.dark-mode .tab-btn { background: #252535; color: #aaa; }
+		body.dark-mode .tab-btn.active { background: #667eea; color: #fff; }
+		body.dark-mode .project-card { background: #252535; border-color: #333; }
+		body.dark-mode .project-card:hover { background: #2d2d45; }
+		body.dark-mode .project-card-name { color: #e0e0e0; }
+		body.dark-mode .project-card-email { color: #aaa; }
 	</style>
 </head>
 <body>
 	<div class="users-container">
 		<div class="users-header">
-			<h1><span>👥</span> Usuários cadastrados <span id="adminBadge" style="display:none;" class="badge badge-admin">Admin</span></h1>
+			<h1><span>⚙️</span> Painel Admin <span id="adminBadge" style="display:none;" class="badge badge-admin">Admin</span></h1>
 			<div class="users-actions">
+				<button class="btn-small" id="btnDark" onclick="toggleDarkMode()" style="background:#444;color:#fff;border-radius:20px;">🌙 Dark</button>
 				<button class="btn-small btn-secondary" onclick="window.location.href='index.html'">⬅ Voltar</button>
-				<button class="btn-small btn-primary" id="btnReload" onclick="loadUsers()">🔄 Recarregar</button>
+				<button class="btn-small btn-primary" id="btnReload" onclick="reloadCurrent()">🔄 Recarregar</button>
 			</div>
 		</div>
 
 		<div id="messageContainer"></div>
 
-		<table class="users-table">
-			<thead>
-				<tr>
-					<th>Email</th>
-					<th>Criado em</th>
-					<th class="text-center">Ações</th>
-				</tr>
-			</thead>
-			<tbody id="usersTbody">
-				<tr>
-					<td colspan="3" class="text-center">Carregando usuários...</td>
-				</tr>
-			</tbody>
-		</table>
+		<!-- Abas -->
+		<div class="section-tabs">
+			<button class="tab-btn active" id="tabUsersBtn" onclick="switchAdminTab('users')">👥 Usuários</button>
+			<button class="tab-btn" id="tabProjectsBtn" onclick="switchAdminTab('projects')">📁 Projetos</button>
+		</div>
+
+		<!-- Seção Usuários -->
+		<div class="tab-section active" id="tabUsers">
+			<table class="users-table">
+				<thead>
+					<tr>
+						<th>Email</th>
+						<th>Criado em</th>
+						<th class="text-center">Ações</th>
+					</tr>
+				</thead>
+				<tbody id="usersTbody">
+					<tr><td colspan="3" class="text-center">Carregando...</td></tr>
+				</tbody>
+			</table>
+		</div>
+
+		<!-- Seção Projetos -->
+		<div class="tab-section" id="tabProjects">
+			<div class="projects-grid" id="projectsGrid">
+				<p style="text-align:center; color:#aaa; padding:20px">Carregando projetos...</p>
+			</div>
+		</div>
 	</div>
 
 	<script>
 		const ADMIN_EMAIL = 'carloscaxito@yahoo.com.br';
+
+		let currentAdminTab = 'users';
+
+		function switchAdminTab(tab) {
+			currentAdminTab = tab;
+			document.getElementById('tabUsers').classList.toggle('active', tab === 'users');
+			document.getElementById('tabProjects').classList.toggle('active', tab === 'projects');
+			document.getElementById('tabUsersBtn').classList.toggle('active', tab === 'users');
+			document.getElementById('tabProjectsBtn').classList.toggle('active', tab === 'projects');
+			if (tab === 'projects') loadProjects();
+		}
+
+		function reloadCurrent() {
+			if (currentAdminTab === 'users') loadUsers();
+			else loadProjects();
+		}
 
 		function showUsersMessage(type, text) {
 			const container = document.getElementById('messageContainer');
@@ -263,6 +386,71 @@
 
 				tbody.appendChild(tr);
 			});
+		}
+
+		async function loadProjects() {
+			const grid = document.getElementById('projectsGrid');
+			grid.innerHTML = '<p style="text-align:center;color:#aaa;padding:20px">Carregando projetos...</p>';
+			try {
+				await window.initSupabase();
+				const client = window.getClient();
+				if (!client) { grid.innerHTML = '<p style="color:red">Erro ao inicializar.</p>'; return; }
+
+				// Carregar projetos
+				const { data: projects, error: pErr } = await client
+					.from('projects')
+					.select('id, name, project_code, created_at, user_id')
+					.order('created_at', { ascending: false });
+
+				if (pErr) { grid.innerHTML = '<p style="color:red">Erro: ' + pErr.message + '</p>'; return; }
+
+				// Carregar usuários para cruzar email
+				const { data: users } = await client
+					.from('users')
+					.select('id, email');
+
+				const userMap = {};
+				(users || []).forEach(u => userMap[u.id] = u.email);
+
+				if (!projects || projects.length === 0) {
+					grid.innerHTML = '<p style="text-align:center;color:#aaa;padding:30px">Nenhum projeto encontrado.</p>';
+					return;
+				}
+
+				grid.innerHTML = '';
+				projects.forEach(p => {
+					const email = userMap[p.user_id] || '—';
+					const date = p.created_at ? new Date(p.created_at).toLocaleString('pt-BR') : '—';
+					const card = document.createElement('div');
+					card.className = 'project-card';
+					card.innerHTML = `
+						<div class="project-card-info">
+							<span class="project-card-name">${p.name || 'Sem nome'}</span>
+							<span class="project-card-date">${date}</span>
+							${p.project_code ? '<span class="project-card-code">🔑 ' + p.project_code + '</span>' : ''}
+							<span class="project-card-email">✉️ ${email}</span>
+						</div>
+						<div class="project-card-actions">
+							<button class="btn-small btn-danger" onclick="confirmDeleteProject('${p.id}', '${(p.name||'').replace(/'/g,'')}')">🗑 Excluir</button>
+						</div>`;
+					grid.appendChild(card);
+				});
+			} catch(e) {
+				grid.innerHTML = '<p style="color:red">Erro: ' + e.message + '</p>';
+			}
+		}
+
+		async function confirmDeleteProject(id, name) {
+			if (!confirm('Excluir o projeto "' + name + '"? Esta ação não pode ser desfeita.')) return;
+			try {
+				await window.initSupabase();
+				const client = window.getClient();
+				const { error } = await client.from('projects').delete().eq('id', id);
+				if (error) { alert('Erro ao excluir: ' + error.message); return; }
+				loadProjects();
+			} catch(e) {
+				alert('Erro: ' + e.message);
+			}
 		}
 
 		async function loadUsers() {
@@ -370,6 +558,22 @@
 
 			loadUsers();
 		});
+
+		function toggleDarkMode() {
+			const isDark = document.body.classList.toggle('dark-mode');
+			localStorage.setItem('darkMode', isDark ? '1' : '0');
+			const btn = document.getElementById('btnDark');
+			if (btn) { btn.textContent = isDark ? '☀️ Claro' : '🌙 Dark'; btn.style.background = isDark ? '#667eea' : '#444'; }
+		}
+		(function() {
+			if (localStorage.getItem('darkMode') === '1') {
+				document.body.classList.add('dark-mode');
+				window.addEventListener('DOMContentLoaded', () => {
+					const btn = document.getElementById('btnDark');
+					if (btn) { btn.textContent = '☀️ Claro'; btn.style.background = '#667eea'; }
+				});
+			}
+		})();
 	</script>
 </body>
 </html>
