@@ -279,16 +279,14 @@
 
     <script src="supabase-config.js"></script>
     <script>
-        // Verificar se usuário já está logado ou em modo de recuperação
+        // Verificar se usuário está em modo de recuperação de senha
         window.addEventListener('load', async function() {
-            console.log('📄 auth.html carregado');
             await window.initSupabase();
             const client = window.getClient();
 
             // Detectar link de recuperação de senha via hash da URL
             const hash = window.location.hash;
             if (hash && hash.includes('type=recovery')) {
-                console.log('🔐 Token de recuperação detectado na URL');
                 switchToResetPassword();
                 return;
             }
@@ -297,22 +295,9 @@
                 // Ouvir evento PASSWORD_RECOVERY do Supabase
                 client.auth.onAuthStateChange((event, session) => {
                     if (event === 'PASSWORD_RECOVERY') {
-                        console.log('🔐 Evento PASSWORD_RECOVERY recebido');
                         switchToResetPassword();
                     }
                 });
-
-                try {
-                    console.log('✅ Cliente pronto');
-                    const { data, error: sessionError } = await client.auth.getSession();
-                    const session = data?.session;
-                    if (session && !localStorage.getItem('projectCode')) {
-                        console.log('✅ Sessão ativa, redirecionando...');
-                        window.location.href = 'index.html';
-                    }
-                } catch (error) {
-                    console.log('⚠️ Erro ao verificar sessão:', error?.message);
-                }
             }
         });
 
@@ -501,14 +486,11 @@
                     return;
                 }
                 
-                console.log('🔍 Buscando código:', code);
-                
                 let project = null;
                 const { data: result } = await client.rpc('get_project_by_code', { p_code: code });
 
                 if (result && result.length > 0) {
                     project = result[0];
-                    console.log('✅ Projeto encontrado');
                 } else {
                     // Fallback
                     const { data: allProjects } = await client.from('projects').select('*');
@@ -538,21 +520,17 @@
 
         function validarCodigoProject(code) {
             const cleaned = code.trim();
-            console.log('Validando código:', cleaned);
             
             // Verifica se tem 8 caracteres exatamente
             if (cleaned.length !== 8) {
-                console.log('❌ Comprimento inválido:', cleaned.length);
                 return false;
             }
             
             // Verifica se contém CXT em qualquer posição (case-insensitive)
             if (!cleaned.toUpperCase().includes('CXT')) {
-                console.log('❌ Não contém CXT');
                 return false;
             }
             
-            console.log('✅ Código válido');
             return true;
         }
 
