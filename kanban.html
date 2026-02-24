@@ -587,6 +587,18 @@
   </div>
 </div>
 
+<!-- ===== MODAL CONFIRMAÇÃO ===== -->
+<div class="modal-overlay" id="confirmOverlay" onclick="if(event.target===this)closeConfirm()">
+  <div class="modal-inner" style="max-width:460px;">
+    <h2 id="confirmTitle" style="font-size:1.1rem;">⚠️ Confirmação</h2>
+    <p id="confirmMsg" style="margin:16px 0 24px;font-size:0.92rem;line-height:1.5;color:var(--text);"></p>
+    <div class="modal-footer" style="margin-top:0;">
+      <button class="btn btn-gray" onclick="closeConfirm()">Cancelar</button>
+      <button class="btn btn-primary" id="confirmOkBtn">OK</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast"></div>
 
@@ -810,11 +822,18 @@ function changeStage(id, newStage) {
 function deleteTask(id) {
   const t = tasks.find(x => x.id === id);
   if (!t) return;
-  if (!confirm(`Excluir a tarefa:\n"${t.what}"?\n\nEssa ação não pode ser desfeita.`)) return;
-  tasks = tasks.filter(x => x.id !== id);
-  saveLocal();
-  renderTable();
-  toast('Tarefa excluída', 'error');
+  showConfirm(
+    '🗑️ Excluir Tarefa',
+    `Deseja excluir a tarefa:<br><br><strong>${esc(t.what)}</strong><br><br>Essa ação não pode ser desfeita.`,
+    () => {
+      tasks = tasks.filter(x => x.id !== id);
+      saveLocal();
+      renderTable();
+      toast('Tarefa excluída', 'error');
+    },
+    'btn-danger',
+    '🗑️ Excluir'
+  );
 }
 
 /* ──────────────────────────────────────────────
@@ -1001,18 +1020,18 @@ function importFromMain() {
   try { count = JSON.parse(mainRaw).length; } catch(e) {}
 
   const msg = tasks.length
-    ? `Isso substituirá as ${tasks.length} tarefa(s) atuais do Kanban por ${count} tarefa(s) do Sistema de Prioridades.\n\nContinuar?`
-    : `Importar ${count} tarefa(s) do Sistema de Prioridades?`;
+    ? `Isso substituirá as <strong>${tasks.length}</strong> tarefa(s) atuais do Kanban por <strong>${count}</strong> tarefa(s) do Sistema de Prioridades.<br><br>Continuar?`
+    : `Importar <strong>${count}</strong> tarefa(s) do Sistema de Prioridades para o Kanban?`;
 
-  if (!confirm(msg)) return;
-
-  const imported = _doImportFromMain(true);
-  if (imported > 0) {
-    buildTableHeader();
-    renderTable();
-    document.getElementById('importBanner').style.display = 'flex';
-    toast(`${imported} tarefa(s) importadas com sucesso!`, 'success');
-  }
+  showConfirm('🔄 Importar do Sistema', msg, () => {
+    const imported = _doImportFromMain(true);
+    if (imported > 0) {
+      buildTableHeader();
+      renderTable();
+      document.getElementById('importBanner').style.display = 'flex';
+      toast(`${imported} tarefa(s) importadas com sucesso!`, 'success');
+    }
+  });
 }
 
 /* ──────────────────────────────────────────────
@@ -1092,9 +1111,25 @@ function datestamp() {
   return `${String(d.getDate()).padStart(2,'0')}${String(d.getMonth()+1).padStart(2,'0')}${d.getFullYear()}_${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`;
 }
 
+/* ──────────────────────────────────────────────
+   CONFIRM MODAL
+   ────────────────────────────────────────────── */
+function showConfirm(title, htmlMsg, onOk, okClass='btn-primary', okLabel='OK') {
+  document.getElementById('confirmTitle').innerHTML = title;
+  document.getElementById('confirmMsg').innerHTML   = htmlMsg;
+  const btn = document.getElementById('confirmOkBtn');
+  btn.className = `btn ${okClass}`;
+  btn.textContent = okLabel;
+  btn.onclick = () => { closeConfirm(); onOk(); };
+  document.getElementById('confirmOverlay').classList.add('open');
+}
+function closeConfirm() {
+  document.getElementById('confirmOverlay').classList.remove('open');
+}
+
 /* Keyboard shortcut: Esc closes modal */
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Escape') { closeModal(); closeConfirm(); }
   if ((e.ctrlKey||e.metaKey) && e.key === 'Enter') {
     if (document.getElementById('modalOverlay').classList.contains('open')) saveModal();
   }
