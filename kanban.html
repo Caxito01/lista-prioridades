@@ -588,13 +588,15 @@
 </div>
 
 <!-- ===== MODAL CONFIRMAÇÃO ===== -->
-<div class="modal-overlay" id="confirmOverlay" onclick="if(event.target===this)closeConfirm()">
-  <div class="modal-inner" style="max-width:460px;">
-    <h2 id="confirmTitle" style="font-size:1.1rem;">⚠️ Confirmação</h2>
-    <p id="confirmMsg" style="margin:16px 0 24px;font-size:0.92rem;line-height:1.5;color:var(--text);"></p>
-    <div class="modal-footer" style="margin-top:0;">
-      <button class="btn btn-gray" onclick="closeConfirm()">Cancelar</button>
-      <button class="btn btn-primary" id="confirmOkBtn">OK</button>
+<div id="confirmOverlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);justify-content:center;align-items:center;z-index:3000;">
+  <div style="background:white;border-radius:15px;padding:30px;max-width:400px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,0.3);text-align:center;">
+    <h2 id="confirmTitle" style="color:#f44336;margin-bottom:20px;font-size:1.5rem;">⚠️ Confirmação</h2>
+    <p id="confirmMsg" style="color:#666;margin-bottom:30px;font-size:1rem;line-height:1.5;"></p>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button id="confirmOkBtn" style="flex:1;padding:12px;background:#f44336;color:white;border:none;border-radius:5px;cursor:pointer;font-size:14px;font-weight:bold;transition:all 0.3s;"
+        onmouseover="this.style.background=this.dataset.hover" onmouseout="this.style.background=this.dataset.bg">OK</button>
+      <button onclick="closeConfirm()" style="flex:1;padding:12px;background:#6c757d;color:white;border:none;border-radius:5px;cursor:pointer;font-size:14px;font-weight:bold;transition:all 0.3s;"
+        onmouseover="this.style.background='#5a6268'" onmouseout="this.style.background='#6c757d'">Cancelar</button>
     </div>
   </div>
 </div>
@@ -823,7 +825,7 @@ function deleteTask(id) {
   const t = tasks.find(x => x.id === id);
   if (!t) return;
   showConfirm(
-    '🗑️ Excluir Tarefa',
+    '⚠️ Excluir Tarefa',
     `Deseja excluir a tarefa:<br><br><strong>${esc(t.what)}</strong><br><br>Essa ação não pode ser desfeita.`,
     () => {
       tasks = tasks.filter(x => x.id !== id);
@@ -831,8 +833,7 @@ function deleteTask(id) {
       renderTable();
       toast('Tarefa excluída', 'error');
     },
-    'btn-danger',
-    '🗑️ Excluir'
+    '#f44336', '#d32f2f', '🗑️ Excluir'
   );
 }
 
@@ -1114,17 +1115,21 @@ function datestamp() {
 /* ──────────────────────────────────────────────
    CONFIRM MODAL
    ────────────────────────────────────────────── */
-function showConfirm(title, htmlMsg, onOk, okClass='btn-primary', okLabel='OK') {
+function showConfirm(title, htmlMsg, onOk, okBg='#f44336', okHover='#d32f2f', okLabel='OK') {
   document.getElementById('confirmTitle').innerHTML = title;
   document.getElementById('confirmMsg').innerHTML   = htmlMsg;
   const btn = document.getElementById('confirmOkBtn');
-  btn.className = `btn ${okClass}`;
-  btn.textContent = okLabel;
+  btn.textContent    = okLabel;
+  btn.style.background = okBg;
+  btn.dataset.bg     = okBg;
+  btn.dataset.hover  = okHover;
   btn.onclick = () => { closeConfirm(); onOk(); };
-  document.getElementById('confirmOverlay').classList.add('open');
+  const overlay = document.getElementById('confirmOverlay');
+  overlay.style.display = 'flex';
+  overlay.onclick = (e) => { if (e.target === overlay) closeConfirm(); };
 }
 function closeConfirm() {
-  document.getElementById('confirmOverlay').classList.remove('open');
+  document.getElementById('confirmOverlay').style.display = 'none';
 }
 
 /* Keyboard shortcut: Esc closes modal */
