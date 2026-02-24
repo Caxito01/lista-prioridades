@@ -551,7 +551,7 @@
 
       <!-- WHO — avaliadores -->
       <div class="field-group full">
-        <label>Quem <span class="field-tag">Who</span> — Responsáveis &amp; Notas (1–5)</label>
+        <label>Quem <span class="field-tag">Who</span> — Selecione o responsável (⭐) e insira as notas (1–5)</label>
         <div class="scores-row" id="scoresRow"></div>
       </div>
 
@@ -735,7 +735,8 @@ function buildRow(t, num) {
   const whoTd = evaluators.map((_, i) => {
     const s = t.who?.[i] ?? 0;
     const cls = s ? `score-${s}` : 'score-0';
-    return `<td class="col-who"><span class="score-chip ${cls}">${s||'—'}</span></td>`;
+    const star = t.responsible === i ? '<span title="Responsável pela execução" style="margin-left:2px;">⭐</span>' : '';
+    return `<td class="col-who"><span class="score-chip ${cls}">${s||'—'}</span>${star}</td>`;
   }).join('');
 
   return `<tr>
@@ -851,8 +852,13 @@ function openModal(id) {
   const row = document.getElementById('scoresRow');
   row.innerHTML = evaluators.map((name, i) => {
     const val = t?.who?.[i] ?? '';
+    const isResp = (t?.responsible ?? null) === i;
     return `<div class="field-group">
-      <label>${esc(name)}</label>
+      <label style="display:flex;align-items:center;gap:5px;">
+        <input type="radio" name="mResponsible" value="${i}" ${isResp ? 'checked' : ''}
+          title="Marcar como responsável pela execução">
+        ${esc(name)}
+      </label>
       <input type="number" id="mWho${i}" min="1" max="5" value="${val}" placeholder="1–5"
         style="text-align:center;" oninput="clampScore(this)">
     </div>`;
@@ -886,15 +892,19 @@ function saveModal() {
     return (v >= 1 && v <= 5) ? v : 0;
   });
 
+  const respEl = document.querySelector('input[name="mResponsible"]:checked');
+  const responsible = respEl !== null ? parseInt(respEl.value) : null;
+
   const data = {
-    stage:   document.getElementById('mStage').value,
-    what:    what,
-    why:     document.getElementById('mWhy').value.trim(),
-    where:   document.getElementById('mWhere').value.trim(),
-    when:    document.getElementById('mWhen').value,
-    how:     document.getElementById('mHow').value.trim(),
-    howMuch: document.getElementById('mHowMuch').value.trim(),
-    who:     who,
+    stage:       document.getElementById('mStage').value,
+    what:        what,
+    why:         document.getElementById('mWhy').value.trim(),
+    where:       document.getElementById('mWhere').value.trim(),
+    when:        document.getElementById('mWhen').value,
+    how:         document.getElementById('mHow').value.trim(),
+    howMuch:     document.getElementById('mHowMuch').value.trim(),
+    who:         who,
+    responsible: responsible,
   };
 
   if (editingId !== null) {
