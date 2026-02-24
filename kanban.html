@@ -621,6 +621,15 @@ let editingId  = null;
 let sortAlphaActive = false;
 let nextId     = 1;
 
+// Mapa de estágios do sistema principal → kanban (precisa estar antes do init)
+const STAGE_MAP = {
+  'ATRASADO':        'Atrasado',
+  'EM PLANEJAMENTO': 'Em Planejamento',
+  'INICIADO':        'Iniciado',
+  'EM EXECUÇÃO':     'Em Execução',
+  'CONCLUÍDO':       'Concluído'
+};
+
 /* ──────────────────────────────────────────────
    INIT
    ────────────────────────────────────────────── */
@@ -640,12 +649,14 @@ let nextId     = 1;
   } catch(e){}
 
   // Se não há tarefas kanban, tenta importar do sistema principal automaticamente
-  if (!tasks.length) {
-    const imported = _doImportFromMain(false);
-    if (imported > 0) {
-      document.getElementById('importBanner').style.display = 'flex';
+  try {
+    if (!tasks.length) {
+      const imported = _doImportFromMain(false);
+      if (imported > 0) {
+        document.getElementById('importBanner').style.display = 'flex';
+      }
     }
-  }
+  } catch(e) { console.warn('Auto-import falhou:', e); }
 
   buildTableHeader();
   renderTable();
@@ -936,18 +947,7 @@ function renameEval(idx) {
    ────────────────────────────────────────────── */
 
 /**
- * Mapa de estágios do sistema principal → kanban
- */
-const STAGE_MAP = {
-  'ATRASADO':        'Atrasado',
-  'EM PLANEJAMENTO': 'Em Planejamento',
-  'INICIADO':        'Iniciado',
-  'EM EXECUÇÃO':     'Em Execução',
-  'CONCLUÍDO':       'Concluído'
-};
-
-/**
- * Executa a importação. silent=true: não mostra confirm.
+ * Executa a importação. interactive=true: mostra toast de erro.
  * Retorna o número de tarefas importadas.
  */
 function _doImportFromMain(interactive) {
