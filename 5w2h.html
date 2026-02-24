@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kanban 5W2H — Gerenciamento de Tarefas</title>
+  <title>CECM 5W2H — Gerenciamento de Tarefas</title>
   <style>
     /* ===== RESET & BASE ===== */
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -442,7 +442,7 @@
 <header>
   <div class="hdr-inner">
     <div class="logo">
-      <h1>📋 Kanban 5W2H</h1>
+      <h1>📋 CECM 5W2H</h1>
       <p>Gerenciamento de Tarefas com Metodologia 5W2H</p>
     </div>
     <div class="hdr-actions">
@@ -513,7 +513,7 @@
 </main>
 
 <footer>
-  &copy; CECM — Sistema de Gerenciamento de Prioridades &nbsp;|&nbsp; Kanban 5W2H
+  &copy; CECM — Sistema de Gerenciamento de Prioridades &nbsp;|&nbsp; CECM 5W2H
 </footer>
 
 <!-- ===== MODAL EDIÇÃO ===== -->
@@ -1065,15 +1065,28 @@ function loadJSON(event) {
     try {
       const payload = JSON.parse(e.target.result);
       if (!Array.isArray(payload.tasks)) throw new Error('Formato inválido');
-      if (tasks.length && !confirm(`Isso substituirá as ${tasks.length} tarefas atuais. Continuar?`)) return;
-      tasks      = payload.tasks;
-      evaluators = payload.evaluators || evaluators;
-      nextId     = tasks.length ? Math.max(...tasks.map(t=>t.id))+1 : 1;
-      localStorage.setItem(LS_KEY_EVALS, JSON.stringify(evaluators));
-      saveLocal();
-      buildTableHeader();
-      renderTable();
-      toast(`${tasks.length} tarefa(s) carregadas com sucesso!`, 'success');
+
+      const doLoad = () => {
+        tasks      = payload.tasks;
+        evaluators = payload.evaluators || evaluators;
+        nextId     = tasks.length ? Math.max(...tasks.map(t=>t.id))+1 : 1;
+        localStorage.setItem(LS_KEY_EVALS, JSON.stringify(evaluators));
+        saveLocal();
+        buildTableHeader();
+        renderTable();
+        toast(`${tasks.length} tarefa(s) carregadas com sucesso!`, 'success');
+      };
+
+      if (tasks.length) {
+        showConfirm(
+          '📥 Carregar JSON',
+          `Isso substituirá as <strong>${tasks.length}</strong> tarefa(s) atuais pelas do arquivo.<br><br>Continuar?`,
+          doLoad,
+          '#667eea', '#5568d3', '📥 Carregar'
+        );
+      } else {
+        doLoad();
+      }
     } catch(err) {
       toast('Erro ao ler o arquivo JSON: ' + err.message, 'error');
     }
@@ -1088,7 +1101,7 @@ function loadJSON(event) {
 function printPDF() {
   const now = new Date();
   document.getElementById('printFooter').innerHTML =
-    `Impresso em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')} &nbsp;|&nbsp; &copy; CECM — Kanban 5W2H`;
+    `Impresso em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')} &nbsp;|&nbsp; &copy; CECM — CECM 5W2H`;
   window.print();
 }
 
