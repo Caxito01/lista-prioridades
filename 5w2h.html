@@ -735,8 +735,8 @@ function buildRow(t, num) {
   const whoTd = evaluators.map((_, i) => {
     const s = t.who?.[i] ?? 0;
     const cls = s ? `score-${s}` : 'score-0';
-    const star = t.responsible === i ? '<span title="Responsável pela execução" style="margin-left:2px;">⭐</span>' : '';
-    return `<td class="col-who"><span class="score-chip ${cls}">${s||'—'}</span>${star}</td>`;
+    const star = t.responsible === i ? '<span title="Responsável pela execução" style="font-size:0.75rem;line-height:1;">⭐</span>' : '';
+    return `<td class="col-who"><div style="display:inline-flex;align-items:center;gap:2px;"><span class="score-chip ${cls}">${s||'—'}</span>${star}</div></td>`;
   }).join('');
 
   return `<tr>
