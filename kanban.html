@@ -450,8 +450,9 @@
       <button class="btn btn-gray"    onclick="clearFilters()">🔄 Limpar Filtros</button>
       <button class="btn btn-warning" onclick="printPDF()">🖨️ Imprimir PDF</button>
       <button class="btn btn-success" onclick="saveJSON()">💾 Salvar Tarefa</button>
-      <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">📥 Carregar Tarefa</button>
+      <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">📥 Carregar JSON</button>
       <input type="file" id="fileInput" accept=".json" style="display:none" onchange="loadJSON(event)">
+      <button class="btn btn-warning" onclick="importFromMain()" title="Importar tarefas do Sistema de Prioridades">🔄 Importar do Sistema</button>
       <button class="btn btn-dark"    onclick="openModal(null)" title="Nova tarefa">➕ Nova Tarefa</button>
       <button class="btn btn-gray"    onclick="toggleDark()" id="btnDark">🌙 Dark</button>
       <a      class="btn btn-gray"    href="index.html">🏠 Início</a>
@@ -461,6 +462,13 @@
 
 <!-- ===== MAIN ===== -->
 <main>
+
+  <!-- Banner de importação -->
+  <div id="importBanner" style="display:none;background:#e8f5e9;border:1px solid #4caf50;border-radius:10px;padding:10px 18px;margin-bottom:16px;font-size:0.85rem;color:#2e7d32;align-items:center;gap:10px;">
+    <strong>✅ Tarefas importadas do Sistema de Prioridades.</strong>
+    Edite cada linha (✏️) para preencher os campos 5W2H (Por quê, Onde, Quando, Como, Custo).
+    <button class="btn btn-sm btn-gray" style="margin-left:auto;" onclick="document.getElementById('importBanner').style.display='none'">✕</button>
+  </div>
 
   <!-- Toolbar / Filtros -->
   <div class="toolbar">
@@ -616,6 +624,14 @@ let nextId     = 1;
     tasks = JSON.parse(raw);
     nextId = tasks.length ? Math.max(...tasks.map(t => t.id)) + 1 : 1;
   } catch(e){}
+
+  // Se não há tarefas kanban, tenta importar do sistema principal automaticamente
+  if (!tasks.length) {
+    const imported = _doImportFromMain(false);
+    if (imported > 0) {
+      document.getElementById('importBanner').style.display = 'flex';
+    }
+  }
 
   buildTableHeader();
   renderTable();
@@ -893,6 +909,110 @@ function renameEval(idx) {
   buildTableHeader();
   renderTable();
   toast(`Avaliador ${idx+1} renomeado para "${name.trim()}"`, 'info');
+}
+
+/* ──────────────────────────────────────────────
+   IMPORT FROM MAIN APP (localStorage 'tasks')
+   ────────────────────────────────────────────── */
+
+/**
+ * Mapa de estágios do sistema principal → kanban
+ */
+const STAGE_MAP = {
+  'ATRASADO':        'Atrasado',
+  'EM PLANEJAMENTO': 'Em Planejamento',
+  'INICIADO':        'Iniciado',
+  'EM EXECUÇÃO':     'Em Execução',
+  'CONCLUÍDO':       'Concluído'
+};
+
+/**
+ * Executa a importação. silent=true: não mostra confirm.
+ * Retorna o número de tarefas importadas.
+ */
+function _doImportFromMain(interactive) {
+  const rawTasks = localStorage.getItem('tasks');
+  if (!rawTasks) {
+    if (interactive) toast('Nenhuma tarefa encontrada no Sistema de Prioridades', 'error');
+    return 0;
+  }
+
+  let mainTasks;
+  try { mainTasks = JSON.parse(rawTasks); } catch(e) {
+    if (interactive) toast('Erro ao ler tarefas do sistema principal', 'error');
+    return 0;
+  }
+  if (!Array.isArray(mainTasks) || !mainTasks.length) {
+    if (interactive) toast('Lista de tarefas do sistema principal está vazia', 'error');
+    return 0;
+  }
+
+  // Importar nomes dos avaliadores se disponíveis
+  const rawEvals = localStorage.getItem('evaluatorNames');
+  if (rawEvals) {
+    try {
+      const ev = JSON.parse(rawEvals);
+      evaluators = [
+        ev.eval1 || 'Avaliador 1',
+        ev.eval2 || 'Avaliador 2',
+        ev.eval3 || 'Avaliador 3',
+        ev.eval4 || 'Avaliador 4'
+      ];
+      localStorage.setItem(LS_KEY_EVALS, JSON.stringify(evaluators));
+    } catch(e) {}
+  }
+
+  // Converter tarefas
+  const converted = mainTasks.map(t => {
+    const evals = t.evaluations || {};
+    return {
+      id:      t.id,
+      stage:   STAGE_MAP[t.stage] || t.stage || 'Em Planejamento',
+      what:    t.description || '',
+      why:     t.why     || '',
+      where:   t.where   || '',
+      when:    t.when    || '',
+      how:     t.how     || '',
+      howMuch: t.howMuch || '',
+      who: [
+        evals.eval1 || 0,
+        evals.eval2 || 0,
+        evals.eval3 || 0,
+        evals.eval4 || 0
+      ]
+    };
+  });
+
+  tasks = converted;
+  nextId = tasks.length ? Math.max(...tasks.map(t => t.id)) + 1 : 1;
+  saveLocal();
+  return converted.length;
+}
+
+/** Botão "Importar do Sistema" — chamado manualmente pelo usuário */
+function importFromMain() {
+  const mainRaw = localStorage.getItem('tasks');
+  if (!mainRaw) {
+    toast('Nenhuma tarefa encontrada no Sistema de Prioridades. Abra o sistema principal e carregue um projeto primeiro.', 'error');
+    return;
+  }
+
+  let count = 0;
+  try { count = JSON.parse(mainRaw).length; } catch(e) {}
+
+  const msg = tasks.length
+    ? `Isso substituirá as ${tasks.length} tarefa(s) atuais do Kanban por ${count} tarefa(s) do Sistema de Prioridades.\n\nContinuar?`
+    : `Importar ${count} tarefa(s) do Sistema de Prioridades?`;
+
+  if (!confirm(msg)) return;
+
+  const imported = _doImportFromMain(true);
+  if (imported > 0) {
+    buildTableHeader();
+    renderTable();
+    document.getElementById('importBanner').style.display = 'flex';
+    toast(`${imported} tarefa(s) importadas com sucesso!`, 'success');
+  }
 }
 
 /* ──────────────────────────────────────────────
