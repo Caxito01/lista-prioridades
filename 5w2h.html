@@ -718,7 +718,13 @@ function renderTable() {
   if (sortAlphaActive) {
     list.sort((a,b) => (a.what||'').localeCompare(b.what||'', 'pt-BR'));
   } else {
-    list.sort((a,b) => calcAvg(b) - calcAvg(a));
+    list.sort((a,b) => {
+      const avgA = calcAvg(a), avgB = calcAvg(b);
+      if (avgA !== avgB) return avgA - avgB; // menor nota primeiro
+      // Desempate: Atrasado tem prioridade (vem primeiro)
+      const late = (x) => x.stage === 'Atrasado' ? 0 : 1;
+      return late(a) - late(b);
+    });
   }
 
   document.getElementById('countTotal').textContent = tasks.length;
