@@ -290,27 +290,38 @@
 
         <!-- Filtros e Controles -->
         <section class="controls-section">
-            <h2>🔍 Filtros e Controles</h2>
-            <div class="controls">
-                <div class="filter-group">
-                    <label for="filterStage">Filtrar por Estágio:</label>
-                    <select id="filterStage" onchange="applyFilters()">
-                        <option value="">Todos os Estágios</option>
-                        <option value="ATRASADO">ATRASADO</option>
-                        <option value="EM PLANEJAMENTO">EM PLANEJAMENTO</option>
-                        <option value="INICIADO">INICIADO</option>
-                        <option value="EM EXECUÇÃO">EM EXECUÇÃO</option>
-                        <option value="CONCLUÍDO">CONCLUÍDO</option>
-                    </select>
+            <div class="controls-bar">
+
+                <!-- Grupo esquerda: filtros -->
+                <div class="controls-group controls-filters">
+                    <div class="ctrl-select-wrap">
+                        <span class="ctrl-select-icon">&#9660;</span>
+                        <select id="filterStage" onchange="applyFilters()">
+                            <option value="">&#128269; Todos os Estágios</option>
+                            <option value="ATRASADO">⚠️ Atrasado</option>
+                            <option value="EM PLANEJAMENTO">📐 Em Planejamento</option>
+                            <option value="INICIADO">🔵 Iniciado</option>
+                            <option value="EM EXECUÇÃO">▶️ Em Execução</option>
+                            <option value="CONCLUÍDO">✅ Concluído</option>
+                        </select>
+                    </div>
+                    <button class="ctrl-btn ctrl-btn-ghost" onclick="toggleSortOrder()">
+                        <span id="sortButtonText">🔤 Ordem Alfabética</span>
+                    </button>
+                    <button class="ctrl-btn ctrl-btn-ghost" onclick="clearFilters()">🔄 Limpar Filtros</button>
                 </div>
-                <button class="btn btn-info" onclick="toggleSortOrder()">
-                    <span id="sortButtonText">ORDEM ALFABÉTICA</span>
-                </button>
-                <button class="btn btn-warning" onclick="clearFilters()">LIMPAR FILTROS</button>
-                <button class="btn btn-success" onclick="printToPDF()">🖨️ IMPRIMIR PDF</button>
-                <button class="btn btn-primary" onclick="saveToDatabase()">💾 SALVAR TAREFA</button>
-                <button class="btn btn-info" onclick="loadFromDatabase()">📥 CARREGAR TAREFA</button>
-                <a href="kanban.html" class="btn btn-secondary" style="text-decoration:none;">📋 KANBAN 5W2H</a>
+
+                <!-- Divisor -->
+                <div class="controls-sep"></div>
+
+                <!-- Grupo direita: ações -->
+                <div class="controls-group controls-actions">
+                    <button class="ctrl-btn ctrl-btn-outline" onclick="printToPDF()">🖨️ PDF</button>
+                    <button class="ctrl-btn ctrl-btn-primary" onclick="saveToDatabase()">💾 Salvar</button>
+                    <button class="ctrl-btn ctrl-btn-primary" onclick="loadFromDatabase()">📥 Carregar</button>
+                    <a href="kanban.html" class="ctrl-btn ctrl-btn-kanban" style="text-decoration:none;">📋 Kanban 5W2H</a>
+                </div>
+
             </div>
         </section>
 

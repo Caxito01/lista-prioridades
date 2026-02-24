@@ -203,19 +203,20 @@ section h2 {
 
 /* Buttons */
 .btn {
-    padding: 12px 24px;
+    padding: 8px 18px;
     border: none;
-    border-radius: 5px;
-    font-size: 1rem;
+    border-radius: 20px;
+    font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.25s;
     text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 .btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
 }
 
 .btn-primary {
@@ -246,81 +247,221 @@ section h2 {
 }
 
 .btn-info {
-    background: #17a2b8;
+    background: #667eea;
     color: white;
 }
 
 .btn-info:hover {
-    background: #138496;
+    background: #5568d3;
 }
 
 .btn-warning {
-    background: #ffc107;
-    color: #333;
+    background: #6c757d;
+    color: white;
 }
 
 .btn-warning:hover {
-    background: #e0a800;
+    background: #5a6268;
 }
 
 .btn-danger {
-    background: rgba(220, 53, 69, 0.15);
+    background: rgba(220, 53, 69, 0.12);
     color: #dc3545;
-    padding: 8px 12px;
-    font-size: 0.9rem;
-    border: 2px solid rgba(220, 53, 69, 0.3);
+    padding: 6px 12px;
+    font-size: 0.82rem;
+    border: 1.5px solid rgba(220, 53, 69, 0.3);
+    border-radius: 14px;
 }
 
 .btn-danger:hover {
-    background: rgba(220, 53, 69, 0.25);
+    background: rgba(220, 53, 69, 0.22);
     border-color: rgba(220, 53, 69, 0.5);
 }
 
 .btn-edit {
-    background: rgba(0, 123, 255, 0.15);
-    color: #007bff;
-    padding: 8px 12px;
-    font-size: 0.9rem;
-    margin-right: 5px;
-    border: 2px solid rgba(0, 123, 255, 0.3);
+    background: rgba(102, 126, 234, 0.12);
+    color: #667eea;
+    padding: 6px 12px;
+    font-size: 0.82rem;
+    margin-right: 4px;
+    border: 1.5px solid rgba(102, 126, 234, 0.3);
+    border-radius: 14px;
 }
 
 .btn-edit:hover {
-    background: rgba(0, 123, 255, 0.25);
-    border-color: rgba(0, 123, 255, 0.5);
+    background: rgba(102, 126, 234, 0.22);
+    border-color: rgba(102, 126, 234, 0.5);
 }
 
 /* Controls Section */
 .controls-section {
-    background: #f8f9ff;
-    padding: 20px;
-    border-radius: 10px;
+    background: #f8f9fa;
+    padding: 16px 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(102,126,234,0.07);
+    border: 1px solid #e8ecf5;
 }
 
+.controls-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.controls-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.controls-sep {
+    width: 1px;
+    height: 32px;
+    background: #d0d5e8;
+    margin: 0 4px;
+    flex-shrink: 0;
+}
+
+.controls-actions {
+    margin-left: auto;
+}
+
+/* Custom styled select */
+.ctrl-select-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.ctrl-select-wrap select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 7px 34px 7px 13px;
+    border: 1.5px solid #d0d5e8;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    background: white;
+    color: #444;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    min-width: 180px;
+}
+
+.ctrl-select-wrap select:hover,
+.ctrl-select-wrap select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102,126,234,0.12);
+}
+
+.ctrl-select-icon {
+    position: absolute;
+    right: 11px;
+    pointer-events: none;
+    font-size: 0.65rem;
+    color: #667eea;
+}
+
+/* Control buttons */
+.ctrl-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 15px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.22s;
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.ctrl-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.13);
+}
+
+/* Ghost: ações secundárias (filtros) */
+.ctrl-btn-ghost {
+    background: white;
+    color: #555;
+    border: 1.5px solid #d0d5e8;
+}
+.ctrl-btn-ghost:hover {
+    border-color: #667eea;
+    color: #667eea;
+    background: #f0f2ff;
+}
+
+/* Primary: ações principais */
+.ctrl-btn-primary {
+    background: #667eea;
+    color: white;
+}
+.ctrl-btn-primary:hover {
+    background: #5568d3;
+}
+
+/* Outline: PDF */
+.ctrl-btn-outline {
+    background: white;
+    color: #667eea;
+    border: 1.5px solid #667eea;
+}
+.ctrl-btn-outline:hover {
+    background: #667eea;
+    color: white;
+}
+
+/* Kanban: destaque com gradiente */
+.ctrl-btn-kanban {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    box-shadow: 0 2px 8px rgba(102,126,234,0.25);
+}
+.ctrl-btn-kanban:hover {
+    background: linear-gradient(135deg, #5568d3, #6a3d96);
+    box-shadow: 0 4px 14px rgba(102,126,234,0.35);
+}
+
+/* Legacy .controls (mantém compatibilidade) */
 .controls {
     display: flex;
-    gap: 15px;
+    gap: 10px;
     flex-wrap: wrap;
-    align-items: flex-end;
+    align-items: center;
 }
 
 .filter-group {
     display: flex;
     flex-direction: column;
-    min-width: 200px;
+    min-width: 180px;
 }
 
 .filter-group label {
     font-weight: 600;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     color: #555;
+    font-size: 0.85rem;
 }
 
 .filter-group select {
-    padding: 12px;
-    border: 2px solid #e0e0e0;
-    border-radius: 5px;
-    font-size: 1rem;
+    padding: 8px 12px;
+    border: 1.5px solid #d0d5e8;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.filter-group select:focus {
+    border-color: #667eea;
 }
 
 /* Legend Styles */
@@ -579,6 +720,13 @@ footer {
         flex-direction: column;
         align-items: stretch;
     }
+
+    .controls-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .controls-sep { display: none; }
+    .controls-actions { margin-left: 0; }
 
     .btn {
         width: 100%;
@@ -976,7 +1124,42 @@ body.dark-mode .controls-section,
 body.dark-mode .help-section,
 body.dark-mode .legend-container {
     background: #252535;
-    border-left-color: #a89be8;
+    border-color: #383850;
+}
+
+body.dark-mode .controls-sep {
+    background: #444460;
+}
+
+body.dark-mode .ctrl-btn-ghost {
+    background: #2a2a3e;
+    color: #c0c0e0;
+    border-color: #444460;
+}
+body.dark-mode .ctrl-btn-ghost:hover {
+    background: #33335a;
+    color: #a89be8;
+    border-color: #a89be8;
+}
+
+body.dark-mode .ctrl-btn-outline {
+    background: #2a2a3e;
+    color: #a89be8;
+    border-color: #a89be8;
+}
+body.dark-mode .ctrl-btn-outline:hover {
+    background: #a89be8;
+    color: #1e1e2e;
+}
+
+body.dark-mode .ctrl-select-wrap select {
+    background: #2a2a3e;
+    color: #c0c0e0;
+    border-color: #444460;
+}
+body.dark-mode .ctrl-select-wrap select:hover,
+body.dark-mode .ctrl-select-wrap select:focus {
+    border-color: #a89be8;
 }
 
 body.dark-mode .form-section {
