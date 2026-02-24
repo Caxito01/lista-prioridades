@@ -24,12 +24,12 @@
       --stage-plan: #ffc107;
       --stage-done: #28a745;
       --stage-init: #6c757d;
-      --avg-high:   #d4edda;
-      --avg-high-t: #155724;
+      --avg-high:   #f8d7da;
+      --avg-high-t: #721c24;
       --avg-mid:    #fff3cd;
       --avg-mid-t:  #856404;
-      --avg-low:    #f8d7da;
-      --avg-low-t:  #721c24;
+      --avg-low:    #d4edda;
+      --avg-low-t:  #155724;
     }
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -44,12 +44,12 @@
       --text: #cdd6f4;
       --border: #45475a;
       --bg-grad: linear-gradient(135deg, #1e1e2e 0%, #313244 100%);
-      --avg-high: #1e3a2a;
-      --avg-high-t: #a6e3a1;
+      --avg-high: #3a1e1e;
+      --avg-high-t: #f38ba8;
       --avg-mid: #3a3000;
       --avg-mid-t: #f9e2af;
-      --avg-low: #3a1e1e;
-      --avg-low-t: #f38ba8;
+      --avg-low: #1e3a2a;
+      --avg-low-t: #a6e3a1;
     }
     body.dark header      { background: rgba(30,30,46,0.97); }
     body.dark main        { background: #1e1e2e; }
@@ -468,9 +468,9 @@
   <!-- Legenda -->
   <div class="legend-box">
     <strong style="font-size:0.82rem;">Legenda&nbsp;Prioridade:</strong>
-    <span class="legend-item"><span class="legend-dot" style="background:#d4edda;border-color:#28a745;"></span>Verde — Média ≥ 4 (Alta)</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#f8d7da;border-color:#dc3545;"></span>Vermelho — Média ≥ 4 (Alta)</span>
     <span class="legend-item"><span class="legend-dot" style="background:#fff3cd;border-color:#ffc107;"></span>Amarelo — Média 3 a 3,99 (Média)</span>
-    <span class="legend-item"><span class="legend-dot" style="background:#f8d7da;border-color:#dc3545;"></span>Vermelho — Média &lt; 3 (Baixa)</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#d4edda;border-color:#28a745;"></span>Verde — Média &lt; 3 (Baixa)</span>
     <span style="margin-left:16px;font-size:0.82rem;"><strong>Estágios:</strong></span>
     <span class="legend-item"><span class="badge-stage stage-exec" style="font-size:0.7rem;">Em Execução</span></span>
     <span class="legend-item"><span class="badge-stage stage-late" style="font-size:0.7rem;">Atrasado</span></span>
@@ -697,7 +697,7 @@ function renderTable() {
   } else {
     list.sort((a,b) => {
       const avgA = calcAvg(a), avgB = calcAvg(b);
-      if (avgA !== avgB) return avgA - avgB; // menor nota primeiro
+      if (avgA !== avgB) return avgB - avgA; // maior nota primeiro
       // Desempate: Atrasado tem prioridade (vem primeiro)
       const late = (x) => x.stage === 'Atrasado' ? 0 : 1;
       return late(a) - late(b);
