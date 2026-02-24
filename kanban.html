@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kanban 5W2H — Gerenciamento de Tarefas</title>
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --primary:   #667eea;
+      --primary-d: #5568d3;
+      --success:   #28a745;
+      --danger:    #dc3545;
+      --warning:   #ffc107;
+      --info:      #17a2b8;
+      --gray:      #6c757d;
+      --bg-grad:   linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --card-bg:   #fff;
+      --text:      #333;
+      --border:    #dee2e6;
+      --stage-run:  #007bff;
+      --stage-late: #dc3545;
+      --stage-plan: #ffc107;
+      --stage-done: #28a745;
+      --stage-init: #6c757d;
+      --avg-high:   #d4edda;
+      --avg-high-t: #155724;
+      --avg-mid:    #fff3cd;
+      --avg-mid-t:  #856404;
+      --avg-low:    #f8d7da;
+      --avg-low-t:  #721c24;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg-grad);
+      min-height: 100vh;
+      color: var(--text);
+    }
+
+    /* ===== DARK MODE ===== */
+    body.dark {
+      --card-bg: #1e1e2e;
+      --text: #cdd6f4;
+      --border: #45475a;
+      --bg-grad: linear-gradient(135deg, #1e1e2e 0%, #313244 100%);
+      --avg-high: #1e3a2a;
+      --avg-high-t: #a6e3a1;
+      --avg-mid: #3a3000;
+      --avg-mid-t: #f9e2af;
+      --avg-low: #3a1e1e;
+      --avg-low-t: #f38ba8;
+    }
+    body.dark header      { background: rgba(30,30,46,0.97); }
+    body.dark main        { background: #1e1e2e; }
+    body.dark .legend-box { background: #313244; border-color: #45475a; }
+    body.dark select,
+    body.dark input[type="text"],
+    body.dark input[type="number"],
+    body.dark input[type="date"],
+    body.dark textarea    { background: #313244; color: #cdd6f4; border-color: #45475a; }
+    body.dark th          { background: #313244; color: #cdd6f4; }
+    body.dark tr:hover td { background: rgba(255,255,255,0.04) !important; }
+    body.dark .modal-inner { background: #1e1e2e; color: #cdd6f4; }
+    body.dark .modal-inner h2 { color: #cba6f7; }
+    body.dark .modal-inner label { color: #a6adc8; }
+    body.dark footer { background: rgba(30,30,46,0.9); color: #a6adc8; }
+    body.dark .select-stage { color: inherit; }
+
+    /* ===== HEADER ===== */
+    header {
+      background: rgba(255,255,255,0.97);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+      padding: 18px 0;
+    }
+    .hdr-inner {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .logo h1 { color: var(--primary); font-size: 1.7rem; }
+    .logo p  { color: #777; font-size: 0.88rem; margin-top: 2px; }
+
+    .hdr-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+    /* ===== BUTTONS ===== */
+    .btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 9px 18px; border: none; border-radius: 22px;
+      font-size: 0.82rem; font-weight: 600; cursor: pointer;
+      transition: all 0.25s; white-space: nowrap;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.18); }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-d); }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-success:hover { background: #218838; }
+    .btn-danger  { background: var(--danger);  color: #fff; }
+    .btn-danger:hover  { background: #bb2d3b; }
+    .btn-warning { background: var(--warning); color: #212529; }
+    .btn-warning:hover { background: #e0a800; }
+    .btn-info    { background: var(--info);    color: #fff; }
+    .btn-info:hover    { background: #138496; }
+    .btn-gray    { background: #6c757d; color: #fff; }
+    .btn-gray:hover    { background: #5a6268; }
+    .btn-dark    { background: #343a40; color: #fff; }
+    .btn-dark:hover    { background: #212529; }
+    .btn-sm { padding: 5px 10px; font-size: 0.78rem; border-radius: 14px; }
+    .btn-icon { padding: 5px 9px; border-radius: 50%; font-size: 1rem; min-width: 32px; justify-content: center; }
+
+    /* ===== MAIN ===== */
+    main {
+      max-width: 1600px;
+      margin: 24px auto;
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+    }
+
+    /* ===== TOOLBAR (filter + sort) ===== */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .toolbar label { font-weight: 600; font-size: 0.88rem; margin-right: 4px; }
+    .toolbar select, .filter-select {
+      padding: 8px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.88rem;
+      background: var(--card-bg);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .toolbar-sep { flex: 1; }
+
+    /* ===== LEGEND ===== */
+    .legend-box {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      background: #f8f9fa;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 18px;
+      margin-bottom: 20px;
+      font-size: 0.82rem;
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-dot  { width: 14px; height: 14px; border-radius: 3px; display: inline-block; border: 1px solid rgba(0,0,0,0.1); }
+
+    /* ===== TABLE ===== */
+    .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      min-width: 1280px;
+    }
+    th {
+      background: #f0f2ff;
+      color: #333;
+      padding: 10px 8px;
+      text-align: center;
+      font-weight: 700;
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    td {
+      padding: 8px 8px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+      text-align: center;
+    }
+    tbody tr:hover td { background: rgba(102,126,234,0.06); }
+    .col-num  { width: 38px; }
+    .col-stg  { width: 140px; }
+    .col-what { width: 200px; text-align: left; }
+    .col-why, .col-where, .col-how { width: 140px; text-align: left; }
+    .col-when, .col-howmuch { width: 100px; }
+    .col-who  { width: 58px; }
+    .col-avg  { width: 72px; font-weight: 700; }
+    .col-act  { width: 80px; }
+
+    .cell-text {
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: block;
+      text-align: left;
+    }
+    td.avg-high { background: var(--avg-high); color: var(--avg-high-t); font-weight: 700; }
+    td.avg-mid  { background: var(--avg-mid);  color: var(--avg-mid-t);  font-weight: 700; }
+    td.avg-low  { background: var(--avg-low);  color: var(--avg-low-t);  font-weight: 700; }
+
+    /* Stage badge */
+    .badge-stage {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 12px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+    }
+    .stage-exec { background: var(--stage-run); }
+    .stage-late { background: var(--stage-late); }
+    .stage-plan { background: var(--stage-plan); color: #212529; }
+    .stage-done { background: var(--stage-done); }
+    .stage-init { background: var(--stage-init); }
+
+    .select-stage {
+      border: none; background: transparent; font-size: 0.78rem;
+      font-weight: 700; cursor: pointer; color: inherit;
+      width: 100%; outline: none;
+    }
+
+    /* Score chip */
+    .score-chip {
+      display: inline-block;
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      line-height: 26px;
+      font-weight: 700;
+      font-size: 0.78rem;
+      color: #fff; text-align: center;
+    }
+    .score-1,.score-2 { background: #dc3545; }
+    .score-3          { background: #ffc107; color: #333; }
+    .score-4,.score-5 { background: #28a745; }
+    .score-0          { background: #ccc; color: #666; }
+
+    /* Empty state */
+    .empty-row td {
+      padding: 40px;
+      text-align: center;
+      color: #aaa;
+      font-size: 1rem;
+    }
+
+    /* ===== MODAL ===== */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 30px 16px;
+      overflow-y: auto;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-inner {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 30px;
+      width: 100%;
+      max-width: 760px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+      position: relative;
+      animation: slideIn 0.2s ease;
+    }
+    @keyframes slideIn {
+      from { opacity:0; transform: translateY(-20px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+    .modal-inner h2 {
+      color: var(--primary);
+      font-size: 1.3rem;
+      margin-bottom: 20px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .modal-close {
+      position: absolute;
+      top: 16px; right: 20px;
+      background: none; border: none;
+      font-size: 1.4rem; cursor: pointer;
+      color: #999; transition: color 0.2s;
+    }
+    .modal-close:hover { color: #333; }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .form-grid .full { grid-column: 1 / -1; }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .field-group label {
+      font-weight: 600;
+      font-size: 0.82rem;
+      color: #555;
+    }
+    .field-group .field-tag {
+      font-size: 0.7rem;
+      background: var(--primary);
+      color: #fff;
+      padding: 1px 6px;
+      border-radius: 8px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+    .field-group input[type="text"],
+    .field-group input[type="number"],
+    .field-group input[type="date"],
+    .field-group textarea,
+    .field-group select {
+      padding: 9px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-family: inherit;
+      background: var(--card-bg);
+      color: var(--text);
+      resize: vertical;
+      transition: border-color 0.2s;
+    }
+    .field-group input:focus,
+    .field-group textarea:focus,
+    .field-group select:focus {
+      border-color: var(--primary);
+      outline: none;
+    }
+
+    .scores-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ===== TOAST ===== */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: #333; color: #fff;
+      padding: 12px 20px; border-radius: 10px;
+      font-size: 0.88rem; font-weight: 600;
+      opacity: 0; transform: translateY(10px);
+      transition: all 0.3s;
+      z-index: 2000;
+      pointer-events: none;
+      max-width: 320px;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.success { background: #28a745; }
+    #toast.error   { background: #dc3545; }
+    #toast.info    { background: #17a2b8; }
+
+    /* ===== FOOTER ===== */
+    footer {
+      text-align: center;
+      padding: 18px;
+      color: rgba(255,255,255,0.8);
+      font-size: 0.82rem;
+    }
+
+    /* ===== PRINT ===== */
+    @media print {
+      body { background: #fff !important; }
+      header .hdr-actions, .toolbar .btn, footer { display: none !important; }
+      main { box-shadow: none; border-radius: 0; padding: 0; max-width: 100%; margin: 0; }
+      .modal-overlay { display: none !important; }
+      table { min-width: unset; font-size: 9pt; }
+      th { background: #e8e8e8 !important; color: #000 !important; }
+      td { border: 1px solid #ccc !important; }
+      .btn-icon { display: none; }
+      .select-stage { display: none; }
+      .badge-print { display: inline !important; }
+      .print-footer { display: block !important; }
+    }
+    .badge-print { display: none; }
+    .print-footer {
+      display: none;
+      text-align: center;
+      font-size: 8pt;
+      color: #666;
+      margin-top: 16px;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      .hdr-inner { flex-direction: column; align-items: flex-start; }
+      .form-grid { grid-template-columns: 1fr; }
+      .scores-row { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* ===== EVALUATOR HEADER TOOLTIP ===== */
+    th[data-tip] { position: relative; cursor: help; }
+    th[data-tip]:hover::after {
+      content: attr(data-tip);
+      position: absolute; top: 100%; left: 50%;
+      transform: translateX(-50%);
+      background: #333; color: #fff;
+      padding: 4px 8px; border-radius: 6px;
+      font-size: 0.74rem; white-space: nowrap;
+      z-index: 10;
+    }
+
+    /* Section titles */
+    .section-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 14px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid #e8ecff;
+      display: flex; align-items: center; gap: 6px;
+    }
+    body.dark .section-title { border-bottom-color: #45475a; }
+    body.dark th { background: #313244 !important; color: #cdd6f4 !important; }
+  </style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header>
+  <div class="hdr-inner">
+    <div class="logo">
+      <h1>📋 Kanban 5W2H</h1>
+      <p>Gerenciamento de Tarefas com Metodologia 5W2H</p>
+    </div>
+    <div class="hdr-actions">
+      <button class="btn btn-info"    onclick="sortAlpha()"     id="btnSort">🔤 Ordem Alfabética</button>
+      <button class="btn btn-gray"    onclick="clearFilters()">🔄 Limpar Filtros</button>
+      <button class="btn btn-warning" onclick="printPDF()">🖨️ Imprimir PDF</button>
+      <button class="btn btn-success" onclick="saveJSON()">💾 Salvar Tarefa</button>
+      <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">📥 Carregar Tarefa</button>
+      <input type="file" id="fileInput" accept=".json" style="display:none" onchange="loadJSON(event)">
+      <button class="btn btn-dark"    onclick="openModal(null)" title="Nova tarefa">➕ Nova Tarefa</button>
+      <button class="btn btn-gray"    onclick="toggleDark()" id="btnDark">🌙 Dark</button>
+      <a      class="btn btn-gray"    href="index.html">🏠 Início</a>
+    </div>
+  </div>
+</header>
+
+<!-- ===== MAIN ===== -->
+<main>
+
+  <!-- Toolbar / Filtros -->
+  <div class="toolbar">
+    <label for="filterStg">Filtrar por Estágio:</label>
+    <select id="filterStg" class="filter-select" onchange="renderTable()">
+      <option value="">Todos os Estágios</option>
+      <option value="Em Execução">Em Execução</option>
+      <option value="Atrasado">Atrasado</option>
+      <option value="Em Planejamento">Em Planejamento</option>
+      <option value="Concluído">Concluído</option>
+      <option value="Iniciado">Iniciado</option>
+    </select>
+    <div class="toolbar-sep"></div>
+    <span style="font-size:0.8rem;color:#888;">
+      Total: <strong id="countTotal">0</strong> tarefa(s) | Exibindo: <strong id="countShown">0</strong>
+    </span>
+  </div>
+
+  <!-- Legenda -->
+  <div class="legend-box">
+    <strong style="font-size:0.82rem;">Legenda&nbsp;Prioridade:</strong>
+    <span class="legend-item"><span class="legend-dot" style="background:#d4edda;border-color:#28a745;"></span>Verde — Média ≥ 4 (Alta)</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#fff3cd;border-color:#ffc107;"></span>Amarelo — Média 3 a 3,99 (Média)</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#f8d7da;border-color:#dc3545;"></span>Vermelho — Média &lt; 3 (Baixa)</span>
+    <span style="margin-left:16px;font-size:0.82rem;"><strong>Estágios:</strong></span>
+    <span class="legend-item"><span class="badge-stage stage-exec" style="font-size:0.7rem;">Em Execução</span></span>
+    <span class="legend-item"><span class="badge-stage stage-late" style="font-size:0.7rem;">Atrasado</span></span>
+    <span class="legend-item"><span class="badge-stage stage-plan" style="font-size:0.7rem;">Em Planejamento</span></span>
+    <span class="legend-item"><span class="badge-stage stage-done" style="font-size:0.7rem;">Concluído</span></span>
+  </div>
+
+  <!-- Tabela -->
+  <div class="section-title">📊 Lista de Tarefas</div>
+  <div class="table-wrap">
+    <table id="mainTable">
+      <thead id="tableHead"></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="print-footer" id="printFooter"></div>
+</main>
+
+<footer>
+  &copy; CECM — Sistema de Gerenciamento de Prioridades &nbsp;|&nbsp; Kanban 5W2H
+</footer>
+
+<!-- ===== MODAL EDIÇÃO ===== -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalBg(event)">
+  <div class="modal-inner">
+    <button class="modal-close" onclick="closeModal()" title="Fechar">&times;</button>
+    <h2 id="modalTitle">✏️ Editar Tarefa</h2>
+
+    <div class="form-grid">
+
+      <!-- STAGE -->
+      <div class="field-group">
+        <label>Estágio</label>
+        <select id="mStage">
+          <option value="Em Execução">Em Execução</option>
+          <option value="Atrasado">Atrasado</option>
+          <option value="Em Planejamento">Em Planejamento</option>
+          <option value="Concluído">Concluído</option>
+          <option value="Iniciado">Iniciado</option>
+        </select>
+      </div>
+
+      <!-- WHEN -->
+      <div class="field-group">
+        <label>Quando <span class="field-tag">When</span></label>
+        <input type="date" id="mWhen">
+      </div>
+
+      <!-- WHAT -->
+      <div class="field-group full">
+        <label>O quê <span class="field-tag">What</span></label>
+        <input type="text" id="mWhat" placeholder="Descreva a tarefa...">
+      </div>
+
+      <!-- WHY -->
+      <div class="field-group full">
+        <label>Por quê <span class="field-tag">Why</span></label>
+        <textarea id="mWhy" rows="2" placeholder="Justificativa ou motivo..."></textarea>
+      </div>
+
+      <!-- WHERE -->
+      <div class="field-group">
+        <label>Onde <span class="field-tag">Where</span></label>
+        <input type="text" id="mWhere" placeholder="Local de execução...">
+      </div>
+
+      <!-- HOW MUCH -->
+      <div class="field-group">
+        <label>Custo estimado <span class="field-tag">How Much</span></label>
+        <input type="text" id="mHowMuch" placeholder="Ex: R$ 5.000,00">
+      </div>
+
+      <!-- HOW -->
+      <div class="field-group full">
+        <label>Como <span class="field-tag">How</span></label>
+        <textarea id="mHow" rows="2" placeholder="Método de execução..."></textarea>
+      </div>
+
+      <!-- WHO — avaliadores -->
+      <div class="field-group full">
+        <label>Quem <span class="field-tag">Who</span> — Responsáveis &amp; Notas (1–5)</label>
+        <div class="scores-row" id="scoresRow"></div>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-success" onclick="saveModal()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- ===== JAVASCRIPT ===== -->
+<script>
+'use strict';
+
+/* ──────────────────────────────────────────────
+   STATE
+   ────────────────────────────────────────────── */
+const LS_KEY_TASKS = 'kanban5w2h_tasks';
+const LS_KEY_EVALS = 'kanban5w2h_evaluators';
+const LS_KEY_DARK  = 'kanban5w2h_dark';
+
+let tasks      = [];
+let evaluators = ['Avaliador 1', 'Avaliador 2', 'Avaliador 3', 'Avaliador 4'];
+let editingId  = null;
+let sortAlphaActive = false;
+let nextId     = 1;
+
+/* ──────────────────────────────────────────────
+   INIT
+   ────────────────────────────────────────────── */
+(function init() {
+  // Dark mode
+  if (localStorage.getItem(LS_KEY_DARK) === '1') applyDark(true, false);
+
+  // Load evaluators
+  const ev = localStorage.getItem(LS_KEY_EVALS);
+  if (ev) try { evaluators = JSON.parse(ev); } catch(e){}
+
+  // Load tasks
+  const raw = localStorage.getItem(LS_KEY_TASKS);
+  if (raw) try {
+    tasks = JSON.parse(raw);
+    nextId = tasks.length ? Math.max(...tasks.map(t => t.id)) + 1 : 1;
+  } catch(e){}
+
+  buildTableHeader();
+  renderTable();
+})();
+
+/* ──────────────────────────────────────────────
+   DARK MODE
+   ────────────────────────────────────────────── */
+function toggleDark() {
+  const isDark = !document.body.classList.contains('dark');
+  applyDark(isDark, true);
+}
+function applyDark(on, save) {
+  document.body.classList.toggle('dark', on);
+  document.getElementById('btnDark').textContent = on ? '☀️ Claro' : '🌙 Dark';
+  if (save) localStorage.setItem(LS_KEY_DARK, on ? '1' : '0');
+}
+
+/* ──────────────────────────────────────────────
+   TABLE HEADER (dynamic evaluators)
+   ────────────────────────────────────────────── */
+function buildTableHeader() {
+  const head = document.getElementById('tableHead');
+  let who = evaluators.map((e,i) =>
+    `<th class="col-who" data-tip="${e}" ondblclick="renameEval(${i})">${abbrev(e)}</th>`
+  ).join('');
+
+  head.innerHTML = `<tr>
+    <th class="col-num">Nº</th>
+    <th class="col-stg">Estágio</th>
+    <th class="col-what">O quê <small style="font-weight:400;color:#888">(What)</small></th>
+    <th class="col-why">Por quê <small style="font-weight:400;color:#888">(Why)</small></th>
+    <th class="col-where">Onde <small style="font-weight:400;color:#888">(Where)</small></th>
+    <th class="col-when">Quando</th>
+    <th class="col-how">Como <small style="font-weight:400;color:#888">(How)</small></th>
+    <th class="col-howmuch">Custo</th>
+    ${who}
+    <th class="col-avg">Média</th>
+    <th class="col-act">Ações</th>
+  </tr>`;
+}
+
+function abbrev(name) {
+  // Return up to 2 words abbreviated
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].substring(0,8);
+  return parts[0].substring(0,1).toUpperCase() + '.' + parts[1].substring(0,6);
+}
+
+/* ──────────────────────────────────────────────
+   RENDER TABLE
+   ────────────────────────────────────────────── */
+function renderTable() {
+  const filterStg = document.getElementById('filterStg').value;
+  let list = [...tasks];
+
+  if (filterStg) list = list.filter(t => t.stage === filterStg);
+
+  if (sortAlphaActive) {
+    list.sort((a,b) => (a.what||'').localeCompare(b.what||'', 'pt-BR'));
+  } else {
+    list.sort((a,b) => calcAvg(b) - calcAvg(a));
+  }
+
+  document.getElementById('countTotal').textContent = tasks.length;
+  document.getElementById('countShown').textContent = list.length;
+
+  const tbody = document.getElementById('tableBody');
+  if (!list.length) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="${8 + evaluators.length + 2}">
+      Nenhuma tarefa encontrada. Clique em <strong>➕ Nova Tarefa</strong> para começar.
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map((t, idx) => buildRow(t, idx + 1)).join('');
+}
+
+function buildRow(t, num) {
+  const avg   = calcAvg(t);
+  const avgCls = avg >= 4 ? 'avg-high' : avg >= 3 ? 'avg-mid' : 'avg-low';
+  const avgStr = avg > 0 ? avg.toFixed(2) : '—';
+
+  const stageBadge = `<select class="select-stage" onchange="changeStage(${t.id}, this.value)"
+    style="background:${stageBg(t.stage)};color:${stageFg(t.stage)};border-radius:10px;padding:3px 6px;">
+    <option value="Em Execução"    ${t.stage==='Em Execução'   ?'selected':''}>▶ Em Execução</option>
+    <option value="Atrasado"       ${t.stage==='Atrasado'      ?'selected':''}>⚠ Atrasado</option>
+    <option value="Em Planejamento"${t.stage==='Em Planejamento'?'selected':''}>📐 Em Planejamento</option>
+    <option value="Concluído"      ${t.stage==='Concluído'     ?'selected':''}>✅ Concluído</option>
+    <option value="Iniciado"       ${t.stage==='Iniciado'      ?'selected':''}>🔵 Iniciado</option>
+  </select>`;
+
+  const whoTd = evaluators.map((_, i) => {
+    const s = t.who?.[i] ?? 0;
+    const cls = s ? `score-${s}` : 'score-0';
+    return `<td class="col-who"><span class="score-chip ${cls}">${s||'—'}</span></td>`;
+  }).join('');
+
+  return `<tr>
+    <td class="col-num">${num}</td>
+    <td class="col-stg">${stageBadge}</td>
+    <td class="col-what"><span class="cell-text" title="${esc(t.what)}">${esc(t.what)||'—'}</span></td>
+    <td class="col-why"><span class="cell-text" title="${esc(t.why)}">${esc(t.why)||'—'}</span></td>
+    <td class="col-where"><span class="cell-text" title="${esc(t.where)}">${esc(t.where)||'—'}</span></td>
+    <td class="col-when">${t.when ? fmtDate(t.when) : '—'}</td>
+    <td class="col-how"><span class="cell-text" title="${esc(t.how)}">${esc(t.how)||'—'}</span></td>
+    <td class="col-howmuch"><span class="cell-text" title="${esc(t.howMuch)}">${esc(t.howMuch)||'—'}</span></td>
+    ${whoTd}
+    <td class="col-avg ${avgCls}">${avgStr}</td>
+    <td class="col-act">
+      <button class="btn btn-sm btn-icon btn-info"   onclick="openModal(${t.id})" title="Editar">✏️</button>
+      <button class="btn btn-sm btn-icon btn-danger"  onclick="deleteTask(${t.id})" title="Excluir">🗑️</button>
+    </td>
+  </tr>`;
+}
+
+/* ──────────────────────────────────────────────
+   HELPERS
+   ────────────────────────────────────────────── */
+function calcAvg(t) {
+  if (!t.who || !t.who.length) return 0;
+  const vals = t.who.filter(v => v > 0);
+  if (!vals.length) return 0;
+  return vals.reduce((a,b) => a+b, 0) / vals.length;
+}
+
+function stageBg(s) {
+  return { 'Em Execução':'#007bff','Atrasado':'#dc3545','Em Planejamento':'#ffc107','Concluído':'#28a745','Iniciado':'#6c757d' }[s] || '#6c757d';
+}
+function stageFg(s) {
+  return s === 'Em Planejamento' ? '#212529' : '#fff';
+}
+
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+/* ──────────────────────────────────────────────
+   SORT & FILTER
+   ────────────────────────────────────────────── */
+function sortAlpha() {
+  sortAlphaActive = !sortAlphaActive;
+  const btn = document.getElementById('btnSort');
+  btn.textContent = sortAlphaActive ? '🔢 Ordem por Prioridade' : '🔤 Ordem Alfabética';
+  btn.className   = sortAlphaActive ? 'btn btn-warning' : 'btn btn-info';
+  renderTable();
+}
+
+function clearFilters() {
+  document.getElementById('filterStg').value = '';
+  sortAlphaActive = false;
+  document.getElementById('btnSort').textContent = '🔤 Ordem Alfabética';
+  document.getElementById('btnSort').className   = 'btn btn-info';
+  renderTable();
+  toast('Filtros limpos', 'info');
+}
+
+/* ──────────────────────────────────────────────
+   CHANGE STAGE (inline)
+   ────────────────────────────────────────────── */
+function changeStage(id, newStage) {
+  const t = tasks.find(x => x.id === id);
+  if (t) { t.stage = newStage; saveLocal(); renderTable(); }
+}
+
+/* ──────────────────────────────────────────────
+   DELETE
+   ────────────────────────────────────────────── */
+function deleteTask(id) {
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  if (!confirm(`Excluir a tarefa:\n"${t.what}"?\n\nEssa ação não pode ser desfeita.`)) return;
+  tasks = tasks.filter(x => x.id !== id);
+  saveLocal();
+  renderTable();
+  toast('Tarefa excluída', 'error');
+}
+
+/* ──────────────────────────────────────────────
+   MODAL
+   ────────────────────────────────────────────── */
+function openModal(id) {
+  editingId = id;
+  const t = id !== null ? tasks.find(x => x.id === id) : null;
+
+  document.getElementById('modalTitle').textContent = t ? '✏️ Editar Tarefa' : '➕ Nova Tarefa';
+  document.getElementById('mStage').value   = t?.stage   || 'Em Execução';
+  document.getElementById('mWhat').value    = t?.what    || '';
+  document.getElementById('mWhy').value     = t?.why     || '';
+  document.getElementById('mWhere').value   = t?.where   || '';
+  document.getElementById('mWhen').value    = t?.when    || '';
+  document.getElementById('mHow').value     = t?.how     || '';
+  document.getElementById('mHowMuch').value = t?.howMuch || '';
+
+  // Build scores row
+  const row = document.getElementById('scoresRow');
+  row.innerHTML = evaluators.map((name, i) => {
+    const val = t?.who?.[i] ?? '';
+    return `<div class="field-group">
+      <label>${esc(name)}</label>
+      <input type="number" id="mWho${i}" min="1" max="5" value="${val}" placeholder="1–5"
+        style="text-align:center;" oninput="clampScore(this)">
+    </div>`;
+  }).join('');
+
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('mWhat').focus();
+}
+
+function clampScore(el) {
+  let v = parseInt(el.value);
+  if (isNaN(v)) return;
+  if (v < 1) el.value = 1;
+  if (v > 5) el.value = 5;
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  editingId = null;
+}
+function closeModalBg(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+function saveModal() {
+  const what = document.getElementById('mWhat').value.trim();
+  if (!what) { toast('O campo "O quê" é obrigatório', 'error'); return; }
+
+  const who = evaluators.map((_, i) => {
+    const v = parseInt(document.getElementById(`mWho${i}`).value);
+    return (v >= 1 && v <= 5) ? v : 0;
+  });
+
+  const data = {
+    stage:   document.getElementById('mStage').value,
+    what:    what,
+    why:     document.getElementById('mWhy').value.trim(),
+    where:   document.getElementById('mWhere').value.trim(),
+    when:    document.getElementById('mWhen').value,
+    how:     document.getElementById('mHow').value.trim(),
+    howMuch: document.getElementById('mHowMuch').value.trim(),
+    who:     who,
+  };
+
+  if (editingId !== null) {
+    const idx = tasks.findIndex(t => t.id === editingId);
+    if (idx !== -1) tasks[idx] = { ...tasks[idx], ...data };
+    toast('Tarefa atualizada', 'success');
+  } else {
+    tasks.push({ id: nextId++, ...data });
+    toast('Tarefa adicionada', 'success');
+  }
+
+  saveLocal();
+  closeModal();
+  renderTable();
+}
+
+/* ──────────────────────────────────────────────
+   RENAME EVALUATOR (dbl-click on header)
+   ────────────────────────────────────────────── */
+function renameEval(idx) {
+  const cur = evaluators[idx];
+  const name = prompt(`Renomear avaliador ${idx+1}:\n(Atual: "${cur}")`, cur);
+  if (!name || name.trim() === cur) return;
+  evaluators[idx] = name.trim();
+  localStorage.setItem(LS_KEY_EVALS, JSON.stringify(evaluators));
+  buildTableHeader();
+  renderTable();
+  toast(`Avaliador ${idx+1} renomeado para "${name.trim()}"`, 'info');
+}
+
+/* ──────────────────────────────────────────────
+   PERSIST
+   ────────────────────────────────────────────── */
+function saveLocal() {
+  localStorage.setItem(LS_KEY_TASKS, JSON.stringify(tasks));
+}
+
+/* ──────────────────────────────────────────────
+   SAVE / LOAD JSON
+   ────────────────────────────────────────────── */
+function saveJSON() {
+  if (!tasks.length) { toast('Nenhuma tarefa para salvar', 'error'); return; }
+  const payload = { evaluators, tasks, savedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `kanban5w2h_${datestamp()}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Arquivo JSON salvo com sucesso!', 'success');
+}
+
+function loadJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const payload = JSON.parse(e.target.result);
+      if (!Array.isArray(payload.tasks)) throw new Error('Formato inválido');
+      if (tasks.length && !confirm(`Isso substituirá as ${tasks.length} tarefas atuais. Continuar?`)) return;
+      tasks      = payload.tasks;
+      evaluators = payload.evaluators || evaluators;
+      nextId     = tasks.length ? Math.max(...tasks.map(t=>t.id))+1 : 1;
+      localStorage.setItem(LS_KEY_EVALS, JSON.stringify(evaluators));
+      saveLocal();
+      buildTableHeader();
+      renderTable();
+      toast(`${tasks.length} tarefa(s) carregadas com sucesso!`, 'success');
+    } catch(err) {
+      toast('Erro ao ler o arquivo JSON: ' + err.message, 'error');
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+/* ──────────────────────────────────────────────
+   PRINT PDF
+   ────────────────────────────────────────────── */
+function printPDF() {
+  const now = new Date();
+  document.getElementById('printFooter').innerHTML =
+    `Impresso em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')} &nbsp;|&nbsp; &copy; CECM — Kanban 5W2H`;
+  window.print();
+}
+
+/* ──────────────────────────────────────────────
+   TOAST
+   ────────────────────────────────────────────── */
+let _toastTimer;
+function toast(msg, type='info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className   = `show ${type}`;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { el.className = ''; }, 3000);
+}
+
+/* ──────────────────────────────────────────────
+   UTILS
+   ────────────────────────────────────────────── */
+function datestamp() {
+  const d = new Date();
+  return `${String(d.getDate()).padStart(2,'0')}${String(d.getMonth()+1).padStart(2,'0')}${d.getFullYear()}_${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+/* Keyboard shortcut: Esc closes modal */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if ((e.ctrlKey||e.metaKey) && e.key === 'Enter') {
+    if (document.getElementById('modalOverlay').classList.contains('open')) saveModal();
+  }
+});
+</script>
+</body>
+</html>
