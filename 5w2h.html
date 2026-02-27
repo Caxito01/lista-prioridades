@@ -877,12 +877,90 @@ function normalizeHowMuch(rawValue) {
   return formatBRL(amount);
 }
 
+function normalizeImportedDate(value) {
+  if (value === null || value === undefined || value === '') return '';
+
+  if (value instanceof Date && !isNaN(value)) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const dateFromTs = new Date(value);
+    return isNaN(dateFromTs) ? '' : dateFromTs.toISOString().slice(0, 10);
+  }
+
+  const raw = String(value).trim();
+  if (!raw) return '';
+
+  const isoMatch = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (isoMatch) return isoMatch[1];
+
+  const brMatch = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (brMatch) return `${brMatch[3]}-${brMatch[2]}-${brMatch[1]}`;
+
+  const dashMatch = raw.match(/^(\d{2})-(\d{2})-(\d{4})/);
+  if (dashMatch) return `${dashMatch[3]}-${dashMatch[2]}-${dashMatch[1]}`;
+
+  const parsed = new Date(raw);
+  if (!isNaN(parsed)) return parsed.toISOString().slice(0, 10);
+
+  return '';
+}
+
+function pickImportedDate(task) {
+  const candidates = [
+    task?.when,
+    task?.dueDate,
+    task?.due_date,
+    task?.due,
+    task?.deadline,
+    task?.prazo,
+    task?.date,
+    task?.data,
+    task?.dataVencimento,
+    task?.data_vencimento,
+    task?.dataLimite,
+    task?.data_limite
+  ];
+
+  for (const value of candidates) {
+    const normalized = normalizeImportedDate(value);
+    if (normalized) return normalized;
+  }
+
+  const shallowKeys = task && typeof task === 'object' ? Object.entries(task) : [];
+  for (const [key, value] of shallowKeys) {
+    if (!/(due|deadline|prazo|vencimento|data)/i.test(key)) continue;
+    const normalized = normalizeImportedDate(value);
+    if (normalized) return normalized;
+  }
+
+  const nestedCandidates = [task?.details, task?.meta, task?.metadata, task?.schedule];
+  for (const nested of nestedCandidates) {
+    if (!nested || typeof nested !== 'object') continue;
+    for (const [key, value] of Object.entries(nested)) {
+      if (!/(due|deadline|prazo|vencimento|data)/i.test(key)) continue;
+      const normalized = normalizeImportedDate(value);
+      if (normalized) return normalized;
+    }
+  }
+
+  return '';
+}
+
 function pickImportedCost(task) {
   const candidates = [
     task?.howMuch,
     task?.cost,
+    task?.taskCost,
+    task?.costValue,
+    task?.cost_value,
+    task?.costEstimate,
+    task?.cost_estimate,
     task?.custo,
     task?.valor,
+    task?.custo_estimado,
+    task?.valor_estimado,
     task?.budget,
     task?.price,
     task?.estimatedCost,
@@ -891,11 +969,34 @@ function pickImportedCost(task) {
     task?.custoEstimado
   ];
 
-  for (const value of candidates) {
-    if (value === null || value === undefined) continue;
-    if (String(value).trim() === '') continue;
+  const normalizeCandidate = (value) => {
+    if (value === null || value === undefined) return '';
+    if (String(value).trim() === '') return '';
     return normalizeHowMuch(value);
+  };
+
+  for (const value of candidates) {
+    const normalized = normalizeCandidate(value);
+    if (normalized) return normalized;
   }
+
+  const shallowKeys = task && typeof task === 'object' ? Object.entries(task) : [];
+  for (const [key, value] of shallowKeys) {
+    if (!/(cost|custo|valor|budget|price)/i.test(key)) continue;
+    const normalized = normalizeCandidate(value);
+    if (normalized) return normalized;
+  }
+
+  const nestedCandidates = [task?.details, task?.meta, task?.metadata, task?.finance, task?.financial];
+  for (const nested of nestedCandidates) {
+    if (!nested || typeof nested !== 'object') continue;
+    for (const [key, value] of Object.entries(nested)) {
+      if (!/(cost|custo|valor|budget|price)/i.test(key)) continue;
+      const normalized = normalizeCandidate(value);
+      if (normalized) return normalized;
+    }
+  }
+
   return '';
 }
 
@@ -1125,7 +1226,7 @@ function _doImportFromMain(interactive) {
       what:    t.description || '',
       why:     t.why     || '',
       where:   t.where   || '',
-      when:    t.when    || t.dueDate || '',
+      when:    pickImportedDate(t),
       how:     t.how     || '',
       howMuch: pickImportedCost(t),
       who: [
