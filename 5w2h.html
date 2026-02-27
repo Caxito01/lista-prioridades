@@ -877,6 +877,36 @@ function normalizeHowMuch(rawValue) {
   return formatBRL(amount);
 }
 
+function deepFindValue(input, predicate, maxDepth = 4) {
+  const visited = new Set();
+
+  function walk(value, depth) {
+    if (depth > maxDepth || value === null || value === undefined) return '';
+    if (typeof value !== 'object') {
+      return predicate(value) ? value : '';
+    }
+
+    if (visited.has(value)) return '';
+    visited.add(value);
+
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const found = walk(item, depth + 1);
+        if (found !== '') return found;
+      }
+      return '';
+    }
+
+    for (const entry of Object.entries(value)) {
+      const found = walk(entry[1], depth + 1);
+      if (found !== '') return found;
+    }
+    return '';
+  }
+
+  return walk(input, 0);
+}
+
 function normalizeImportedDate(value) {
   if (value === null || value === undefined || value === '') return '';
 
@@ -945,6 +975,15 @@ function pickImportedDate(task) {
     }
   }
 
+  const deepDate = deepFindValue(task, value => {
+    if (typeof value !== 'string') return false;
+    return /(\d{4}-\d{2}-\d{2})|(\d{2}\/\d{2}\/\d{4})|(\d{2}-\d{2}-\d{4})/.test(value);
+  });
+  if (deepDate !== '') {
+    const normalized = normalizeImportedDate(deepDate);
+    if (normalized) return normalized;
+  }
+
   return '';
 }
 
@@ -995,6 +1034,19 @@ function pickImportedCost(task) {
       const normalized = normalizeCandidate(value);
       if (normalized) return normalized;
     }
+  }
+
+  const deepCost = deepFindValue(task, value => {
+    if (typeof value === 'string') {
+      if (/R\$/.test(value)) return true;
+      if (/\d+[.,]\d{2}/.test(value)) return true;
+    }
+    if (typeof value === 'number') return value >= 10;
+    return false;
+  });
+  if (deepCost !== '') {
+    const normalized = normalizeCandidate(deepCost);
+    if (normalized) return normalized;
   }
 
   return '';
@@ -1219,16 +1271,19 @@ function _doImportFromMain(interactive) {
 
   // Converter tarefas
   const converted = mainTasks.map(t => {
-    const evals = t.evaluations || {};
+    const source = (t && typeof t === 'object' && t.data && typeof t.data === 'object')
+      ? { ...t.data, ...t }
+      : t;
+    const evals = source?.evaluations || source?.evals || {};
     return {
-      id:      t.id,
-      stage:   STAGE_MAP[t.stage] || t.stage || 'Em Planejamento',
-      what:    t.description || '',
-      why:     t.why     || '',
-      where:   t.where   || '',
-      when:    pickImportedDate(t),
-      how:     t.how     || '',
-      howMuch: pickImportedCost(t),
+      id:      source?.id ?? t?.id,
+      stage:   STAGE_MAP[source?.stage] || source?.stage || 'Em Planejamento',
+      what:    source?.description || source?.what || '',
+      why:     source?.why     || '',
+      where:   source?.where   || '',
+      when:    pickImportedDate(source),
+      how:     source?.how     || '',
+      howMuch: pickImportedCost(source),
       who: [
         evals.eval1 || 0,
         evals.eval2 || 0,
