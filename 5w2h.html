@@ -186,6 +186,8 @@
       text-align: center;
     }
     tbody tr:hover td { background: rgba(102,126,234,0.06); }
+    tbody tr.row-overdue td { background: rgba(220,53,69,0.10); }
+    tbody tr.row-due-today td { background: rgba(255,193,7,0.14); }
     .col-num  { width: 38px; }
     .col-stg  { width: 140px; }
     .col-what { width: 200px; text-align: left; }
@@ -413,6 +415,8 @@
     }
     body.dark .section-title { border-bottom-color: #45475a; }
     body.dark th { background: #313244 !important; color: #cdd6f4 !important; }
+    body.dark tbody tr.row-overdue td { background: rgba(220,53,69,0.18); }
+    body.dark tbody tr.row-due-today td { background: rgba(255,193,7,0.22); }
   </style>
 </head>
 <body>
@@ -459,9 +463,17 @@
       <option value="Concluído">Concluído</option>
       <option value="Iniciado">Iniciado</option>
     </select>
+    <label for="filterDeadline">Prazo:</label>
+    <select id="filterDeadline" class="filter-select" onchange="renderTable()">
+      <option value="">Todos</option>
+      <option value="today">Vence Hoje</option>
+      <option value="overdue">Vencidas</option>
+    </select>
     <div class="toolbar-sep"></div>
     <span style="font-size:0.8rem;color:#888;">
       Total: <strong id="countTotal">0</strong> tarefa(s) | Exibindo: <strong id="countShown">0</strong>
+      | Vence hoje: <strong id="countDueToday">0</strong> | Vencidas: <strong id="countOverdue">0</strong>
+      | Custo exibido: <strong id="sumCostShown">R$ 0,00</strong>
     </span>
   </div>
 
@@ -540,7 +552,7 @@
       <!-- HOW MUCH -->
       <div class="field-group">
         <label>Custo estimado <span class="field-tag">How Much</span></label>
-        <input type="text" id="mHowMuch" placeholder="Ex: R$ 5.000,00">
+        <input type="text" id="mHowMuch" inputmode="decimal" placeholder="Ex: R$ 5.000,00" onblur="formatHowMuchInput(this)">
       </div>
 
       <!-- HOW -->
@@ -688,9 +700,12 @@ function abbrev(name) {
    ────────────────────────────────────────────── */
 function renderTable() {
   const filterStg = document.getElementById('filterStg').value;
+  const filterDeadline = document.getElementById('filterDeadline').value;
   let list = [...tasks];
 
   if (filterStg) list = list.filter(t => t.stage === filterStg);
+  if (filterDeadline === 'today') list = list.filter(t => isDueToday(t));
+  if (filterDeadline === 'overdue') list = list.filter(t => isOverdue(t));
 
   if (sortAlphaActive) {
     list.sort((a,b) => (a.what||'').localeCompare(b.what||'', 'pt-BR'));
@@ -706,6 +721,10 @@ function renderTable() {
 
   document.getElementById('countTotal').textContent = tasks.length;
   document.getElementById('countShown').textContent = list.length;
+  document.getElementById('countDueToday').textContent = tasks.filter(t => isDueToday(t)).length;
+  document.getElementById('countOverdue').textContent = tasks.filter(t => isOverdue(t)).length;
+  const totalCostShown = list.reduce((acc, t) => acc + parseCurrencyToNumber(t.howMuch), 0);
+  document.getElementById('sumCostShown').textContent = formatBRL(totalCostShown);
 
   const tbody = document.getElementById('tableBody');
   if (!list.length) {
@@ -722,6 +741,7 @@ function buildRow(t, num) {
   const avg   = calcAvg(t);
   const avgCls = avg >= 4 ? 'avg-high' : avg >= 3 ? 'avg-mid' : 'avg-low';
   const avgStr = avg > 0 ? avg.toFixed(2) : '—';
+  const dueRowClass = isOverdue(t) ? 'row-overdue' : isDueToday(t) ? 'row-due-today' : '';
 
   const stageBadge = `<select class="select-stage" onchange="changeStage(${t.id}, this.value)"
     style="background:${stageBg(t.stage)};color:${stageFg(t.stage)};border-radius:10px;padding:3px 6px;">
@@ -739,13 +759,13 @@ function buildRow(t, num) {
     return `<td class="col-who"><div style="display:inline-flex;align-items:center;gap:2px;"><span class="score-chip ${cls}">${s||'—'}</span>${star}</div></td>`;
   }).join('');
 
-  return `<tr>
+  return `<tr class="${dueRowClass}">
     <td class="col-num">${num}</td>
     <td class="col-stg">${stageBadge}</td>
     <td class="col-what"><span class="cell-text" title="${esc(t.what)}">${esc(t.what)||'—'}</span></td>
     <td class="col-why"><span class="cell-text" title="${esc(t.why)}">${esc(t.why)||'—'}</span></td>
     <td class="col-where"><span class="cell-text" title="${esc(t.where)}">${esc(t.where)||'—'}</span></td>
-    <td class="col-when">${t.when ? fmtDate(t.when) : '—'}</td>
+    <td class="col-when">${fmtWhenCell(t)}</td>
     <td class="col-how"><span class="cell-text" title="${esc(t.how)}">${esc(t.how)||'—'}</span></td>
     <td class="col-howmuch"><span class="cell-text" title="${esc(t.howMuch)}">${esc(t.howMuch)||'—'}</span></td>
     ${whoTd}
@@ -785,6 +805,82 @@ function fmtDate(iso) {
   return `${d}/${m}/${y}`;
 }
 
+function getTodayISO() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function isDoneTask(t) {
+  return t?.stage === 'Concluído';
+}
+
+function isOverdue(t) {
+  if (!t?.when || isDoneTask(t)) return false;
+  return t.when < getTodayISO();
+}
+
+function isDueToday(t) {
+  if (!t?.when || isDoneTask(t)) return false;
+  return t.when === getTodayISO();
+}
+
+function fmtWhenCell(t) {
+  if (!t?.when) return '—';
+  const dateLabel = fmtDate(t.when);
+  if (isOverdue(t)) {
+    return `<span style="font-weight:700;color:#dc3545;">${dateLabel} ⚠️</span>`;
+  }
+  if (isDueToday(t)) {
+    return `<span style="font-weight:700;color:#ff9800;">${dateLabel} ⏰</span>`;
+  }
+  return dateLabel;
+}
+
+function parseCurrencyToNumber(value) {
+  if (value === null || value === undefined) return 0;
+  const input = String(value).trim();
+  if (!input) return 0;
+
+  const cleaned = input.replace(/[^\d,.-]/g, '');
+  if (!cleaned) return 0;
+
+  const lastComma = cleaned.lastIndexOf(',');
+  const lastDot = cleaned.lastIndexOf('.');
+  let normalized = cleaned;
+
+  if (lastComma > -1 && lastDot > -1) {
+    const decimalIsComma = lastComma > lastDot;
+    normalized = decimalIsComma
+      ? cleaned.replace(/\./g, '').replace(',', '.')
+      : cleaned.replace(/,/g, '');
+  } else if (lastComma > -1) {
+    normalized = cleaned.replace(/\./g, '').replace(',', '.');
+  } else {
+    normalized = cleaned.replace(/,/g, '');
+  }
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatBRL(value) {
+  const numberValue = Number(value) || 0;
+  return numberValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function normalizeHowMuch(rawValue) {
+  const amount = parseCurrencyToNumber(rawValue);
+  if (amount <= 0) return '';
+  return formatBRL(amount);
+}
+
+function formatHowMuchInput(el) {
+  el.value = normalizeHowMuch(el.value);
+}
+
 /* ──────────────────────────────────────────────
    SORT & FILTER
    ────────────────────────────────────────────── */
@@ -798,6 +894,7 @@ function sortAlpha() {
 
 function clearFilters() {
   document.getElementById('filterStg').value = '';
+  document.getElementById('filterDeadline').value = '';
   sortAlphaActive = false;
   document.getElementById('btnSort').textContent = '🔤 Ordem Alfabética';
   document.getElementById('btnSort').className   = 'btn btn-info';
@@ -846,7 +943,7 @@ function openModal(id) {
   document.getElementById('mWhere').value   = t?.where   || '';
   document.getElementById('mWhen').value    = t?.when    || '';
   document.getElementById('mHow').value     = t?.how     || '';
-  document.getElementById('mHowMuch').value = t?.howMuch || '';
+  document.getElementById('mHowMuch').value = normalizeHowMuch(t?.howMuch || '');
 
   // Build scores row
   const row = document.getElementById('scoresRow');
@@ -886,23 +983,45 @@ function closeModalBg(e) {
 function saveModal() {
   const what = document.getElementById('mWhat').value.trim();
   if (!what) { toast('O campo "O quê" é obrigatório', 'error'); return; }
+  const stage = document.getElementById('mStage').value;
+  if (!stage) { toast('O campo "Estágio" é obrigatório', 'error'); return; }
 
   const who = evaluators.map((_, i) => {
     const v = parseInt(document.getElementById(`mWho${i}`).value);
     return (v >= 1 && v <= 5) ? v : 0;
   });
 
+  if (!who.some(v => v > 0)) {
+    toast('Informe ao menos uma nota (1 a 5) em "Quem"', 'error');
+    return;
+  }
+
   const respEl = document.querySelector('input[name="mResponsible"]:checked');
   const responsible = respEl !== null ? parseInt(respEl.value) : null;
+  if (responsible === null) {
+    toast('Selecione um responsável pela execução', 'error');
+    return;
+  }
+  if (!who[responsible] || who[responsible] < 1 || who[responsible] > 5) {
+    toast('A pessoa responsável precisa ter nota válida (1 a 5)', 'error');
+    return;
+  }
+
+  const howMuchRaw = document.getElementById('mHowMuch').value.trim();
+  const costValue = parseCurrencyToNumber(howMuchRaw);
+  if (howMuchRaw && costValue <= 0) {
+    toast('Informe um custo válido (ex.: R$ 5.000,00)', 'error');
+    return;
+  }
 
   const data = {
-    stage:       document.getElementById('mStage').value,
+    stage:       stage,
     what:        what,
     why:         document.getElementById('mWhy').value.trim(),
     where:       document.getElementById('mWhere').value.trim(),
     when:        document.getElementById('mWhen').value,
     how:         document.getElementById('mHow').value.trim(),
-    howMuch:     document.getElementById('mHowMuch').value.trim(),
+    howMuch:     costValue > 0 ? formatBRL(costValue) : '',
     who:         who,
     responsible: responsible,
   };

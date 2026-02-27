@@ -6,6 +6,7 @@ let tasks = [];
 let editingTaskId = null;
 let currentSortOrder = 'priority'; // 'priority' ou 'alphabetical'
 let currentFilter = '';
+let currentDeadlineFilter = '';
 let currentProjectCode = null; // Código do projeto acessado
 
 // Nomes dos avaliadores
@@ -291,20 +292,153 @@ function calculateAverage(evaluations) {
     return (sum / 4).toFixed(2);
 }
 
+function getTodayISO() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function isDoneTask(task) {
+    return task?.stage === 'CONCLUÍDO';
+}
+
+function isOverdue(task) {
+    if (!task?.dueDate || isDoneTask(task)) return false;
+    return task.dueDate < getTodayISO();
+}
+
+function isDueToday(task) {
+    if (!task?.dueDate || isDoneTask(task)) return false;
+    return task.dueDate === getTodayISO();
+}
+
+function parseCurrencyToNumber(value) {
+    if (value === null || value === undefined) return 0;
+    const input = String(value).trim();
+    if (!input) return 0;
+
+    const cleaned = input.replace(/[^\d,.-]/g, '');
+    if (!cleaned) return 0;
+
+    const lastComma = cleaned.lastIndexOf(',');
+    const lastDot = cleaned.lastIndexOf('.');
+    let normalized = cleaned;
+
+    if (lastComma > -1 && lastDot > -1) {
+        const decimalIsComma = lastComma > lastDot;
+        normalized = decimalIsComma
+            ? cleaned.replace(/\./g, '').replace(',', '.')
+            : cleaned.replace(/,/g, '');
+    } else if (lastComma > -1) {
+        normalized = cleaned.replace(/\./g, '').replace(',', '.');
+    } else {
+        normalized = cleaned.replace(/,/g, '');
+    }
+
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatBRL(value) {
+    const numberValue = Number(value) || 0;
+    return numberValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function normalizeCost(rawValue) {
+    const amount = parseCurrencyToNumber(rawValue);
+    if (amount <= 0) return '';
+    return formatBRL(amount);
+}
+
+function formatTaskCostInput(el) {
+    if (!el) return;
+    el.value = normalizeCost(el.value);
+}
+
+function formatDueDate(isoDate) {
+    if (!isoDate) return '—';
+    const [year, month, day] = isoDate.split('-');
+    return `${day}/${month}/${year}`;
+}
+
+function buildDueDateCell(task) {
+    if (!task?.dueDate) return '—';
+    const baseDate = formatDueDate(task.dueDate);
+    if (isOverdue(task)) return `<span class="due-overdue">${baseDate} ⚠️</span>`;
+    if (isDueToday(task)) return `<span class="due-today">${baseDate} ⏰</span>`;
+    return baseDate;
+}
+
+function updateSummary(filteredTasks) {
+    const totalEl = document.getElementById('summaryTotal');
+    const shownEl = document.getElementById('summaryShown');
+    const dueTodayEl = document.getElementById('summaryDueToday');
+    const overdueEl = document.getElementById('summaryOverdue');
+    const costEl = document.getElementById('summaryCost');
+
+    if (!totalEl || !shownEl || !dueTodayEl || !overdueEl || !costEl) return;
+
+    const totalCount = tasks.length;
+    const shownCount = filteredTasks.length;
+    const dueTodayCount = tasks.filter(t => isDueToday(t)).length;
+    const overdueCount = tasks.filter(t => isOverdue(t)).length;
+    const shownCost = filteredTasks.reduce((acc, task) => acc + parseCurrencyToNumber(task.cost), 0);
+
+    totalEl.textContent = totalCount;
+    shownEl.textContent = shownCount;
+    dueTodayEl.textContent = dueTodayCount;
+    overdueEl.textContent = overdueCount;
+    costEl.textContent = formatBRL(shownCost);
+}
+
 // Manipular envio do formulário
 function handleFormSubmit(e) {
     e.preventDefault();
+
+    const description = document.getElementById('taskDescription').value.trim();
+    const stage = document.getElementById('taskStage').value;
+    const dueDate = document.getElementById('taskDueDate').value;
+    const costRaw = document.getElementById('taskCost').value.trim();
+    const costValue = parseCurrencyToNumber(costRaw);
+
+    const evaluations = {
+        eval1: parseInt(document.getElementById('eval1').value),
+        eval2: parseInt(document.getElementById('eval2').value),
+        eval3: parseInt(document.getElementById('eval3').value),
+        eval4: parseInt(document.getElementById('eval4').value)
+    };
+
+    if (!description) {
+        showNotification('❌ A descrição da tarefa é obrigatória.');
+        return;
+    }
+
+    if (!stage) {
+        showNotification('❌ O estágio da tarefa é obrigatório.');
+        return;
+    }
+
+    const evals = Object.values(evaluations);
+    const invalidEval = evals.some(v => !Number.isInteger(v) || v < 1 || v > 5);
+    if (invalidEval) {
+        showNotification('❌ Todas as notas devem estar entre 1 e 5.');
+        return;
+    }
+
+    if (costRaw && costValue <= 0) {
+        showNotification('❌ Informe um custo válido (ex.: R$ 5.000,00).');
+        return;
+    }
     
     const taskData = {
         id: editingTaskId || Date.now(),
-        description: document.getElementById('taskDescription').value,
-        stage: document.getElementById('taskStage').value,
-        evaluations: {
-            eval1: parseInt(document.getElementById('eval1').value),
-            eval2: parseInt(document.getElementById('eval2').value),
-            eval3: parseInt(document.getElementById('eval3').value),
-            eval4: parseInt(document.getElementById('eval4').value)
-        }
+        description: description,
+        stage: stage,
+        dueDate: dueDate,
+        cost: costValue > 0 ? formatBRL(costValue) : '',
+        evaluations: evaluations
     };
     
     taskData.average = calculateAverage(taskData.evaluations);
@@ -349,6 +483,8 @@ function editTask(id) {
     editingTaskId = id;
     document.getElementById('taskDescription').value = task.description;
     document.getElementById('taskStage').value = task.stage;
+    document.getElementById('taskDueDate').value = task.dueDate || '';
+    document.getElementById('taskCost').value = normalizeCost(task.cost || '');
     document.getElementById('eval1').value = task.evaluations.eval1;
     document.getElementById('eval2').value = task.evaluations.eval2;
     document.getElementById('eval3').value = task.evaluations.eval3;
@@ -457,22 +593,34 @@ function sortTasks(tasksToSort) {
 
 // Filtrar tarefas
 function filterTasks() {
-    if (!currentFilter) {
-        return [...tasks];
+    let filtered = [...tasks];
+
+    if (currentFilter) {
+        filtered = filtered.filter(t => t.stage === currentFilter);
     }
-    return tasks.filter(t => t.stage === currentFilter);
+
+    if (currentDeadlineFilter === 'today') {
+        filtered = filtered.filter(t => isDueToday(t));
+    } else if (currentDeadlineFilter === 'overdue') {
+        filtered = filtered.filter(t => isOverdue(t));
+    }
+
+    return filtered;
 }
 
 // Aplicar filtros
 function applyFilters() {
     currentFilter = document.getElementById('filterStage').value;
+    currentDeadlineFilter = document.getElementById('filterDeadline').value;
     renderTasks();
 }
 
 // Limpar filtros
 function clearFilters() {
     currentFilter = '';
+    currentDeadlineFilter = '';
     document.getElementById('filterStage').value = '';
+    document.getElementById('filterDeadline').value = '';
     renderTasks();
 }
 
@@ -502,6 +650,7 @@ function renderTasks() {
     
     let filteredTasks = filterTasks();
     let sortedTasks = sortTasks(filteredTasks);
+    updateSummary(sortedTasks);
     
     console.log('📊 Tarefas a renderizar:', sortedTasks.length);
     
@@ -519,7 +668,7 @@ function renderTasks() {
     }
     
     tbody.innerHTML = sortedTasks.map((task, index) => `
-        <tr>
+        <tr class="${isOverdue(task) ? 'row-overdue' : isDueToday(task) ? 'row-due-today' : ''}">
             <td class="row-number">${index + 1}</td>
             <td>
                 <select class="stage-select" data-stage="${task.stage}" onchange="updateTaskStage(${task.id}, this.value)">
@@ -531,6 +680,8 @@ function renderTasks() {
                 </select>
             </td>
             <td>${task.description}</td>
+            <td>${buildDueDateCell(task)}</td>
+            <td>${task.cost || '—'}</td>
             <td class="score-cell">${task.evaluations.eval1}</td>
             <td class="score-cell">${task.evaluations.eval2}</td>
             <td class="score-cell">${task.evaluations.eval3}</td>

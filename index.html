@@ -114,6 +114,11 @@
                     <li><strong>Estágio:</strong> Selecione o status atual (ATRASADO, EM PLANEJAMENTO, INICIADO, EM EXECUÇÃO, CONCLUÍDO)</li>
                     <li><strong>Notas:</strong> Cada avaliador atribui uma nota de 1 a 5</li>
                 </ul>
+                <p><strong>Campos opcionais:</strong></p>
+                <ul>
+                    <li><strong>Data de Vencimento:</strong> usada para alertas de prazo (vence hoje e vencidas)</li>
+                    <li><strong>Custo Estimado:</strong> valor formatado automaticamente em moeda (R$)</li>
+                </ul>
                 <p>A média é calculada automaticamente e determina a prioridade da tarefa.</p>
                 <p>Tarefas com a média empatada são ordenadas por estágio. O estágio, <strong>ATRASADO</strong> tem prioridade máxima.</p>
             </div>
@@ -128,12 +133,14 @@
             <div class="help-section">
                 <h3>🔍 4. Filtros e Controles</h3>
                 <p><strong>Filtrar por Estágio:</strong> Selecione um estágio específico no dropdown para ver apenas essas tarefas.</p>
+                <p><strong>Filtrar por Prazo:</strong> Use o filtro de prazo para listar apenas tarefas que vencem hoje ou já estão vencidas.</p>
                 <p><strong>Ordenação:</strong></p>
                 <ul>
                     <li>Por padrão, tarefas são ordenadas por <strong>prioridade</strong> (maior média primeiro)</li>
                     <li>Clique em "ORDEM ALFABÉTICA" para ordenar por descrição</li>
                     <li>Clique em "ORDEM POR PRIORIDADE" para voltar à ordenação por média</li>
                 </ul>
+                <p><strong>Resumo da Tabela:</strong> Exibe total de tarefas, tarefas filtradas, vencendo hoje, vencidas e soma de custo do que está em exibição.</p>
                 <p><strong>Limpar Filtros:</strong> Remove todos os filtros aplicados.</p>
             </div>
 
@@ -162,6 +169,11 @@
                     <li>🟢 Verde: Média ≥ 4 (alta prioridade)</li>
                     <li>🟡 Amarelo: Média entre 3 e 3.99 (média prioridade)</li>
                     <li>🔴 Vermelho: Média < 3 (baixa prioridade)</li>
+                </ul>
+                <p><strong>Prazos:</strong></p>
+                <ul>
+                    <li>⏰ Laranja: tarefa com vencimento hoje</li>
+                    <li>⚠️ Vermelho: tarefa vencida (exceto quando concluída)</li>
                 </ul>
             </div>
 
@@ -262,6 +274,17 @@
                     </div>
                 </div>
 
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="taskDueDate">Data de Vencimento</label>
+                        <input type="date" id="taskDueDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="taskCost">Custo Estimado</label>
+                        <input type="text" id="taskCost" inputmode="decimal" placeholder="Ex: R$ 5.000,00" onblur="formatTaskCostInput(this)">
+                    </div>
+                </div>
+
                 <div class="form-row evaluations-row">
                     <div class="form-group">
                         <label for="eval1">Nota <span class="evaluator-name">Avaliador 1</span> (1-5) *</label>
@@ -303,6 +326,14 @@
                             <option value="INICIADO">🔵 Iniciado</option>
                             <option value="EM EXECUÇÃO">▶️ Em Execução</option>
                             <option value="CONCLUÍDO">✅ Concluído</option>
+                        </select>
+                    </div>
+                    <div class="ctrl-select-wrap">
+                        <span class="ctrl-select-icon">&#9660;</span>
+                        <select id="filterDeadline" onchange="applyFilters()">
+                            <option value="">⏱️ Todos os Prazos</option>
+                            <option value="today">⏰ Vence Hoje</option>
+                            <option value="overdue">⚠️ Vencidas</option>
                         </select>
                     </div>
                     <button class="ctrl-btn ctrl-btn-ghost" onclick="toggleSortOrder()">
@@ -352,6 +383,8 @@
                             <th class="col-number">Nº</th>
                             <th>Estágio</th>
                             <th>Descrição</th>
+                            <th>Vencimento</th>
+                            <th>Custo</th>
                             <th class="evaluator-header">Avaliador 1</th>
                             <th class="evaluator-header">Avaliador 2</th>
                             <th class="evaluator-header">Avaliador 3</th>
@@ -364,6 +397,12 @@
                         <!-- Tarefas serão inseridas aqui dinamicamente -->
                     </tbody>
                 </table>
+            </div>
+            <div class="table-summary">
+                Exibindo <strong id="summaryShown">0</strong> de <strong id="summaryTotal">0</strong> tarefa(s)
+                | ⏰ Hoje: <strong id="summaryDueToday">0</strong>
+                | ⚠️ Vencidas: <strong id="summaryOverdue">0</strong>
+                | 💰 Custo exibido: <strong id="summaryCost">R$ 0,00</strong>
             </div>
             <div id="noTasksMessage" class="no-tasks">
                 Nenhuma tarefa cadastrada. Adicione uma nova tarefa acima.

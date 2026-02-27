@@ -532,6 +532,24 @@ tbody tr:hover {
     background-color: #f8f9ff;
 }
 
+tbody tr.row-overdue {
+    background-color: rgba(220, 53, 69, 0.10);
+}
+
+tbody tr.row-due-today {
+    background-color: rgba(255, 193, 7, 0.12);
+}
+
+.due-overdue {
+    color: #dc3545;
+    font-weight: 700;
+}
+
+.due-today {
+    color: #ff9800;
+    font-weight: 700;
+}
+
 /* Stage Colors */
 .stage-badge {
     padding: 8px 12px;
@@ -616,6 +634,16 @@ tbody tr:hover {
     color: #999;
     font-size: 1.1rem;
     display: none;
+}
+
+.table-summary {
+    margin-top: 12px;
+    font-size: 0.88rem;
+    color: #555;
+    background: #f8f9fa;
+    border: 1px solid #e8ecf5;
+    border-radius: 8px;
+    padding: 10px 12px;
 }
 
 /* Stage Select */
@@ -894,17 +922,17 @@ tbody tr {
         display: none !important;
     }
 
-    /* Ocultar apenas as colunas de avaliadores (4-7) e ações (9), manter Nº (1), Estágio (2), Descrição (3), Média (8) */
-    th:nth-child(4),
-    th:nth-child(5),
+    /* Ocultar colunas de avaliadores (6-9) e ações (11), mantendo Nº, Estágio, Descrição, Vencimento, Custo e Média */
     th:nth-child(6),
     th:nth-child(7),
+    th:nth-child(8),
     th:nth-child(9),
-    td:nth-child(4),
-    td:nth-child(5),
+    th:nth-child(11),
     td:nth-child(6),
     td:nth-child(7),
-    td:nth-child(9) {
+    td:nth-child(8),
+    td:nth-child(9),
+    td:nth-child(11) {
         display: none !important;
     }
 
@@ -956,17 +984,17 @@ tbody tr {
         word-wrap: break-word;
     }
 
-    th:nth-child(8),
-    td:nth-child(8) {
+    th:nth-child(10),
+    td:nth-child(10) {
         width: 8%;
         white-space: nowrap;
     }
 
-    /* Centralizar as colunas Nº (1) e Média (8) */
+    /* Centralizar as colunas Nº (1) e Média (10) */
     th:nth-child(1),
-    th:nth-child(8),
+    th:nth-child(10),
     td:nth-child(1),
-    td:nth-child(8) {
+    td:nth-child(10) {
         text-align: center;
     }
 
@@ -1046,11 +1074,19 @@ td:nth-child(3) {
     width: auto;
 }
 
-/* Avaliadores 1-4 - Colunas médias */
+/* Vencimento */
 th:nth-child(4),
-td:nth-child(4),
+td:nth-child(4) {
+    width: 120px;
+}
+
+/* Custo */
 th:nth-child(5),
-td:nth-child(5),
+td:nth-child(5) {
+    width: 120px;
+}
+
+/* Avaliadores 1-4 - Colunas médias */
 th:nth-child(6),
 td:nth-child(6),
 th:nth-child(7),
@@ -1058,15 +1094,22 @@ td:nth-child(7) {
     width: 80px;
 }
 
-/* Média - Coluna pequena */
 th:nth-child(8),
-td:nth-child(8) {
+td:nth-child(8),
+th:nth-child(9),
+td:nth-child(9) {
+    width: 80px;
+}
+
+/* Média - Coluna pequena */
+th:nth-child(10),
+td:nth-child(10) {
     width: 90px;
 }
 
 /* Ações - Coluna pequena */
-th:nth-child(9),
-td:nth-child(9) {
+th:nth-child(11),
+td:nth-child(11) {
     width: 110px;
 }
 
@@ -1206,6 +1249,20 @@ body.dark-mode td {
 
 body.dark-mode tbody tr:hover {
     background-color: #252535;
+}
+
+body.dark-mode tbody tr.row-overdue {
+    background-color: rgba(220, 53, 69, 0.18);
+}
+
+body.dark-mode tbody tr.row-due-today {
+    background-color: rgba(255, 193, 7, 0.22);
+}
+
+body.dark-mode .table-summary {
+    background: #252535;
+    border-color: #383850;
+    color: #c8c8d8;
 }
 
 body.dark-mode .modal-content {
