@@ -877,6 +877,28 @@ function normalizeHowMuch(rawValue) {
   return formatBRL(amount);
 }
 
+function pickImportedCost(task) {
+  const candidates = [
+    task?.howMuch,
+    task?.cost,
+    task?.custo,
+    task?.valor,
+    task?.budget,
+    task?.price,
+    task?.estimatedCost,
+    task?.estimated_cost,
+    task?.valorEstimado,
+    task?.custoEstimado
+  ];
+
+  for (const value of candidates) {
+    if (value === null || value === undefined) continue;
+    if (String(value).trim() === '') continue;
+    return normalizeHowMuch(value);
+  }
+  return '';
+}
+
 function formatHowMuchInput(el) {
   el.value = normalizeHowMuch(el.value);
 }
@@ -1103,9 +1125,9 @@ function _doImportFromMain(interactive) {
       what:    t.description || '',
       why:     t.why     || '',
       where:   t.where   || '',
-      when:    t.when    || '',
+      when:    t.when    || t.dueDate || '',
       how:     t.how     || '',
-      howMuch: t.howMuch || '',
+      howMuch: pickImportedCost(t),
       who: [
         evals.eval1 || 0,
         evals.eval2 || 0,
