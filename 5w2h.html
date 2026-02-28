@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CECM 5W2H — Gerenciamento de Tarefas</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-init.js?v=1735000004"></script>
   <style>
     /* ===== RESET & BASE ===== */
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -111,6 +113,8 @@
     .btn-gray:hover    { background: #5a6268; }
     .btn-dark    { background: #343a40; color: #fff; }
     .btn-dark:hover    { background: #212529; }
+    .btn-db      { background: #2e7d32; color: #fff; }
+    .btn-db:hover{ background: #1b5e20; }
     .btn-sm { padding: 5px 10px; font-size: 0.78rem; border-radius: 14px; }
     .btn-icon { padding: 5px 9px; border-radius: 50%; font-size: 1rem; min-width: 32px; justify-content: center; }
 
@@ -359,17 +363,18 @@
 
     /* ===== TOAST ===== */
     #toast {
-      position: fixed; bottom: 24px; right: 24px;
+      position: fixed; top: 50%; left: 50%;
       background: #333; color: #fff;
       padding: 12px 20px; border-radius: 10px;
       font-size: 0.88rem; font-weight: 600;
-      opacity: 0; transform: translateY(10px);
+      opacity: 0; transform: translate(-50%, 10px);
       transition: all 0.3s;
-      z-index: 2000;
+      z-index: 5000;
       pointer-events: none;
-      max-width: 320px;
+      max-width: min(520px, 92vw);
+      text-align: center;
     }
-    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.show { opacity: 1; transform: translate(-50%, -50%); }
     #toast.success { background: #28a745; }
     #toast.error   { background: #dc3545; }
     #toast.info    { background: #17a2b8; }
@@ -435,6 +440,8 @@
       <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">📥 Carregar JSON</button>
       <input type="file" id="fileInput" accept=".json" style="display:none" onchange="loadJSON(event)">
       <button class="btn btn-warning" onclick="importFromMain()" title="Importar tarefas do Sistema de Prioridades">🔄 Importar do Sistema</button>
+      <button class="btn btn-db" onclick="saveToDatabase5w2h()" title="Salvar no banco de dados">💾 Salvar Banco</button>
+      <button class="btn btn-info" onclick="loadFromDatabase5w2h()" title="Carregar do banco de dados">📥 Carregar Banco</button>
       <button class="btn btn-dark"    onclick="openModal(null)" title="Nova tarefa">➕ Nova Tarefa</button>
       <button class="btn btn-gray"    onclick="toggleDark()" id="btnDark">🌙 Dark</button>
       <a      class="btn btn-gray"    href="index.html">🏠 Início</a>
@@ -450,6 +457,13 @@
     <strong>✅ Tarefas importadas do Sistema de Prioridades.</strong>
     Edite cada linha (✏️) para preencher os campos 5W2H (Por quê, Onde, Quando, Como, Custo).
     <button class="btn btn-sm btn-gray" style="margin-left:auto;" onclick="document.getElementById('importBanner').style.display='none'">✕</button>
+  </div>
+
+  <div id="dbProjectBanner" style="display:none;background:#e3f2fd;border:1px solid #64b5f6;border-radius:10px;padding:10px 18px;margin-bottom:16px;font-size:0.85rem;color:#1565c0;align-items:center;gap:10px;">
+    <strong>📦 Projeto no banco:</strong>
+    <span id="dbProjectName"></span>
+    <span id="dbProjectCode" style="font-weight:700;"></span>
+    <button class="btn btn-sm btn-gray" style="margin-left:auto;" onclick="clearCurrentDbProject()">Desvincular</button>
   </div>
 
   <!-- Toolbar / Filtros -->
@@ -603,12 +617,17 @@
 const LS_KEY_TASKS = 'kanban5w2h_tasks';
 const LS_KEY_EVALS = 'kanban5w2h_evaluators';
 const LS_KEY_DARK  = 'kanban5w2h_dark';
+const LS_KEY_DB_PROJECT_ID   = 'kanban5w2h_project_id';
+const LS_KEY_DB_PROJECT_NAME = 'kanban5w2h_project_name';
+const LS_KEY_DB_PROJECT_CODE = 'kanban5w2h_project_code';
 
 let tasks      = [];
 let evaluators = ['Avaliador 1', 'Avaliador 2', 'Avaliador 3', 'Avaliador 4'];
 let editingId  = null;
 let sortAlphaActive = false;
 let nextId     = 1;
+let projectSelectionMode = null;
+let projectSelectionList = [];
 
 // Mapa de estágios do sistema principal → kanban (precisa estar antes do init)
 const STAGE_MAP = {
@@ -648,6 +667,8 @@ const STAGE_MAP = {
   } catch(e) { console.warn('Auto-import falhou:', e); }
 
   buildTableHeader();
+  updateDbBanner();
+  refreshLinkedProjectCodeFromDb();
   renderTable();
 })();
 
@@ -1155,11 +1176,30 @@ function closeModalBg(e) {
   if (e.target === document.getElementById('modalOverlay')) closeModal();
 }
 
+function showValidationError(message, fieldId) {
+  toast(message, 'error');
+  if (!fieldId) return;
+
+  const field = document.getElementById(fieldId);
+  if (!field) return;
+
+  const oldBorder = field.style.borderColor;
+  field.style.borderColor = '#dc3545';
+  field.focus();
+  if (typeof field.select === 'function') {
+    try { field.select(); } catch (e) {}
+  }
+
+  setTimeout(() => {
+    field.style.borderColor = oldBorder || '';
+  }, 1500);
+}
+
 function saveModal() {
   const what = document.getElementById('mWhat').value.trim();
-  if (!what) { toast('O campo "O quê" é obrigatório', 'error'); return; }
+  if (!what) { showValidationError('O campo "O quê" é obrigatório', 'mWhat'); return; }
   const stage = document.getElementById('mStage').value;
-  if (!stage) { toast('O campo "Estágio" é obrigatório', 'error'); return; }
+  if (!stage) { showValidationError('O campo "Estágio" é obrigatório', 'mStage'); return; }
 
   const who = evaluators.map((_, i) => {
     const v = parseInt(document.getElementById(`mWho${i}`).value);
@@ -1167,25 +1207,27 @@ function saveModal() {
   });
 
   if (!who.some(v => v > 0)) {
-    toast('Informe ao menos uma nota (1 a 5) em "Quem"', 'error');
+    showValidationError('Informe ao menos uma nota (1 a 5) em "Quem"', 'mWho0');
     return;
   }
 
   const respEl = document.querySelector('input[name="mResponsible"]:checked');
   const responsible = respEl !== null ? parseInt(respEl.value) : null;
   if (responsible === null) {
-    toast('Selecione um responsável pela execução', 'error');
+    showValidationError('Selecione um responsável pela execução');
+    const firstRadio = document.querySelector('input[name="mResponsible"]');
+    if (firstRadio) firstRadio.focus();
     return;
   }
   if (!who[responsible] || who[responsible] < 1 || who[responsible] > 5) {
-    toast('A pessoa responsável precisa ter nota válida (1 a 5)', 'error');
+    showValidationError('A pessoa responsável precisa ter nota válida (1 a 5)', `mWho${responsible}`);
     return;
   }
 
   const howMuchRaw = document.getElementById('mHowMuch').value.trim();
   const costValue = parseCurrencyToNumber(howMuchRaw);
   if (howMuchRaw && costValue <= 0) {
-    toast('Informe um custo válido (ex.: R$ 5.000,00)', 'error');
+    showValidationError('Informe um custo válido (ex.: R$ 5.000,00)', 'mHowMuch');
     return;
   }
 
@@ -1330,6 +1372,421 @@ function importFromMain() {
    ────────────────────────────────────────────── */
 function saveLocal() {
   localStorage.setItem(LS_KEY_TASKS, JSON.stringify(tasks));
+}
+
+/* ──────────────────────────────────────────────
+   SUPABASE (SAVE / LOAD)
+   ────────────────────────────────────────────── */
+async function getSupabaseSession() {
+  await window.initSupabase();
+  const client = window.getClient();
+  if (!client || !client.auth) {
+    toast('Supabase não inicializado. Recarregue a página.', 'error');
+    return { client: null, session: null };
+  }
+
+  const { data, error } = await client.auth.getSession();
+  if (error) {
+    toast('Erro de autenticação: ' + error.message, 'error');
+    return { client, session: null };
+  }
+
+  const session = data?.session || null;
+  if (!session) {
+    toast('Você precisa estar logado para salvar/carregar no banco.', 'error');
+    setTimeout(() => {
+      window.location.href = 'auth.html?t=' + Date.now();
+    }, 900);
+    return { client, session: null };
+  }
+
+  return { client, session };
+}
+
+function build5w2hPayload() {
+  return {
+    evaluators,
+    tasks,
+    savedAt: new Date().toISOString()
+  };
+}
+
+function mergeProjectData(existingData) {
+  const base = existingData && typeof existingData === 'object' ? { ...existingData } : {};
+  base.fivew2h = build5w2hPayload();
+  return base;
+}
+
+async function fetchUserProjects(client, userId) {
+  const { data: projects, error } = await client
+    .from('projects')
+    .select('id, name, data, project_code, created_at, user_id')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if (error) {
+    toast('Erro ao listar projetos: ' + error.message, 'error');
+    return [];
+  }
+  return projects || [];
+}
+
+function updateDbBanner() {
+  const projectId = localStorage.getItem(LS_KEY_DB_PROJECT_ID);
+  const projectName = localStorage.getItem(LS_KEY_DB_PROJECT_NAME);
+  const projectCode = localStorage.getItem(LS_KEY_DB_PROJECT_CODE);
+  const banner = document.getElementById('dbProjectBanner');
+  const label = document.getElementById('dbProjectName');
+  const codeLabel = document.getElementById('dbProjectCode');
+
+  if (!banner || !label || !codeLabel) return;
+  if (!projectId) {
+    banner.style.display = 'none';
+    label.textContent = '';
+    codeLabel.textContent = '';
+    return;
+  }
+
+  label.textContent = projectName || '(sem nome)';
+  codeLabel.textContent = projectCode ? `🔑 ${projectCode}` : '';
+  banner.style.display = 'flex';
+}
+
+async function refreshLinkedProjectCodeFromDb() {
+  const projectId = localStorage.getItem(LS_KEY_DB_PROJECT_ID);
+  const localCode = localStorage.getItem(LS_KEY_DB_PROJECT_CODE);
+  if (!projectId || localCode) return;
+
+  try {
+    await window.initSupabase();
+    const client = window.getClient();
+    if (!client || !client.auth) return;
+
+    const { data: sessionData, error: sessionError } = await client.auth.getSession();
+    const session = sessionData?.session;
+    if (sessionError || !session) return;
+
+    const { data: project, error } = await client
+      .from('projects')
+      .select('id, name, project_code')
+      .eq('id', projectId)
+      .eq('user_id', session.user.id)
+      .single();
+
+    if (error || !project) return;
+
+    localStorage.setItem(LS_KEY_DB_PROJECT_NAME, project.name || localStorage.getItem(LS_KEY_DB_PROJECT_NAME) || 'Projeto 5W2H');
+    localStorage.setItem(LS_KEY_DB_PROJECT_CODE, project.project_code || '');
+    updateDbBanner();
+  } catch (e) {
+    console.warn('Não foi possível atualizar código do projeto vinculado:', e?.message || e);
+  }
+}
+
+function setCurrentDbProject(projectId, projectName, projectCode = '') {
+  localStorage.setItem(LS_KEY_DB_PROJECT_ID, projectId);
+  localStorage.setItem(LS_KEY_DB_PROJECT_NAME, projectName || 'Projeto 5W2H');
+  localStorage.setItem(LS_KEY_DB_PROJECT_CODE, projectCode || '');
+  updateDbBanner();
+  if (!projectCode) {
+    refreshLinkedProjectCodeFromDb();
+  }
+}
+
+function clearCurrentDbProject() {
+  localStorage.removeItem(LS_KEY_DB_PROJECT_ID);
+  localStorage.removeItem(LS_KEY_DB_PROJECT_NAME);
+  localStorage.removeItem(LS_KEY_DB_PROJECT_CODE);
+  updateDbBanner();
+  toast('Projeto vinculado removido. O próximo salvamento pode criar/selecionar outro.', 'info');
+}
+
+function closeProjectSelectModal() {
+  const modal = document.getElementById('projectSelectModal5w2h');
+  if (modal) modal.remove();
+}
+
+function showProjectSelectModal(mode, projects) {
+  closeProjectSelectModal();
+  projectSelectionMode = mode;
+  projectSelectionList = projects || [];
+
+  const title = mode === 'save' ? '💾 Salvar no Banco' : '📥 Carregar do Banco';
+  const subtitle = mode === 'save'
+    ? 'Selecione um projeto para atualizar, ou crie um novo projeto:'
+    : 'Selecione um projeto para carregar os dados 5W2H:';
+
+  const listHtml = projectSelectionList.length
+    ? `<div style="max-height:300px;overflow-y:auto;border:1px solid #ddd;border-radius:8px;margin:12px 0;">${projectSelectionList.map(project => {
+        const code = project.project_code ? ` • 🔑 ${project.project_code}` : '';
+        const date = project.created_at ? new Date(project.created_at).toLocaleString('pt-BR') : '';
+        return `<div onclick="selectProjectFromModal('${project.id}')" style="padding:10px 12px;border-bottom:1px solid #eee;cursor:pointer;background:#fafafa;" onmouseover="this.style.background='#f0f4ff'" onmouseout="this.style.background='#fafafa'"><strong>${esc(project.name || 'Sem nome')}</strong><br><small style='color:#777'>${date}${code}</small></div>`;
+      }).join('')}</div>`
+    : '<p style="margin:12px 0;color:#666;">Nenhum projeto encontrado.</p>';
+
+  const modal = document.createElement('div');
+  modal.id = 'projectSelectModal5w2h';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:2100;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:12px;padding:24px;max-width:520px;width:92%;box-shadow:0 10px 30px rgba(0,0,0,0.25);">
+      <h2 style="margin:0 0 10px;color:#333;font-size:1.3rem;">${title}</h2>
+      <p style="margin:0;color:#666;">${subtitle}</p>
+      ${listHtml}
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;">
+        ${mode === 'save' ? '<button class="btn btn-success" onclick="createNewProjectFromModal()">➕ Novo Projeto</button>' : ''}
+        <button class="btn btn-gray" onclick="closeProjectSelectModal()">Fechar</button>
+      </div>
+    </div>
+  `;
+
+  modal.onclick = (e) => {
+    if (e.target === modal) closeProjectSelectModal();
+  };
+  document.body.appendChild(modal);
+}
+
+function selectProjectFromModal(projectId) {
+  const project = projectSelectionList.find(p => p.id === projectId);
+  if (!project) return;
+  if (projectSelectionMode === 'save') {
+    performSaveToExistingProject(project);
+  } else {
+    performLoadProject(project);
+  }
+}
+
+function createNewProjectFromModal() {
+  if (!tasks.length) {
+    toast('A lista está vazia. Adicione ao menos uma tarefa antes de salvar.', 'error');
+    return;
+  }
+
+  closeProjectSelectModal();
+  const isDark = document.body.classList.contains('dark');
+  const panelBg = isDark ? '#1e1e2e' : '#ffffff';
+  const panelTitle = isDark ? '#cba6f7' : '#333333';
+  const panelText = isDark ? '#a6adc8' : '#666666';
+  const inputBg = isDark ? '#313244' : '#ffffff';
+  const inputColor = isDark ? '#cdd6f4' : '#333333';
+  const inputBorder = isDark ? '#45475a' : '#dddddd';
+
+  const inputModal = document.createElement('div');
+  inputModal.id = 'newProjectNameModal5w2h';
+  inputModal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2200;
+  `;
+
+  inputModal.innerHTML = `
+    <div style="background:${panelBg}; padding: 30px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); max-width: 400px; width: 90%;">
+      <h2 style="margin-top: 0; color:${panelTitle};">📝 Novo Projeto</h2>
+      <p style="color:${panelText};">Digite um nome para o novo projeto:</p>
+      <input type="text" id="newProjectNameInput5w2h" placeholder="Ex: Projeto Importante" style="width: 100%; padding: 10px; border: 1px solid ${inputBorder}; border-radius: 5px; box-sizing: border-box; font-size: 14px; margin-bottom: 15px; background:${inputBg}; color:${inputColor};">
+      <div style="display: flex; gap: 10px;">
+        <button onclick="confirmNewProjectFromModal()" style="flex: 1; padding: 12px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">Criar</button>
+        <button onclick="closeNewProjectNameModal5w2h()" style="flex: 1; padding: 12px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">Cancelar</button>
+      </div>
+    </div>
+  `;
+
+  inputModal.onclick = (e) => {
+    if (e.target === inputModal) closeNewProjectNameModal5w2h();
+  };
+
+  document.body.appendChild(inputModal);
+
+  const input = document.getElementById('newProjectNameInput5w2h');
+  if (input) {
+    input.value = localStorage.getItem(LS_KEY_DB_PROJECT_NAME) || 'Projeto 5W2H';
+    input.focus();
+    input.select();
+    input.addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') confirmNewProjectFromModal();
+    });
+  }
+}
+
+function closeNewProjectNameModal5w2h() {
+  const modal = document.getElementById('newProjectNameModal5w2h');
+  if (modal) modal.remove();
+}
+
+async function confirmNewProjectFromModal() {
+  const input = document.getElementById('newProjectNameInput5w2h');
+  const name = input?.value?.trim();
+
+  if (!name) {
+    toast('Digite um nome para o projeto!', 'error');
+    if (input) input.focus();
+    return;
+  }
+
+  const saved = await performSaveAsNewProject(name);
+  if (saved) {
+    closeNewProjectNameModal5w2h();
+  }
+}
+
+async function saveToDatabase5w2h() {
+  if (!tasks.length) {
+    toast('A lista está vazia. Adicione ao menos uma tarefa antes de salvar.', 'error');
+    return;
+  }
+
+  const { client, session } = await getSupabaseSession();
+  if (!client || !session) return;
+
+  const currentProjectId = localStorage.getItem(LS_KEY_DB_PROJECT_ID);
+  if (currentProjectId) {
+    const projects = await fetchUserProjects(client, session.user.id);
+    const current = projects.find(p => p.id === currentProjectId);
+    if (current) {
+      await performSaveToExistingProject(current);
+      return;
+    }
+  }
+
+  const projects = await fetchUserProjects(client, session.user.id);
+  showProjectSelectModal('save', projects);
+}
+
+async function performSaveToExistingProject(project) {
+  const { client, session } = await getSupabaseSession();
+  if (!client || !session) return;
+
+  const payload = mergeProjectData(project.data);
+  const { error } = await client
+    .from('projects')
+    .update({ data: payload, updated_at: new Date().toISOString() })
+    .eq('id', project.id)
+    .eq('user_id', session.user.id);
+
+  if (error) {
+    toast('Erro ao salvar no projeto: ' + error.message, 'error');
+    return;
+  }
+
+  setCurrentDbProject(project.id, project.name || 'Projeto 5W2H', project.project_code || '');
+  closeProjectSelectModal();
+  toast('Projeto atualizado no banco com sucesso!', 'success');
+}
+
+async function performSaveAsNewProject(projectName) {
+  const { client, session } = await getSupabaseSession();
+  if (!client || !session) return false;
+
+  const now = new Date().toISOString();
+  const payload = mergeProjectData({
+    evaluator_names: {
+      eval1: evaluators[0] || 'Avaliador 1',
+      eval2: evaluators[1] || 'Avaliador 2',
+      eval3: evaluators[2] || 'Avaliador 3',
+      eval4: evaluators[3] || 'Avaliador 4'
+    }
+  });
+
+  const { data: inserted, error } = await client
+    .from('projects')
+    .insert([{ name: projectName, data: payload, user_id: session.user.id, created_at: now }])
+    .select('id, name, project_code')
+    .single();
+
+  if (error) {
+    toast('Erro ao criar projeto: ' + error.message, 'error');
+    return false;
+  }
+
+  if (inserted?.id) {
+    setCurrentDbProject(inserted.id, inserted.name || projectName, inserted.project_code || '');
+  }
+  closeProjectSelectModal();
+  toast('Novo projeto salvo no banco com sucesso!', 'success');
+  return true;
+}
+
+function parseFivew2hFromProjectData(data) {
+  if (!data || typeof data !== 'object') return null;
+
+  if (data.fivew2h && Array.isArray(data.fivew2h.tasks)) {
+    return {
+      tasks: data.fivew2h.tasks,
+      evaluators: Array.isArray(data.fivew2h.evaluators) ? data.fivew2h.evaluators : null
+    };
+  }
+
+  if (Array.isArray(data.tasks)) {
+    const importedTasks = data.tasks.map(t => {
+      const evals = t.evaluations || {};
+      return {
+        id: t.id || Date.now() + Math.floor(Math.random() * 1000),
+        stage: STAGE_MAP[t.stage] || t.stage || 'Em Planejamento',
+        what: t.description || '',
+        why: t.why || '',
+        where: t.where || '',
+        when: t.when || '',
+        how: t.how || '',
+        howMuch: t.howMuch || '',
+        who: [evals.eval1 || 0, evals.eval2 || 0, evals.eval3 || 0, evals.eval4 || 0],
+        responsible: null
+      };
+    });
+
+    const evaluatorSource = data.evaluator_names || {};
+    const fallbackEvaluators = [
+      evaluatorSource.eval1 || 'Avaliador 1',
+      evaluatorSource.eval2 || 'Avaliador 2',
+      evaluatorSource.eval3 || 'Avaliador 3',
+      evaluatorSource.eval4 || 'Avaliador 4'
+    ];
+
+    return { tasks: importedTasks, evaluators: fallbackEvaluators };
+  }
+
+  return null;
+}
+
+async function loadFromDatabase5w2h() {
+  const { client, session } = await getSupabaseSession();
+  if (!client || !session) return;
+
+  const projects = await fetchUserProjects(client, session.user.id);
+  if (!projects.length) {
+    toast('Nenhum projeto encontrado para sua conta.', 'error');
+    return;
+  }
+  showProjectSelectModal('load', projects);
+}
+
+function performLoadProject(project) {
+  const parsed = parseFivew2hFromProjectData(project.data);
+  if (!parsed || !Array.isArray(parsed.tasks)) {
+    toast('Este projeto não possui dados 5W2H salvos.', 'error');
+    return;
+  }
+
+  tasks = parsed.tasks;
+  if (Array.isArray(parsed.evaluators) && parsed.evaluators.length >= 4) {
+    evaluators = parsed.evaluators.slice(0, 4);
+  }
+
+  nextId = tasks.length ? Math.max(...tasks.map(t => Number(t.id) || 0)) + 1 : 1;
+  localStorage.setItem(LS_KEY_EVALS, JSON.stringify(evaluators));
+  saveLocal();
+  setCurrentDbProject(project.id, project.name || 'Projeto 5W2H', project.project_code || '');
+
+  closeProjectSelectModal();
+  buildTableHeader();
+  renderTable();
+  toast(`Projeto "${project.name || 'Sem nome'}" carregado com sucesso!`, 'success');
 }
 
 /* ──────────────────────────────────────────────
