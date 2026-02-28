@@ -610,8 +610,8 @@
       <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">📥 JSON</button>
       <input type="file" id="fileInput" accept=".json" style="display:none" onchange="loadJSON(event)">
       <button class="btn btn-warning" onclick="importFromMain()" title="Importar tarefas do Sistema de Prioridades">🔄 Importar</button>
-      <button class="btn btn-db" onclick="saveToDatabase5w2h()" title="Salvar no banco de dados">💾 Banco</button>
-      <button class="btn btn-info" onclick="loadFromDatabase5w2h()" title="Carregar do banco de dados">📥 Banco</button>
+      <button class="btn btn-db" onclick="saveToDatabase5w2h()" title="Salvar no banco de dados">💾 Salvar</button>
+      <button class="btn btn-info" onclick="loadFromDatabase5w2h()" title="Carregar do banco de dados">📥 Carregar</button>
       <button class="btn btn-dark" onclick="openModal(null)" title="Nova tarefa">➕ Nova</button>
       <a class="btn btn-gray" href="index.html">🏠 Início</a>
       <a class="btn btn-primary" href="dashboard5w2h.html" title="Ver dashboard analítico">📊 Dashboard</a>
@@ -1920,6 +1920,9 @@ async function performSaveToExistingProject(project) {
   if (!client || !session) return;
 
   const payload = mergeProjectData(project.data);
+  // Garantir que projetos 5W2H não tenham evaluator_names no nível raiz
+  // (esse campo é o discriminador usado pelo index.html para filtrar projetos compatíveis)
+  delete payload.evaluator_names;
   const { error } = await client
     .from('projects')
     .update({ data: payload, updated_at: new Date().toISOString() })
@@ -1941,14 +1944,10 @@ async function performSaveAsNewProject(projectName) {
   if (!client || !session) return false;
 
   const now = new Date().toISOString();
-  const payload = mergeProjectData({
-    evaluator_names: {
-      eval1: evaluators[0] || 'Avaliador 1',
-      eval2: evaluators[1] || 'Avaliador 2',
-      eval3: evaluators[2] || 'Avaliador 3',
-      eval4: evaluators[3] || 'Avaliador 4'
-    }
-  });
+  // Não incluir evaluator_names no payload para que esses projetos
+  // não apareçam no modal "Carregar Tarefa" do index.html
+  // (o discriminador é: data.evaluator_names !== undefined → projeto do index.html)
+  const payload = mergeProjectData({});
 
   const { data: inserted, error } = await client
     .from('projects')
