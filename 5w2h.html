@@ -1886,30 +1886,22 @@ function exportXLSX() {
 
   const stageLabel = { exec:'Em Execução', late:'Atrasada', plan:'Planejamento', done:'Concluída', init:'Iniciação' };
 
-  // Cabeçalho fixo
-  const evalHeaders = evaluators.map(ev => `Avaliador: ${ev.name}`);
-  const header = ['#','Etapa','O Quê (What)','Por Quê (Why)','Onde (Where)','Quem (Who)','Quando (When)','Quanto Custa (How Much)','Como (How)', ...evalHeaders, 'Média'];
+  const header = ['#','Etapa','O Quê (What)','Por Quê (Why)','Onde (Where)','Quem (Who)','Quando (When)','Quanto Custa (How Much)','Como (How)'];
 
   const rows = tasks.map((t, i) => {
-    const scores = evaluators.map(ev => {
-      const s = t.scores?.[ev.id];
-      return s ? Number(s) : '';
-    });
-    const avg = scores.filter(s => s !== '').length
-      ? (scores.filter(s => s !== '').reduce((a,b) => a+b, 0) / scores.filter(s => s !== '').length).toFixed(1)
+    const responsibleName = (t.responsible != null && evaluators[t.responsible])
+      ? evaluators[t.responsible]
       : '';
     return [
       i + 1,
       stageLabel[t.stage] || t.stage || '',
-      t.what   || '',
-      t.why    || '',
-      t.where  || '',
-      t.who    || '',
-      t.when   || '',
+      t.what    || '',
+      t.why     || '',
+      t.where   || '',
+      responsibleName,
+      t.when    || '',
       t.howMuch != null ? t.howMuch : '',
-      t.how    || '',
-      ...scores,
-      avg
+      t.how     || '',
     ];
   });
 
@@ -1918,10 +1910,8 @@ function exportXLSX() {
 
   // Larguras de coluna
   ws['!cols'] = [
-    {wch:4},{wch:14},{wch:28},{wch:24},{wch:20},{wch:14},
-    {wch:12},{wch:14},{wch:24},
-    ...evaluators.map(() => ({wch:12})),
-    {wch:8}
+    {wch:4},{wch:16},{wch:32},{wch:28},{wch:24},{wch:20},
+    {wch:14},{wch:18},{wch:30}
   ];
 
   const wb = XLSX.utils.book_new();
@@ -1959,40 +1949,31 @@ function exportPDF() {
   const evalHeaders = evaluators.map(ev => ({ header: ev.name, dataKey: 'ev_'+ev.id }));
 
   const columns = [
-    { header: '#',             dataKey: 'num'     },
-    { header: 'Etapa',         dataKey: 'stage'   },
-    { header: 'O Quê',         dataKey: 'what'    },
-    { header: 'Por Quê',       dataKey: 'why'     },
-    { header: 'Onde',          dataKey: 'where'   },
-    { header: 'Quem',          dataKey: 'who'     },
-    { header: 'Quando',        dataKey: 'when'    },
-    { header: 'Custo',         dataKey: 'howMuch' },
-    { header: 'Como',          dataKey: 'how'     },
-    ...evalHeaders,
-    { header: 'Média',         dataKey: 'avg'     },
+    { header: '#',      dataKey: 'num'     },
+    { header: 'Etapa',  dataKey: 'stage'   },
+    { header: 'O Quê',  dataKey: 'what'    },
+    { header: 'Por Quê',dataKey: 'why'     },
+    { header: 'Onde',   dataKey: 'where'   },
+    { header: 'Quem',   dataKey: 'who'     },
+    { header: 'Quando', dataKey: 'when'    },
+    { header: 'Custo',  dataKey: 'howMuch' },
+    { header: 'Como',   dataKey: 'how'     },
   ];
 
   const body = tasks.map((t, i) => {
-    const scores = {};
-    let total = 0, count = 0;
-    evaluators.forEach(ev => {
-      const s = t.scores?.[ev.id];
-      scores['ev_'+ev.id] = s ? Number(s) : '-';
-      if (s) { total += Number(s); count++; }
-    });
-    const avg = count ? (total / count).toFixed(1) : '-';
+    const responsibleName = (t.responsible != null && evaluators[t.responsible])
+      ? evaluators[t.responsible]
+      : '';
     return {
       num:     i + 1,
       stage:   stageLabel[t.stage] || t.stage || '',
       what:    t.what    || '',
       why:     t.why     || '',
       where:   t.where   || '',
-      who:     t.who     || '',
+      who:     responsibleName,
       when:    t.when    || '',
-      howMuch: t.howMuch != null ? `R$ ${Number(t.howMuch).toLocaleString('pt-BR',{minimumFractionDigits:2})}` : '',
+      howMuch: t.howMuch || '',
       how:     t.how     || '',
-      ...scores,
-      avg
     };
   });
 
@@ -2004,15 +1985,14 @@ function exportPDF() {
     headStyles: { fillColor: [102, 126, 234], textColor: 255, fontStyle: 'bold', fontSize: 7 },
     columnStyles: {
       num:     { cellWidth: 6,  halign: 'center' },
-      stage:   { cellWidth: 22, halign: 'center' },
-      what:    { cellWidth: 38 },
-      why:     { cellWidth: 30 },
-      where:   { cellWidth: 24 },
-      who:     { cellWidth: 16, halign: 'center' },
-      when:    { cellWidth: 18, halign: 'center' },
-      howMuch: { cellWidth: 20, halign: 'right'  },
-      how:     { cellWidth: 30 },
-      avg:     { cellWidth: 12, halign: 'center', fontStyle: 'bold' },
+      stage:   { cellWidth: 26, halign: 'center' },
+      what:    { cellWidth: 44 },
+      why:     { cellWidth: 36 },
+      where:   { cellWidth: 30 },
+      who:     { cellWidth: 22, halign: 'center' },
+      when:    { cellWidth: 20, halign: 'center' },
+      howMuch: { cellWidth: 22, halign: 'right'  },
+      how:     { cellWidth: 'auto' },
     },
     didParseCell(data) {
       if (data.column.dataKey === 'stage' && data.section === 'body') {
