@@ -324,11 +324,24 @@
       <button class="pill" data-stage="Iniciado">⚪ Iniciado</button>
       <button class="pill" data-stage="Concluído">🟢 Concluído</button>
     </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
+      <button onclick="reloadData()" title="Recarregar dados do 5W2H" style="background:rgba(167,139,250,0.15);border:1.5px solid #a78bfa;color:#a78bfa;padding:7px 14px;border-radius:8px;font-size:0.78rem;font-weight:600;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='rgba(167,139,250,0.3)'" onmouseout="this.style.background='rgba(167,139,250,0.15)'">🔄 Atualizar</button>
+      <a href="5w2h.html" title="Voltar para o gerenciador de tarefas" style="background:rgba(6,182,212,0.15);border:1.5px solid #06b6d4;color:#06b6d4;padding:7px 14px;border-radius:8px;font-size:0.78rem;font-weight:600;cursor:pointer;text-decoration:none;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(6,182,212,0.3)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'">← Voltar ao 5W2H</a>
+    </div>
   </div>
 </header>
 
 <!-- ═══════════════ MAIN ═══════════════ -->
 <div class="main">
+
+  <!-- BANNER SEM DADOS -->
+  <div id="noDataBanner" style="display:none;background:rgba(245,158,11,0.12);border:1.5px solid #f59e0b;border-radius:12px;padding:16px 20px;margin-bottom:20px;color:#fbbf24;align-items:center;gap:12px;flex-wrap:wrap;">
+    <span style="font-size:1.5rem;">⚠️</span>
+    <div>
+      <strong>Nenhum dado encontrado no 5W2H.</strong><br>
+      <span style="font-size:0.8rem;opacity:0.85;">Adicione tarefas na página <a href="5w2h.html" style="color:#fbbf24;text-decoration:underline;">5W2H</a> e clique em <strong>🔄 Atualizar</strong> para ver o dashboard.</span>
+    </div>
+  </div>
 
   <!-- KPI CARDS -->
   <div class="kpi-grid" id="kpiGrid"></div>
@@ -447,18 +460,78 @@
 
 <script>
 /* ════════════════════════════════════════
-   DADOS
+   DADOS — lidos em tempo real do localStorage
 ═════════════════════════════════════════ */
-const RAW_DATA = [
-  { id:1, estagio:"Atrasado",         what:"Implementação de pipeline de CI/CD",           why:"Automatizar deploys e reduzir erros em produção",                          where:"Ambiente de desenvolvimento - GitHub Actions", when:"2026-04-05", how:"Configuração de workflows com testes automatizados, build e deploy em containers Docker",           custo:2000,  joaquim:5, jose:4, pedro:5, jesus:5 },
-  { id:2, estagio:"Em Execução",      what:"Redesign da página inicial do portal",         why:"Modernizar a identidade visual e melhorar a experiência do usuário",        where:"Remoto - Equipe de Design",                    when:"2026-01-20", how:"Prototipagem no Figma com aprovação por etapas e implementação em React",                        custo:2200,  joaquim:5, jose:5, pedro:4, jesus:5 },
-  { id:3, estagio:"Em Planejamento",  what:"Configuração de backup automático de dados",   why:"Garantir a recuperação de dados em caso de falha ou ataque ransomware",     where:"Servidores locais e armazenamento em nuvem AWS S3", when:"2026-03-15", how:"Script de backup diário com retenção de 30 dias e teste mensal de restauração",               custo:600,   joaquim:5, jose:5, pedro:4, jesus:5 },
-  { id:4, estagio:"Iniciado",         what:"Troca de equipamentos de informática obsoletos", why:"Computadores antigos reduzem a produtividade e geram custos de manutenção", where:"Todos os setores administrativos",             when:"2026-01-15", how:"Compra de notebooks novos com configuração padrão e descarte adequado dos antigos",               custo:22000, joaquim:5, jose:5, pedro:5, jesus:4 },
-  { id:5, estagio:"Concluído",        what:"Reforma e climatização da sala de reuniões",   why:"Ambiente inadequado prejudica reuniões com clientes e produtividade da equipe", where:"Sede - 2º andar",                           when:"2026-01-30", how:"Contratação de empresa de reformas com instalação de ar-condicionado e mobiliário novo",          custo:12000, joaquim:5, jose:4, pedro:5, jesus:5 },
-  { id:6, estagio:"Em Execução",      what:"Desenvolvimento de aplicativo mobile para vendas", why:"Permitir que vendedores externos registrem pedidos em tempo real",        where:"Equipe de desenvolvimento mobile",             when:"2026-04-15", how:"Desenvolvimento em React Native com sincronização offline e push notifications",                  custo:15000, joaquim:5, jose:4, pedro:4, jesus:5 }
-];
 
-const EVALS   = ['joaquim','jose','pedro','jesus'];
+// Chaves idênticas às usadas em 5w2h.html
+const LS_KEY_TASKS = 'kanban5w2h_tasks';
+const LS_KEY_EVALS = 'kanban5w2h_evaluators';
+
+/**
+ * Converte uma task do formato de 5w2h.html para o formato interno do dashboard.
+ * Em 5w2h.html cada tarefa tem:
+ *   t.stage      → estágio (string)
+ *   t.what/why/where/when/how/howMuch → campos 5W2H
+ *   t.who        → array de notas por índice de avaliador  (ex: [4, 5, 3, 5])
+ *   t.responsible→ índice do avaliador responsável
+ */
+function parseCurrencyToNumber(str) {
+  if (!str) return 0;
+  if (typeof str === 'number') return str;
+  return parseFloat(str.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0;
+}
+
+function loadFromLocalStorage() {
+  // Avaliadores
+  let evals = ['Avaliador 1', 'Avaliador 2', 'Avaliador 3', 'Avaliador 4'];
+  try {
+    const raw = localStorage.getItem(LS_KEY_EVALS);
+    if (raw) evals = JSON.parse(raw);
+  } catch(e) {}
+
+  // Tarefas
+  let tasks = [];
+  try {
+    const raw = localStorage.getItem(LS_KEY_TASKS);
+    if (raw) tasks = JSON.parse(raw);
+  } catch(e) {}
+
+  // Converte para o formato do dashboard
+  const data = tasks.map(t => {
+    const obj = {
+      id:      t.id,
+      estagio: t.stage || 'Iniciado',
+      what:    t.what    || '—',
+      why:     t.why     || '—',
+      where:   t.where   || '—',
+      when:    t.when    || null,
+      how:     t.how     || '—',
+      custo:   parseCurrencyToNumber(t.howMuch),
+      responsible: t.responsible ?? null,
+    };
+    // Notas individuais: quem[i] → chave = nome do avaliador normalizado
+    evals.forEach((name, i) => {
+      obj[i] = (t.who && t.who[i] != null) ? t.who[i] : 0;
+    });
+    return obj;
+  });
+
+  return { data, evals };
+}
+
+// Carrega e mantém referências globais
+const _loaded = loadFromLocalStorage();
+let RAW_DATA = _loaded.data;
+let EVALS    = _loaded.evals;   // array de nomes (dinâmico)
+
+// Aviso se não há dados
+if (!RAW_DATA.length) {
+  document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('noDataBanner');
+    if (el) el.style.display = 'flex';
+  });
+}
+
 const STAGE_C = {
   'Atrasado':        { bg:'rgba(239,68,68,0.15)',   border:'rgba(239,68,68,0.5)',   solid:'#ef4444', cls:'st-Atrasado' },
   'Em Execução':     { bg:'rgba(59,130,246,0.15)',  border:'rgba(59,130,246,0.5)',  solid:'#3b82f6', cls:'st-Em-Execução' },
@@ -475,7 +548,13 @@ let modalRadarChart = null;
 /* ════════════════════════════════════════
    HELPERS
 ═════════════════════════════════════════ */
-function avg(p)  { return EVALS.reduce((s,e) => s + p[e], 0) / EVALS.length; }
+// Notas ficam em p[0], p[1], p[2]... (índice numérico do avaliador)
+function avg(p)  {
+  if (!EVALS.length) return 0;
+  const total = EVALS.reduce((s, _, i) => s + (p[i] || 0), 0);
+  const count = EVALS.filter((_, i) => (p[i] || 0) > 0).length;
+  return count > 0 ? total / count : 0;
+}
 function fmtBRL(v) { return v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' }); }
 function fmtDate(iso) {
   if (!iso) return '—';
@@ -627,7 +706,7 @@ function buildRadar(data) {
       labels: EVALS.map(e => e.charAt(0).toUpperCase()+e.slice(1)),
       datasets: data.map((p,i) => ({
         label: p.what.length > 20 ? p.what.slice(0,20)+'…' : p.what,
-        data:  EVALS.map(e => p[e]),
+        data:  EVALS.map((_, idx) => p[idx] || 0),
         backgroundColor:  evalColors[i % evalColors.length].bg,
         borderColor:      evalColors[i % evalColors.length].border,
         pointBackgroundColor: evalColors[i % evalColors.length].border,
@@ -694,7 +773,7 @@ function buildEvalBar(data) {
       labels: data.map(p => p.what.length > 18 ? p.what.slice(0,18)+'…' : p.what),
       datasets: EVALS.map((e,i) => ({
         label: e.charAt(0).toUpperCase()+e.slice(1),
-        data:  data.map(p => p[e]),
+        data:  data.map(p => p[i] || 0),
         backgroundColor: evalColors[i].replace(/\)/, '').replace('rgb','rgba')+'99' || evalColors[i],
         borderColor:     evalColors[i],
         borderWidth: 1.5, borderRadius: 4,
@@ -771,7 +850,7 @@ function renderTable(data) {
 
   const today = new Date().toISOString().slice(0,10);
   document.getElementById('tableBody').innerHTML = sorted.map(p => {
-    const a = (EVALS.reduce((s,e)=>s+p[e],0)/EVALS.length);
+    const a = avg(p);
     const avgCls = a >= 4.5 ? 'avg-high' : a >= 3.5 ? 'avg-mid' : 'avg-low';
     const late   = isLate(p);
     return `<tr onclick="openModal(${p.id})">
@@ -820,14 +899,17 @@ function openModal(id) {
     document.getElementById('mCostBar').style.width = costPct + '%';
   }));
 
-  const evalColors = ['#a78bfa','#06b6d4','#fbbf24','#4ade80'];
-  document.getElementById('mEvalGrid').innerHTML = EVALS.map((e,i) => `
-    <div class="eval-chip" style="border-color:${evalColors[i]}33;">
-      <div class="name">${e.charAt(0).toUpperCase()+e.slice(1)}</div>
-      <div class="score" style="color:${evalColors[i]}">${p[e]}</div>
-      <div style="font-size:0.65rem;color:#94a3b8;margin-top:2px;">${'★'.repeat(p[e])}${'☆'.repeat(5-p[e])}</div>
-    </div>
-  `).join('');
+  const evalColors = ['#a78bfa','#06b6d4','#fbbf24','#4ade80','#f87171','#c084fc'];
+  document.getElementById('mEvalGrid').innerHTML = EVALS.map((e,i) => {
+    const score = p[i] || 0;
+    const isResponsible = p.responsible === i;
+    return `
+    <div class="eval-chip" style="border-color:${evalColors[i % evalColors.length]}33;${isResponsible?'border-color:'+evalColors[i%evalColors.length]+';background:'+evalColors[i%evalColors.length]+'18;':''}">
+      <div class="name">${e.charAt(0).toUpperCase()+e.slice(1)}${isResponsible?' ⭐':''}</div>
+      <div class="score" style="color:${evalColors[i % evalColors.length]}">${score}</div>
+      <div style="font-size:0.65rem;color:#94a3b8;margin-top:2px;">${'★'.repeat(score)}${'☆'.repeat(Math.max(0,5-score))}</div>
+    </div>`;
+  }).join('');
 
   // Radar individual
   if (modalRadarChart) { modalRadarChart.destroy(); modalRadarChart = null; }
@@ -837,7 +919,7 @@ function openModal(id) {
       labels: EVALS.map(e => e.charAt(0).toUpperCase()+e.slice(1)),
       datasets: [{
         label: p.what.length > 30 ? p.what.slice(0,30)+'…' : p.what,
-        data:  EVALS.map(e => p[e]),
+        data:  EVALS.map((_, idx) => p[idx] || 0),
         backgroundColor: `${stageSolid(p.estagio)}22`,
         borderColor:      stageSolid(p.estagio),
         pointBackgroundColor: stageSolid(p.estagio),
@@ -871,6 +953,20 @@ function closeModal() {
 /* ════════════════════════════════════════
    INIT & EVENTS
 ═════════════════════════════════════════ */
+
+/** Recarrega dados do localStorage e redesenha tudo */
+function reloadData() {
+  const { data, evals } = loadFromLocalStorage();
+  RAW_DATA = data;
+  EVALS    = evals;
+  currentFilter = 'all';
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  document.querySelector('.pill[data-stage="all"]').classList.add('active');
+  const banner = document.getElementById('noDataBanner');
+  if (banner) banner.style.display = RAW_DATA.length ? 'none' : 'flex';
+  refresh();
+}
+
 function refresh() {
   const data = getFiltered();
   renderKPI(data);
@@ -913,6 +1009,10 @@ const now = new Date();
 const opts = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
 document.getElementById('headerDate').textContent = now.toLocaleDateString('pt-BR', opts);
 document.getElementById('footerDate').textContent  = now.toLocaleDateString('pt-BR');
+
+// Exibe banner se não há dados
+const _noDataBanner = document.getElementById('noDataBanner');
+if (_noDataBanner && !RAW_DATA.length) _noDataBanner.style.display = 'flex';
 
 // Inicia
 refresh();
