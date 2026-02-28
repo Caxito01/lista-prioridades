@@ -89,14 +89,14 @@
     /* ── KPI CARDS ── */
     .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 16px; margin-bottom: 28px;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 10px; margin-bottom: 28px;
     }
     .kpi-card {
       background: var(--bg2);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 20px;
+      padding: 14px 12px;
       box-shadow: var(--shadow);
       animation: fadeUp 0.4s ease both;
       position: relative; overflow: hidden;
@@ -114,9 +114,12 @@
     .kpi-card:nth-child(4) { animation-delay: 0.20s; }
     .kpi-card:nth-child(5) { animation-delay: 0.25s; }
     .kpi-card:nth-child(6) { animation-delay: 0.30s; }
-    .kpi-icon { font-size: 1.6rem; margin-bottom: 10px; }
+    .kpi-card:nth-child(7) { animation-delay: 0.35s; }
+    .kpi-card:nth-child(8) { animation-delay: 0.40s; }
+    .kpi-card:nth-child(9) { animation-delay: 0.45s; }
+    .kpi-icon { font-size: 1.2rem; margin-bottom: 6px; }
     .kpi-value {
-      font-size: 1.7rem; font-weight: 800; letter-spacing: -1px;
+      font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px;
       background: linear-gradient(135deg, #fff, #cbd5e1);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
@@ -125,9 +128,9 @@
     .kpi-card.exec .kpi-value { background: linear-gradient(135deg, var(--c-exec), #93c5fd); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .kpi-card.plan .kpi-value { background: linear-gradient(135deg, var(--c-plan), #fde68a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .kpi-card.init .kpi-value { background: linear-gradient(135deg, var(--c-init), #d1d5db); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .kpi-label { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
-    .kpi-sub { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; opacity: 0.7; }
-    .kpi-bar { height: 3px; border-radius: 99px; margin-top: 12px; background: var(--bg3); overflow: hidden; }
+    .kpi-label { font-size: 0.68rem; color: var(--text-muted); margin-top: 3px; font-weight: 500; }
+    .kpi-sub { font-size: 0.62rem; color: var(--text-muted); margin-top: 1px; opacity: 0.7; }
+    .kpi-bar { height: 3px; border-radius: 99px; margin-top: 10px; background: var(--bg3); overflow: hidden; }
     .kpi-bar-fill { height: 100%; border-radius: 99px; transition: width 1s ease; }
 
     /* ── CHARTS GRID ── */
