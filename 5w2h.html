@@ -7,6 +7,11 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-init.js?v=1735000004"></script>
+  <!-- SheetJS para exportação XLSX -->
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <!-- jsPDF + AutoTable para exportação PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <style>
     /* ===== RESET & BASE ===== */
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -422,6 +427,53 @@
     body.dark th { background: #313244 !important; color: #cdd6f4 !important; }
     body.dark tbody tr.row-overdue td { background: rgba(220,53,69,0.18); }
     body.dark tbody tr.row-due-today td { background: rgba(255,193,7,0.22); }
+
+    /* ===== EXPORT DROPDOWN ===== */
+    .export-wrap {
+      position: relative;
+      display: inline-flex;
+    }
+    .export-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      background: var(--card-bg);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+      min-width: 170px;
+      z-index: 3000;
+      overflow: hidden;
+      animation: fadeDown 0.15s ease;
+    }
+    .export-menu.open { display: block; }
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .export-menu button {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      width: 100%;
+      padding: 11px 18px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: var(--text);
+      transition: background 0.15s;
+      text-align: left;
+      border-radius: 0;
+    }
+    .export-menu button:hover { background: rgba(102,126,234,0.10); }
+    .export-menu button + button { border-top: 1px solid var(--border); }
+    body.dark .export-menu { background: #1e1e2e; border-color: #45475a; }
+    body.dark .export-menu button { color: #cdd6f4; }
+    body.dark .export-menu button:hover { background: rgba(255,255,255,0.07); }
+    body.dark .export-menu button + button { border-top-color: #45475a; }
   </style>
 </head>
 <body>
@@ -436,7 +488,14 @@
     <div class="hdr-actions">
       <button class="btn btn-info"    onclick="sortAlpha()"     id="btnSort">🔤 Ordem Alfabética</button>
       <button class="btn btn-gray"    onclick="clearFilters()">🔄 Limpar Filtros</button>
-      <button class="btn btn-success" onclick="saveJSON()">💾 Baixar arquivo</button>
+      <div class="export-wrap">
+        <button class="btn btn-success" onclick="toggleExportMenu(event)">💾 Baixar arquivo ▾</button>
+        <div class="export-menu" id="exportMenu">
+          <button onclick="saveJSON();   closeExportMenu()">📄 JSON</button>
+          <button onclick="exportXLSX(); closeExportMenu()">📊 Excel (XLSX)</button>
+          <button onclick="exportPDF();  closeExportMenu()">📋 PDF</button>
+        </div>
+      </div>
       <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">📥 Carregar JSON</button>
       <input type="file" id="fileInput" accept=".json" style="display:none" onchange="loadJSON(event)">
       <button class="btn btn-warning" onclick="importFromMain()" title="Importar tarefas do Sistema de Prioridades">🔄 Importar do Sistema</button>
@@ -1790,6 +1849,20 @@ function performLoadProject(project) {
 }
 
 /* ──────────────────────────────────────────────
+   EXPORT DROPDOWN
+   ────────────────────────────────────────────── */
+function toggleExportMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('exportMenu');
+  menu.classList.toggle('open');
+}
+function closeExportMenu() {
+  document.getElementById('exportMenu').classList.remove('open');
+}
+// Fechar ao clicar fora
+document.addEventListener('click', () => closeExportMenu());
+
+/* ──────────────────────────────────────────────
    SAVE / LOAD JSON
    ────────────────────────────────────────────── */
 function saveJSON() {
@@ -1802,6 +1875,162 @@ function saveJSON() {
   a.click();
   URL.revokeObjectURL(a.href);
   toast('Arquivo JSON salvo com sucesso!', 'success');
+}
+
+/* ──────────────────────────────────────────────
+   EXPORT XLSX (SheetJS)
+   ────────────────────────────────────────────── */
+function exportXLSX() {
+  if (!tasks.length) { toast('Nenhuma tarefa para exportar', 'error'); return; }
+  if (typeof XLSX === 'undefined') { toast('Biblioteca XLSX não carregada', 'error'); return; }
+
+  const stageLabel = { exec:'Em Execução', late:'Atrasada', plan:'Planejamento', done:'Concluída', init:'Iniciação' };
+
+  // Cabeçalho fixo
+  const evalHeaders = evaluators.map(ev => `Avaliador: ${ev.name}`);
+  const header = ['#','Etapa','O Quê (What)','Por Quê (Why)','Onde (Where)','Quem (Who)','Quando (When)','Quanto Custa (How Much)','Como (How)', ...evalHeaders, 'Média'];
+
+  const rows = tasks.map((t, i) => {
+    const scores = evaluators.map(ev => {
+      const s = t.scores?.[ev.id];
+      return s ? Number(s) : '';
+    });
+    const avg = scores.filter(s => s !== '').length
+      ? (scores.filter(s => s !== '').reduce((a,b) => a+b, 0) / scores.filter(s => s !== '').length).toFixed(1)
+      : '';
+    return [
+      i + 1,
+      stageLabel[t.stage] || t.stage || '',
+      t.what   || '',
+      t.why    || '',
+      t.where  || '',
+      t.who    || '',
+      t.when   || '',
+      t.howMuch != null ? t.howMuch : '',
+      t.how    || '',
+      ...scores,
+      avg
+    ];
+  });
+
+  const wsData = [header, ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Larguras de coluna
+  ws['!cols'] = [
+    {wch:4},{wch:14},{wch:28},{wch:24},{wch:20},{wch:14},
+    {wch:12},{wch:14},{wch:24},
+    ...evaluators.map(() => ({wch:12})),
+    {wch:8}
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '5W2H');
+  XLSX.writeFile(wb, `kanban5w2h_${datestamp()}.xlsx`);
+  toast('Arquivo Excel exportado com sucesso!', 'success');
+}
+
+/* ──────────────────────────────────────────────
+   EXPORT PDF (jsPDF + AutoTable)
+   ────────────────────────────────────────────── */
+function exportPDF() {
+  if (!tasks.length) { toast('Nenhuma tarefa para exportar', 'error'); return; }
+  if (typeof window.jspdf === 'undefined' && typeof jsPDF === 'undefined') {
+    toast('Biblioteca jsPDF não carregada', 'error'); return;
+  }
+
+  const { jsPDF } = window.jspdf || window;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+  const stageLabel = { exec:'Em Execução', late:'Atrasada', plan:'Planejamento', done:'Concluída', init:'Iniciação' };
+  const stageColor = {
+    exec:[0,123,255], late:[220,53,69], plan:[255,193,7],
+    done:[40,167,69],  init:[108,117,125]
+  };
+
+  // Título
+  doc.setFontSize(14);
+  doc.setTextColor(102, 126, 234);
+  doc.text('CECM 5W2H — Gerenciamento de Tarefas', 14, 14);
+  doc.setFontSize(8);
+  doc.setTextColor(120, 120, 120);
+  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}  |  ${tasks.length} tarefa(s)`, 14, 20);
+
+  const evalHeaders = evaluators.map(ev => ({ header: ev.name, dataKey: 'ev_'+ev.id }));
+
+  const columns = [
+    { header: '#',             dataKey: 'num'     },
+    { header: 'Etapa',         dataKey: 'stage'   },
+    { header: 'O Quê',         dataKey: 'what'    },
+    { header: 'Por Quê',       dataKey: 'why'     },
+    { header: 'Onde',          dataKey: 'where'   },
+    { header: 'Quem',          dataKey: 'who'     },
+    { header: 'Quando',        dataKey: 'when'    },
+    { header: 'Custo',         dataKey: 'howMuch' },
+    { header: 'Como',          dataKey: 'how'     },
+    ...evalHeaders,
+    { header: 'Média',         dataKey: 'avg'     },
+  ];
+
+  const body = tasks.map((t, i) => {
+    const scores = {};
+    let total = 0, count = 0;
+    evaluators.forEach(ev => {
+      const s = t.scores?.[ev.id];
+      scores['ev_'+ev.id] = s ? Number(s) : '-';
+      if (s) { total += Number(s); count++; }
+    });
+    const avg = count ? (total / count).toFixed(1) : '-';
+    return {
+      num:     i + 1,
+      stage:   stageLabel[t.stage] || t.stage || '',
+      what:    t.what    || '',
+      why:     t.why     || '',
+      where:   t.where   || '',
+      who:     t.who     || '',
+      when:    t.when    || '',
+      howMuch: t.howMuch != null ? `R$ ${Number(t.howMuch).toLocaleString('pt-BR',{minimumFractionDigits:2})}` : '',
+      how:     t.how     || '',
+      ...scores,
+      avg
+    };
+  });
+
+  doc.autoTable({
+    startY: 24,
+    columns,
+    body,
+    styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
+    headStyles: { fillColor: [102, 126, 234], textColor: 255, fontStyle: 'bold', fontSize: 7 },
+    columnStyles: {
+      num:     { cellWidth: 6,  halign: 'center' },
+      stage:   { cellWidth: 22, halign: 'center' },
+      what:    { cellWidth: 38 },
+      why:     { cellWidth: 30 },
+      where:   { cellWidth: 24 },
+      who:     { cellWidth: 16, halign: 'center' },
+      when:    { cellWidth: 18, halign: 'center' },
+      howMuch: { cellWidth: 20, halign: 'right'  },
+      how:     { cellWidth: 30 },
+      avg:     { cellWidth: 12, halign: 'center', fontStyle: 'bold' },
+    },
+    didParseCell(data) {
+      if (data.column.dataKey === 'stage' && data.section === 'body') {
+        const key = Object.keys(stageLabel).find(k => stageLabel[k] === data.cell.raw);
+        if (key && stageColor[key]) {
+          const [r,g,b] = stageColor[key];
+          data.cell.styles.fillColor = [r,g,b];
+          data.cell.styles.textColor = key === 'plan' ? [33,37,41] : [255,255,255];
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+    },
+    alternateRowStyles: { fillColor: [245, 246, 255] },
+    margin: { left: 14, right: 14 },
+  });
+
+  doc.save(`kanban5w2h_${datestamp()}.pdf`);
+  toast('Arquivo PDF exportado com sucesso!', 'success');
 }
 
 function loadJSON(event) {
