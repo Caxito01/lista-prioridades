@@ -907,7 +907,7 @@ function esc(str) {
 function fmtDate(iso) {
   if (!iso) return '—';
   const [y,m,d] = iso.split('-');
-  return `${d}/${m}/${y}`;
+  return `${d}-${m}-${y}`;
 }
 
 function getTodayISO() {
@@ -1985,7 +1985,7 @@ function exportXLSX() {
       t.what    || '',
       t.why     || '',
       t.where   || '',
-      t.when    || '',
+      fmtDate(t.when),
       t.how     || '',
       t.howMuch || '',
       ...scores,
@@ -2082,7 +2082,7 @@ function exportPDF() {
       what:    t.what    || '',
       why:     t.why     || '',
       where:   t.where   || '',
-      when:    t.when    || '',
+      when:    fmtDate(t.when),
       how:     t.how     || '',
       howMuch: t.howMuch || '',
       ...evScores,
