@@ -1924,53 +1924,97 @@ function saveJSON() {
 }
 
 /* ──────────────────────────────────────────────
-   EXPORT XLSX (SheetJS)
+   HELPER: lista filtrada + ordenada (igual à tela)
+   ────────────────────────────────────────────── */
+function getVisibleList() {
+  const filterStg      = document.getElementById('filterStg').value;
+  const filterDeadline = document.getElementById('filterDeadline').value;
+  let list = [...tasks];
+
+  if (filterStg)                   list = list.filter(t => t.stage === filterStg);
+  if (filterDeadline === 'today')   list = list.filter(t => isDueToday(t));
+  if (filterDeadline === 'overdue') list = list.filter(t => isOverdue(t));
+
+  if (sortCost) {
+    list.sort((a,b) => {
+      const ca = parseCurrencyToNumber(a.howMuch);
+      const cb = parseCurrencyToNumber(b.howMuch);
+      return sortCost === 'asc' ? ca - cb : cb - ca;
+    });
+  } else if (sortAlphaActive) {
+    list.sort((a,b) => (a.what||'').localeCompare(b.what||'', 'pt-BR'));
+  } else {
+    list.sort((a,b) => {
+      const avgA = calcAvg(a), avgB = calcAvg(b);
+      if (avgA !== avgB) return avgB - avgA;
+      const late = (x) => x.stage === 'Atrasado' ? 0 : 1;
+      return late(a) - late(b);
+    });
+  }
+  return list;
+}
+
+/* ──────────────────────────────────────────────
+   EXPORT XLSX (SheetJS) — espelha exatamente a tela
    ────────────────────────────────────────────── */
 function exportXLSX() {
-  if (!tasks.length) { toast('Nenhuma tarefa para exportar', 'error'); return; }
+  const list = getVisibleList();
+  if (!list.length) { toast('Nenhuma tarefa visível para exportar', 'error'); return; }
   if (typeof XLSX === 'undefined') { toast('Biblioteca XLSX não carregada', 'error'); return; }
 
-  const stageLabel = { exec:'Em Execução', late:'Atrasada', plan:'Planejamento', done:'Concluída', init:'Iniciação' };
+  // Cabeçalho igual à tabela: colunas fixas + uma por avaliador + Média
+  const evalCols = evaluators.map(ev => ev);
+  const header = [
+    '#', 'Etapa', 'O Quê (What)', 'Por Quê (Why)', 'Onde (Where)',
+    'Quando (When)', 'Como (How)', 'Custo (How Much)',
+    ...evalCols,
+    'Média'
+  ];
 
-  const header = ['#','Etapa','O Quê (What)','Por Quê (Why)','Onde (Where)','Quem (Who)','Quando (When)','Quanto Custa (How Much)','Como (How)'];
+  const rows = list.map((t, i) => {
+    const scores = evaluators.map((_, idx) => {
+      const s = t.who?.[idx];
+      return (s && s > 0) ? s : '';
+    });
+    const vals = scores.filter(s => s !== '');
+    const avg = vals.length ? (vals.reduce((a,b) => a+b, 0) / vals.length).toFixed(2) : '';
 
-  const rows = tasks.map((t, i) => {
-    const responsibleName = (t.responsible != null && evaluators[t.responsible])
-      ? evaluators[t.responsible]
-      : '';
     return [
       i + 1,
-      stageLabel[t.stage] || t.stage || '',
+      t.stage   || '',
       t.what    || '',
       t.why     || '',
       t.where   || '',
-      responsibleName,
       t.when    || '',
-      t.howMuch != null ? t.howMuch : '',
       t.how     || '',
+      t.howMuch || '',
+      ...scores,
+      avg
     ];
   });
 
   const wsData = [header, ...rows];
   const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-  // Larguras de coluna
   ws['!cols'] = [
-    {wch:4},{wch:16},{wch:32},{wch:28},{wch:24},{wch:20},
-    {wch:14},{wch:18},{wch:30}
+    {wch:4}, {wch:18}, {wch:32}, {wch:28}, {wch:24},
+    {wch:14}, {wch:30}, {wch:18},
+    ...evaluators.map(() => ({wch:12})),
+    {wch:8}
   ];
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, '5W2H');
   XLSX.writeFile(wb, `kanban5w2h_${datestamp()}.xlsx`);
-  toast('Arquivo Excel exportado com sucesso!', 'success');
+  toast(`${list.length} tarefa(s) exportadas para Excel!`, 'success');
 }
 
 /* ──────────────────────────────────────────────
-   EXPORT PDF (jsPDF + AutoTable)
+   EXPORT PDF (jsPDF + AutoTable) — espelha exatamente a tela
    ────────────────────────────────────────────── */
 function exportPDF() {
-  if (!tasks.length) { toast('Nenhuma tarefa para exportar', 'error'); return; }
+  const list = getVisibleList();
+  if (!list.length) { toast('Nenhuma tarefa visível para exportar', 'error'); return; }
   if (typeof window.jspdf === 'undefined' && typeof jsPDF === 'undefined') {
     toast('Biblioteca jsPDF não carregada', 'error'); return;
   }
@@ -1978,85 +2022,115 @@ function exportPDF() {
   const { jsPDF } = window.jspdf || window;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-  const stageLabel = { exec:'Em Execução', late:'Atrasada', plan:'Planejamento', done:'Concluída', init:'Iniciação' };
   const stageColor = {
-    exec:[0,123,255], late:[220,53,69], plan:[255,193,7],
-    done:[40,167,69],  init:[108,117,125]
+    'Em Execução':    [0,123,255],
+    'Atrasado':       [220,53,69],
+    'Em Planejamento':[255,193,7],
+    'Concluído':      [40,167,69],
+    'Iniciado':       [108,117,125]
   };
 
-  // Título
+  // Filtro/sort ativo para o subtítulo
+  const filterStg = document.getElementById('filterStg').value;
+  const filterDl  = document.getElementById('filterDeadline').value;
+  const sortDesc  = sortCost ? `Ordenado por custo ${sortCost==='asc'?'↑':'↓'}` :
+                    sortAlphaActive ? 'Ordem alfabética' : 'Ordem por prioridade';
+  const filterDesc = [filterStg, filterDl==='today'?'vence hoje':filterDl==='overdue'?'atrasados':''].filter(Boolean).join(', ');
+
   doc.setFontSize(14);
   doc.setTextColor(102, 126, 234);
   doc.text('CECM 5W2H — Gerenciamento de Tarefas', 14, 14);
   doc.setFontSize(8);
   doc.setTextColor(120, 120, 120);
-  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}  |  ${tasks.length} tarefa(s)`, 14, 20);
+  const subtitle = `Gerado em: ${new Date().toLocaleString('pt-BR')}  |  ${list.length} tarefa(s)` +
+    (filterDesc ? `  |  Filtro: ${filterDesc}` : '') +
+    `  |  ${sortDesc}`;
+  doc.text(subtitle, 14, 20);
 
-  const evalHeaders = evaluators.map(ev => ({ header: ev.name, dataKey: 'ev_'+ev.id }));
-
+  // Colunas: fixas + avaliadores + média
+  const evalColumns = evaluators.map((ev, i) => ({ header: abbrev(ev), dataKey: `ev${i}` }));
   const columns = [
-    { header: '#',      dataKey: 'num'     },
-    { header: 'Etapa',  dataKey: 'stage'   },
-    { header: 'O Quê',  dataKey: 'what'    },
-    { header: 'Por Quê',dataKey: 'why'     },
-    { header: 'Onde',   dataKey: 'where'   },
-    { header: 'Quem',   dataKey: 'who'     },
-    { header: 'Quando', dataKey: 'when'    },
-    { header: 'Custo',  dataKey: 'howMuch' },
-    { header: 'Como',   dataKey: 'how'     },
+    { header: '#',       dataKey: 'num'     },
+    { header: 'Etapa',   dataKey: 'stage'   },
+    { header: 'O Quê',   dataKey: 'what'    },
+    { header: 'Por Quê', dataKey: 'why'     },
+    { header: 'Onde',    dataKey: 'where'   },
+    { header: 'Quando',  dataKey: 'when'    },
+    { header: 'Como',    dataKey: 'how'     },
+    { header: 'Custo',   dataKey: 'howMuch' },
+    ...evalColumns,
+    { header: 'Média',   dataKey: 'avg'     },
   ];
 
-  const body = tasks.map((t, i) => {
-    const responsibleName = (t.responsible != null && evaluators[t.responsible])
-      ? evaluators[t.responsible]
-      : '';
+  const body = list.map((t, i) => {
+    const evScores = {};
+    const vals = [];
+    evaluators.forEach((_, idx) => {
+      const s = t.who?.[idx];
+      const v = (s && s > 0) ? s : '—';
+      evScores[`ev${idx}`] = v;
+      if (s && s > 0) vals.push(s);
+    });
+    const avg = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2) : '—';
+    // marca responsável com estrela
+    if (t.responsible != null && evScores[`ev${t.responsible}`] !== '—') {
+      evScores[`ev${t.responsible}`] = evScores[`ev${t.responsible}`] + '★';
+    }
     return {
       num:     i + 1,
-      stage:   stageLabel[t.stage] || t.stage || '',
+      stage:   t.stage   || '',
       what:    t.what    || '',
       why:     t.why     || '',
       where:   t.where   || '',
-      who:     responsibleName,
       when:    t.when    || '',
-      howMuch: t.howMuch || '',
       how:     t.how     || '',
+      howMuch: t.howMuch || '',
+      ...evScores,
+      avg
     };
+  });
+
+  // Largura disponível ≈ 267mm (A4 landscape - margens 14+14)
+  const evW = Math.max(8, Math.floor(40 / evaluators.length));
+  const evalColStyles = {};
+  evaluators.forEach((_, i) => {
+    evalColStyles[`ev${i}`] = { cellWidth: evW, halign: 'center' };
   });
 
   doc.autoTable({
     startY: 24,
     columns,
     body,
-    styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
-    headStyles: { fillColor: [102, 126, 234], textColor: 255, fontStyle: 'bold', fontSize: 7 },
+    styles:     { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
+    headStyles: { fillColor: [102,126,234], textColor: 255, fontStyle: 'bold', fontSize: 7 },
     columnStyles: {
       num:     { cellWidth: 6,  halign: 'center' },
-      stage:   { cellWidth: 26, halign: 'center' },
-      what:    { cellWidth: 44 },
-      why:     { cellWidth: 36 },
-      where:   { cellWidth: 30 },
-      who:     { cellWidth: 22, halign: 'center' },
-      when:    { cellWidth: 20, halign: 'center' },
-      howMuch: { cellWidth: 22, halign: 'right'  },
-      how:     { cellWidth: 'auto' },
+      stage:   { cellWidth: 24, halign: 'center' },
+      what:    { cellWidth: 38 },
+      why:     { cellWidth: 28 },
+      where:   { cellWidth: 24 },
+      when:    { cellWidth: 18, halign: 'center' },
+      how:     { cellWidth: 28 },
+      howMuch: { cellWidth: 20, halign: 'right'  },
+      avg:     { cellWidth: 10, halign: 'center', fontStyle: 'bold' },
+      ...evalColStyles
     },
     didParseCell(data) {
       if (data.column.dataKey === 'stage' && data.section === 'body') {
-        const key = Object.keys(stageLabel).find(k => stageLabel[k] === data.cell.raw);
-        if (key && stageColor[key]) {
-          const [r,g,b] = stageColor[key];
-          data.cell.styles.fillColor = [r,g,b];
-          data.cell.styles.textColor = key === 'plan' ? [33,37,41] : [255,255,255];
+        const color = stageColor[data.cell.raw];
+        if (color) {
+          data.cell.styles.fillColor = color;
+          data.cell.styles.textColor = data.cell.raw === 'Em Planejamento' ? [33,37,41] : [255,255,255];
           data.cell.styles.fontStyle = 'bold';
         }
       }
     },
-    alternateRowStyles: { fillColor: [245, 246, 255] },
+    alternateRowStyles: { fillColor: [245,246,255] },
     margin: { left: 14, right: 14 },
   });
 
   doc.save(`kanban5w2h_${datestamp()}.pdf`);
-  toast('Arquivo PDF exportado com sucesso!', 'success');
+  toast(`${list.length} tarefa(s) exportadas para PDF!`, 'success');
 }
 
 function loadJSON(event) {
