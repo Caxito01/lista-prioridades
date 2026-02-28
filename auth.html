@@ -581,7 +581,7 @@
         }
 
         async function handleCodeLogin() {
-            const code = document.getElementById('projectCode').value.trim();
+            const code = document.getElementById('projectCode').value.trim().toUpperCase();
             const btn = document.getElementById('codeBtn');
 
             if (!code) {
@@ -590,7 +590,7 @@
             }
 
             if (!validarCodigoProject(code)) {
-                showMessage('❌ Código inválido!', 'error');
+                showMessage('❌ Código inválido! Use o formato: 8 caracteres contendo CXT (ex: CXT12345)', 'error');
                 return;
             }
 
@@ -604,32 +604,56 @@
                     showMessage('❌ Sistema não inicializou. Recarregue.', 'error');
                     return;
                 }
-                
-                let project = null;
-                const { data: result } = await client.rpc('get_project_by_code', { p_code: code });
 
-                if (result && result.length > 0) {
-                    project = result[0];
+                let project = null;
+
+                // 1ª tentativa: RPC pública (ignora RLS)
+                const { data: rpcResult, error: rpcError } = await client
+                    .rpc('get_project_by_code', { p_code: code });
+
+                if (!rpcError && rpcResult && rpcResult.length > 0) {
+                    project = rpcResult[0];
+                    console.log('✅ Projeto encontrado via RPC:', project.name);
                 } else {
-                    // Fallback
-                    const { data: allProjects } = await client.from('projects').select('*');
-                    project = allProjects?.find(p => 
-                        p.project_code?.toUpperCase() === code.toUpperCase()
-                    );
+                    console.warn('⚠️ RPC falhou ou não encontrou:', rpcError?.message);
+
+                    // 2ª tentativa: query direta por project_code
+                    const { data: byCode } = await client
+                        .from('projects')
+                        .select('*')
+                        .ilike('project_code', code)
+                        .limit(1)
+                        .single();
+
+                    if (byCode) {
+                        project = byCode;
+                        console.log('✅ Projeto encontrado por project_code:', project.name);
+                    } else {
+                        // 3ª tentativa: varrer todos (último recurso, pode ser bloqueado por RLS)
+                        const { data: allProjects } = await client.from('projects').select('*');
+                        project = allProjects?.find(p =>
+                            p.project_code?.toUpperCase() === code
+                        ) || null;
+                        if (project) console.log('✅ Projeto encontrado via scan:', project.name);
+                    }
                 }
 
                 if (!project) {
-                    showMessage('❌ Código não encontrado!', 'error');
+                    showMessage('❌ Código não encontrado! Verifique o código e tente novamente.', 'error');
                 } else {
-                    localStorage.setItem('projectCode', project.project_code);
-                    localStorage.setItem('projectId', project.id);
+                    // Sempre usar o código que o usuário digitou (garante não salvar null)
+                    const storedCode = project.project_code || code;
+                    localStorage.setItem('projectCode', storedCode);
+                    localStorage.setItem('projectId',   project.id);
                     localStorage.setItem('projectName', project.name);
-                    showMessage('✅ Acesso concedido!', 'success');
+                    console.log('💾 Salvo no localStorage — code:', storedCode, '| id:', project.id);
+                    showMessage('✅ Acesso concedido! Carregando...', 'success');
                     setTimeout(() => {
                         window.location.href = 'index.html?t=' + Date.now();
                     }, 800);
                 }
             } catch (error) {
+                console.error('❌ Erro no handleCodeLogin:', error);
                 showMessage('❌ Erro: ' + error.message, 'error');
             } finally {
                 btn.disabled = false;

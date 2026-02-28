@@ -49,28 +49,34 @@ function displayProjectCode(code) {
 // Inicialização
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('📄 DOMContentLoaded - iniciando app.js...');
-    
+
     // Garantir que Supabase está inicializado
     await window.initSupabase();
-    
+
     loadEvaluatorNames();
     await loadTasks();
     updateEvaluatorLabels();
     renderTasks();
-    
+
     // Verificar acesso por código
     const projectCode = localStorage.getItem('projectCode');
     if (projectCode) {
         currentProjectCode = projectCode;
         document.title = `Lista de Tarefas - Projeto: ${projectCode}`;
-        // Mostrar código na página
-        document.getElementById('projectCodeBanner').style.display = 'block';
-        document.getElementById('projectCodeDisplay').textContent = projectCode;
+        const banner  = document.getElementById('projectCodeBanner');
+        const display = document.getElementById('projectCodeDisplay');
+        if (banner)  banner.style.display = 'block';
+        if (display) display.textContent  = projectCode;
+
+        const projectName = localStorage.getItem('projectName');
+        if (projectName) {
+            console.log('📦 Projeto acessado por código:', projectCode, '—', projectName);
+        }
     }
-    
+
     // Event listener para o formulário
     document.getElementById('taskForm').addEventListener('submit', handleFormSubmit);
-    
+
     console.log('✅ App.js inicializado com sucesso!');
 });
 
@@ -197,10 +203,71 @@ function updateEvaluatorLabels() {
 
 // Carregar tarefas
 async function loadTasks() {
-    const projectId = localStorage.getItem('projectId');
-    
-    console.log('📂 Carregando tarefas... (projectId:', projectId, ')');
-    
+    const projectId   = localStorage.getItem('projectId');
+    const projectCode = localStorage.getItem('projectCode');
+
+    console.log('📂 Carregando tarefas... (projectId:', projectId, '| projectCode:', projectCode, ')');
+
+    // ── Acesso por código (sem sessão autenticada) ─────────────────────────
+    if (projectCode) {
+        try {
+            await window.initSupabase();
+            const client = window.getClient();
+            if (!client) {
+                console.log('⚠️ Supabase não disponível, usando localStorage');
+                loadTasksFromLocalStorage();
+                return;
+            }
+
+            console.log('� Buscando projeto via RPC (código):', projectCode);
+            const { data: result, error: rpcError } = await client
+                .rpc('get_project_by_code', { p_code: projectCode });
+
+            if (!rpcError && result && result.length > 0) {
+                const project = result[0];
+                _applyProjectData(project);
+                return;
+            }
+
+            // Fallback: query direta (pode funcionar se RLS permitir leitura pública)
+            if (projectId) {
+                console.log('⚠️ RPC falhou, tentando query direta por id...');
+                const { data: project, error: idError } = await client
+                    .from('projects')
+                    .select('*')
+                    .eq('id', projectId)
+                    .single();
+
+                if (!idError && project) {
+                    _applyProjectData(project);
+                    return;
+                }
+                console.log('⚠️ Query direta também falhou:', idError?.message);
+            }
+
+            // Último recurso: query por project_code
+            console.log('⚠️ Tentando query por project_code...');
+            const { data: byCode, error: codeError } = await client
+                .from('projects')
+                .select('*')
+                .eq('project_code', projectCode)
+                .single();
+
+            if (!codeError && byCode) {
+                _applyProjectData(byCode);
+                return;
+            }
+
+            console.log('❌ Nenhum método funcionou. Usando localStorage.');
+            loadTasksFromLocalStorage();
+        } catch (error) {
+            console.log('❌ Erro ao carregar tarefas por código:', error.message);
+            loadTasksFromLocalStorage();
+        }
+        return;
+    }
+
+    // ── Acesso autenticado (por projectId) ────────────────────────────────
     if (projectId) {
         try {
             await window.initSupabase();
@@ -210,49 +277,58 @@ async function loadTasks() {
                 loadTasksFromLocalStorage();
                 return;
             }
-            
+
             console.log('🔍 Buscando projeto no Supabase: ', projectId);
             const { data: project, error } = await client
                 .from('projects')
                 .select('*')
                 .eq('id', projectId)
                 .single();
-            
+
             if (error) {
                 console.log('⚠️ Erro ao buscar projeto:', error.message);
                 loadTasksFromLocalStorage();
                 return;
             }
-            
-            if (project && project.data) {
-                // Estrutura nova: tudo vem em project.data
-                const data = project.data;
-                const loadedTasks = Array.isArray(data.tasks) ? data.tasks : [];
-                const loadedEvaluators = data.evaluator_names || evaluatorNames;
 
-                tasks = loadedTasks;
-                evaluatorNames = loadedEvaluators;
-
-                localStorage.setItem('tasks', JSON.stringify(tasks));
-                localStorage.setItem('evaluatorNames', JSON.stringify(evaluatorNames));
-
-                console.log('✅ Tarefas carregadas do Supabase:', tasks.length);
-            } else if (project && Array.isArray(project.tasks)) {
-                // Compatibilidade com estrutura alternativa antiga
-                tasks = project.tasks;
-                localStorage.setItem('tasks', JSON.stringify(tasks));
-                console.log('✅ Tarefas carregadas (alt):', tasks.length);
-            } else {
-                console.log('⚠️ Projeto encontrado mas sem tarefas, usando localStorage');
-                loadTasksFromLocalStorage();
-            }
+            _applyProjectData(project);
         } catch (error) {
             console.log('❌ Erro ao carregar tarefas:', error.message);
             loadTasksFromLocalStorage();
         }
     } else {
-        // Sem projectId, carregar do localStorage
+        // Sem projectId nem projectCode
         console.log('📱 Sem projectId, carregando do localStorage');
+        loadTasksFromLocalStorage();
+    }
+}
+
+// Aplicar dados de um projeto carregado do Supabase
+function _applyProjectData(project) {
+    if (project && project.data) {
+        const data = project.data;
+        const loadedTasks = Array.isArray(data.tasks) ? data.tasks : [];
+        const loadedEvaluators = data.evaluator_names || evaluatorNames;
+
+        tasks = loadedTasks;
+        evaluatorNames = loadedEvaluators;
+
+        localStorage.setItem('tasks', JSON.stringify(tasks));
+        localStorage.setItem('evaluatorNames', JSON.stringify(evaluatorNames));
+
+        // Atualizar campos de nome dos avaliadores na tela
+        ['eval1','eval2','eval3','eval4'].forEach((k, i) => {
+            const el = document.getElementById('evaluator' + (i + 1));
+            if (el) el.value = evaluatorNames[k] || ('Avaliador ' + (i + 1));
+        });
+
+        console.log('✅ Tarefas carregadas do Supabase:', tasks.length, '| Avaliadores:', loadedEvaluators);
+    } else if (project && Array.isArray(project.tasks)) {
+        tasks = project.tasks;
+        localStorage.setItem('tasks', JSON.stringify(tasks));
+        console.log('✅ Tarefas carregadas (alt):', tasks.length);
+    } else {
+        console.log('⚠️ Projeto sem tarefas, usando localStorage');
         loadTasksFromLocalStorage();
     }
 }
