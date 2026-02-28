@@ -7,6 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-init.js?v=1735000004"></script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -325,7 +327,7 @@
       <button class="pill" data-stage="Concluído">🟢 Concluído</button>
     </div>
     <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
-      <button onclick="reloadData()" title="Recarregar dados do 5W2H" style="background:rgba(167,139,250,0.15);border:1.5px solid #a78bfa;color:#a78bfa;padding:7px 14px;border-radius:8px;font-size:0.78rem;font-weight:600;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='rgba(167,139,250,0.3)'" onmouseout="this.style.background='rgba(167,139,250,0.15)'">🔄 Atualizar</button>
+      <span id="realtimeDot" style="display:none;font-size:0.75rem;color:#a78bfa;background:rgba(167,139,250,0.12);border:1.5px solid rgba(167,139,250,0.3);padding:5px 12px;border-radius:8px;font-weight:600;">🟣 Tempo real</span>
       <a href="5w2h.html" title="Voltar para o gerenciador de tarefas" style="background:rgba(6,182,212,0.15);border:1.5px solid #06b6d4;color:#06b6d4;padding:7px 14px;border-radius:8px;font-size:0.78rem;font-weight:600;cursor:pointer;text-decoration:none;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(6,182,212,0.3)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'">← Voltar ao 5W2H</a>
     </div>
   </div>
@@ -339,7 +341,7 @@
     <span style="font-size:1.5rem;">⚠️</span>
     <div>
       <strong>Nenhum dado encontrado no 5W2H.</strong><br>
-      <span style="font-size:0.8rem;opacity:0.85;">Adicione tarefas na página <a href="5w2h.html" style="color:#fbbf24;text-decoration:underline;">5W2H</a> e clique em <strong>🔄 Atualizar</strong> para ver o dashboard.</span>
+      <span style="font-size:0.8rem;opacity:0.85;">Adicione tarefas na página <a href="5w2h.html" style="color:#fbbf24;text-decoration:underline;">5W2H</a> e salve no banco — o dashboard atualizará automaticamente.</span>
     </div>
   </div>
 
@@ -464,8 +466,9 @@
 ═════════════════════════════════════════ */
 
 // Chaves idênticas às usadas em 5w2h.html
-const LS_KEY_TASKS = 'kanban5w2h_tasks';
-const LS_KEY_EVALS = 'kanban5w2h_evaluators';
+const LS_KEY_TASKS        = 'kanban5w2h_tasks';
+const LS_KEY_EVALS        = 'kanban5w2h_evaluators';
+const LS_KEY_DB_PROJECT_ID = 'kanban5w2h_project_id';
 
 /**
  * Converte uma task do formato de 5w2h.html para o formato interno do dashboard.
@@ -1016,6 +1019,89 @@ if (_noDataBanner && !RAW_DATA.length) _noDataBanner.style.display = 'flex';
 
 // Inicia
 refresh();
+
+/* ════════════════════════════════════════
+   REALTIME SYNC (Supabase)
+═════════════════════════════════════════ */
+let _dashRealtimeChannel = null;
+let _dashLastUpdatedAt   = null;
+
+function applyRemoteData(projectData) {
+  // Extrai dados fivew2h do payload do projeto
+  const fivew2h = projectData?.fivew2h;
+  if (!fivew2h || !Array.isArray(fivew2h.tasks)) return;
+
+  const remoteTasks = fivew2h.tasks;
+  const remoteEvals = Array.isArray(fivew2h.evaluators) ? fivew2h.evaluators
+                    : ['Avaliador 1','Avaliador 2','Avaliador 3','Avaliador 4'];
+
+  // Atualiza localStorage para consistência
+  localStorage.setItem(LS_KEY_TASKS, JSON.stringify(remoteTasks));
+  localStorage.setItem(LS_KEY_EVALS, JSON.stringify(remoteEvals));
+
+  // Recarrega estado global
+  const { data, evals } = loadFromLocalStorage();
+  RAW_DATA = data;
+  EVALS    = evals;
+
+  // Reseta filtro e redesenha
+  currentFilter = 'all';
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  document.querySelector('.pill[data-stage="all"]').classList.add('active');
+
+  const banner = document.getElementById('noDataBanner');
+  if (banner) banner.style.display = RAW_DATA.length ? 'none' : 'flex';
+
+  refresh();
+}
+
+async function startDashboardRealtime() {
+  const projectId = localStorage.getItem(LS_KEY_DB_PROJECT_ID);
+  if (!projectId) return;
+
+  try {
+    await window.initSupabase();
+    const client = window.getClient();
+    if (!client) return;
+
+    if (_dashRealtimeChannel) {
+      client.removeChannel(_dashRealtimeChannel);
+      _dashRealtimeChannel = null;
+    }
+
+    _dashRealtimeChannel = client
+      .channel('dash_project_' + projectId)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'projects', filter: `id=eq.${projectId}` },
+        (payload) => {
+          const newUpdatedAt = payload?.new?.updated_at;
+          if (newUpdatedAt && newUpdatedAt === _dashLastUpdatedAt) return;
+          _dashLastUpdatedAt = newUpdatedAt;
+
+          const remoteData = payload?.new?.data;
+          if (!remoteData) return;
+
+          applyRemoteData(remoteData);
+        }
+      )
+      .subscribe((status) => {
+        const dot = document.getElementById('realtimeDot');
+        if (status === 'SUBSCRIBED') {
+          console.log('[dashboard] Realtime ativo para projeto', projectId);
+          if (dot) dot.style.display = 'inline-block';
+        } else {
+          if (dot) dot.style.display = 'none';
+        }
+      });
+
+  } catch(e) {
+    console.warn('[dashboard] Realtime não disponível:', e?.message || e);
+  }
+}
+
+// Inicia realtime com pequeno delay para garantir que o Supabase inicializou
+setTimeout(startDashboardRealtime, 800);
 </script>
 </body>
 </html>
