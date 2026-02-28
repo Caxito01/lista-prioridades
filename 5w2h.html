@@ -875,6 +875,9 @@ const STAGE_MAP = {
   updateDbBanner();
   refreshLinkedProjectCodeFromDb();
   renderTable();
+
+  // Inicia sincronização em tempo real se houver projeto vinculado
+  setTimeout(startRealtimeSync, 1000);
 })();
 
 /* ──────────────────────────────────────────────
@@ -1628,6 +1631,141 @@ function importFromMain() {
    ────────────────────────────────────────────── */
 function saveLocal() {
   localStorage.setItem(LS_KEY_TASKS, JSON.stringify(tasks));
+  // Propaga alterações ao banco em tempo real (debounce 1.5s)
+  scheduleSilentSave();
+}
+
+// ── SILENT SAVE (auto-save ao banco sem toast de sucesso) ──
+let _silentSaveTimer = null;
+let _isSilentSaving  = false;
+
+function scheduleSilentSave() {
+  const projectId = localStorage.getItem(LS_KEY_DB_PROJECT_ID);
+  if (!projectId) return; // sem projeto vinculado, não faz nada
+  clearTimeout(_silentSaveTimer);
+  _silentSaveTimer = setTimeout(performSilentSave, 1500);
+}
+
+async function performSilentSave() {
+  if (_isSilentSaving) return;
+  const projectId = localStorage.getItem(LS_KEY_DB_PROJECT_ID);
+  if (!projectId) return;
+
+  try {
+    _isSilentSaving = true;
+    await window.initSupabase();
+    const client = window.getClient();
+    if (!client || !client.auth) return;
+
+    const { data: sessionData } = await client.auth.getSession();
+    const session = sessionData?.session;
+    if (!session) return;
+
+    // Busca dados atuais do projeto para fazer merge correto
+    const { data: project, error: fetchErr } = await client
+      .from('projects')
+      .select('id, data')
+      .eq('id', projectId)
+      .eq('user_id', session.user.id)
+      .single();
+
+    if (fetchErr || !project) return;
+
+    const payload = mergeProjectData(project.data);
+    delete payload.evaluator_names;
+
+    const { data: updated } = await client
+      .from('projects')
+      .update({ data: payload, updated_at: new Date().toISOString() })
+      .eq('id', projectId)
+      .eq('user_id', session.user.id)
+      .select('updated_at')
+      .single();
+
+    // Registra o timestamp para que o realtime não reaplique este próprio save
+    if (updated?.updated_at) _lastKnownUpdatedAt = updated.updated_at;
+
+  } catch(e) {
+    console.warn('[5w2h] silent save falhou:', e?.message || e);
+  } finally {
+    _isSilentSaving = false;
+  }
+}
+
+// ── REALTIME SYNC ──
+let _realtimeChannel = null;
+let _lastKnownUpdatedAt = null;
+let _isApplyingRemote = false;
+
+async function startRealtimeSync() {
+  const projectId = localStorage.getItem(LS_KEY_DB_PROJECT_ID);
+  if (!projectId) return;
+
+  try {
+    await window.initSupabase();
+    const client = window.getClient();
+    if (!client) return;
+
+    // Remove canal anterior se existir
+    if (_realtimeChannel) {
+      client.removeChannel(_realtimeChannel);
+      _realtimeChannel = null;
+    }
+
+    _realtimeChannel = client
+      .channel('5w2h_project_' + projectId)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'projects', filter: `id=eq.${projectId}` },
+        (payload) => {
+          // Evita loop: ignora se foi este próprio browser que acabou de salvar
+          const newUpdatedAt = payload?.new?.updated_at;
+          if (newUpdatedAt && newUpdatedAt === _lastKnownUpdatedAt) return;
+          _lastKnownUpdatedAt = newUpdatedAt;
+
+          const remoteData = payload?.new?.data;
+          if (!remoteData) return;
+
+          const parsed = parseFivew2hFromProjectData(remoteData);
+          if (!parsed || !Array.isArray(parsed.tasks)) return;
+
+          // Não aplica se o modal de edição estiver aberto (usuário está editando)
+          const modalOpen = document.getElementById('modalOverlay')?.classList.contains('open');
+          if (modalOpen || _isApplyingRemote) return;
+
+          _isApplyingRemote = true;
+          tasks = parsed.tasks;
+          if (Array.isArray(parsed.evaluators) && parsed.evaluators.length >= 4) {
+            evaluators = parsed.evaluators.slice(0, 4);
+            localStorage.setItem(LS_KEY_EVALS, JSON.stringify(evaluators));
+          }
+          nextId = tasks.length ? Math.max(...tasks.map(t => Number(t.id) || 0)) + 1 : 1;
+          localStorage.setItem(LS_KEY_TASKS, JSON.stringify(tasks));
+
+          buildTableHeader();
+          renderTable();
+          toast('🔄 Dados atualizados em tempo real', 'info');
+          _isApplyingRemote = false;
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[5w2h] Realtime ativo para projeto', projectId);
+        }
+      });
+
+  } catch(e) {
+    console.warn('[5w2h] Realtime não disponível:', e?.message || e);
+  }
+}
+
+function stopRealtimeSync() {
+  if (_realtimeChannel) {
+    try {
+      window.getClient()?.removeChannel(_realtimeChannel);
+    } catch(e) {}
+    _realtimeChannel = null;
+  }
 }
 
 /* ──────────────────────────────────────────────
@@ -1748,12 +1886,15 @@ function setCurrentDbProject(projectId, projectName, projectCode = '') {
   if (!projectCode) {
     refreshLinkedProjectCodeFromDb();
   }
+  // Reinicia realtime para o novo projeto vinculado
+  startRealtimeSync();
 }
 
 function clearCurrentDbProject() {
   localStorage.removeItem(LS_KEY_DB_PROJECT_ID);
   localStorage.removeItem(LS_KEY_DB_PROJECT_NAME);
   localStorage.removeItem(LS_KEY_DB_PROJECT_CODE);
+  stopRealtimeSync();
   updateDbBanner();
   toast('Projeto vinculado removido. O próximo salvamento pode criar/selecionar outro.', 'info');
 }
