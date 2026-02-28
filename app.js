@@ -391,6 +391,16 @@ function updateSummary(filteredTasks) {
     dueTodayEl.textContent = dueTodayCount;
     overdueEl.textContent = overdueCount;
     costEl.textContent = formatBRL(shownCost);
+
+    // Update header summary
+    const hdrSummary = document.getElementById('headerSummary');
+    if (hdrSummary) {
+        hdrSummary.innerHTML =
+            `Total: <strong>${totalCount}</strong> | Exibindo: <strong>${shownCount}</strong>` +
+            ` | ⏰ Hoje: <strong>${dueTodayCount}</strong>` +
+            ` | ⚠️ Vencidas: <strong>${overdueCount}</strong>` +
+            ` | 💰 <strong>${formatBRL(shownCost)}</strong>`;
+    }
 }
 
 // Manipular envio do formulário
@@ -612,6 +622,28 @@ function filterTasks() {
 function applyFilters() {
     currentFilter = document.getElementById('filterStage').value;
     currentDeadlineFilter = document.getElementById('filterDeadline').value;
+    // Sync header selects
+    const hdrStg = document.getElementById('filterStageHdr');
+    const hdrDl  = document.getElementById('filterDeadlineHdr');
+    if (hdrStg) hdrStg.value = currentFilter;
+    if (hdrDl)  hdrDl.value  = currentDeadlineFilter;
+    renderTasks();
+}
+
+// Aplicar filtros a partir do header
+function applyFiltersFromHeader() {
+    const hdrStg = document.getElementById('filterStageHdr');
+    const hdrDl  = document.getElementById('filterDeadlineHdr');
+    if (hdrStg) {
+        currentFilter = hdrStg.value;
+        const stg = document.getElementById('filterStage');
+        if (stg) stg.value = currentFilter;
+    }
+    if (hdrDl) {
+        currentDeadlineFilter = hdrDl.value;
+        const dl = document.getElementById('filterDeadline');
+        if (dl) dl.value = currentDeadlineFilter;
+    }
     renderTasks();
 }
 
@@ -619,8 +651,14 @@ function applyFilters() {
 function clearFilters() {
     currentFilter = '';
     currentDeadlineFilter = '';
-    document.getElementById('filterStage').value = '';
-    document.getElementById('filterDeadline').value = '';
+    const filterStage    = document.getElementById('filterStage');
+    const filterDeadline = document.getElementById('filterDeadline');
+    const hdrStg         = document.getElementById('filterStageHdr');
+    const hdrDl          = document.getElementById('filterDeadlineHdr');
+    if (filterStage)    filterStage.value    = '';
+    if (filterDeadline) filterDeadline.value = '';
+    if (hdrStg)         hdrStg.value         = '';
+    if (hdrDl)          hdrDl.value          = '';
     renderTasks();
 }
 
@@ -628,10 +666,12 @@ function clearFilters() {
 function toggleSortOrder() {
     if (currentSortOrder === 'priority') {
         currentSortOrder = 'alphabetical';
-        document.getElementById('sortButtonText').textContent = 'ORDEM POR PRIORIDADE';
+        const btn = document.getElementById('sortButtonText');
+        if (btn) btn.textContent = 'ORDEM POR PRIORIDADE';
     } else {
         currentSortOrder = 'priority';
-        document.getElementById('sortButtonText').textContent = 'ORDEM ALFABÉTICA';
+        const btn = document.getElementById('sortButtonText');
+        if (btn) btn.textContent = 'ORDEM ALFABÉTICA';
     }
     renderTasks();
 }

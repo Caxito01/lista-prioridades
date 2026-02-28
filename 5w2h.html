@@ -77,24 +77,137 @@
 
     /* ===== HEADER ===== */
     header {
+      position: sticky;
+      top: 0;
+      z-index: 900;
       background: rgba(255,255,255,0.97);
-      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
-      padding: 18px 0;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: 0 2px 16px rgba(0,0,0,0.13);
     }
-    .hdr-inner {
+    body.dark header {
+      background: rgba(30,30,46,0.97);
+      box-shadow: 0 2px 16px rgba(0,0,0,0.4);
+    }
+
+    /* Row 1: logo + action buttons */
+    .hdr-top {
       max-width: 1600px;
       margin: 0 auto;
-      padding: 0 24px;
+      padding: 10px 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 16px;
+      gap: 12px;
       flex-wrap: wrap;
     }
-    .logo h1 { color: var(--primary); font-size: 1.7rem; }
-    .logo p  { color: #777; font-size: 0.88rem; margin-top: 2px; }
+    .logo h1 { color: var(--primary); font-size: 1.4rem; line-height: 1.2; }
+    .logo p  { color: #777; font-size: 0.78rem; margin-top: 1px; }
+    body.dark .logo p { color: #888; }
 
-    .hdr-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .hdr-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+    /* Row 2: filter bar */
+    .hdr-filters {
+      border-top: 1px solid rgba(0,0,0,0.07);
+      background: rgba(248,249,255,0.95);
+      max-width: 100%;
+      padding: 7px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    body.dark .hdr-filters {
+      background: rgba(24,24,38,0.90);
+      border-top-color: rgba(255,255,255,0.07);
+    }
+    .hdr-filters label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #555;
+      white-space: nowrap;
+    }
+    body.dark .hdr-filters label { color: #a6adc8; }
+    .hdr-filter-select {
+      appearance: none; -webkit-appearance: none;
+      padding: 5px 28px 5px 10px;
+      border: 1.5px solid var(--border);
+      border-radius: 18px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      background: var(--card-bg);
+      color: var(--text);
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .hdr-filter-select:focus { border-color: var(--primary); }
+    .hdr-filter-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+    .hdr-filter-wrap::after {
+      content: '▾';
+      position: absolute;
+      right: 9px;
+      pointer-events: none;
+      font-size: 0.65rem;
+      color: var(--primary);
+    }
+    .hdr-filters-sep {
+      width: 1px; height: 24px;
+      background: var(--border);
+      flex-shrink: 0;
+      margin: 0 4px;
+    }
+    .hdr-summary {
+      font-size: 0.74rem;
+      color: #888;
+      margin-left: auto;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    body.dark .hdr-summary { color: #888; }
+    .hdr-summary strong { color: var(--text); }
+
+    /* Dark toggle pill */
+    .dark-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: var(--card-bg);
+      color: var(--text);
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.25s;
+      white-space: nowrap;
+    }
+    .dark-toggle:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-1px); }
+    .dark-toggle .toggle-track {
+      width: 28px; height: 15px;
+      background: #ccc;
+      border-radius: 8px;
+      position: relative;
+      transition: background 0.25s;
+      flex-shrink: 0;
+    }
+    body.dark .dark-toggle .toggle-track { background: var(--primary); }
+    .dark-toggle .toggle-thumb {
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 11px; height: 11px;
+      border-radius: 50%;
+      background: #fff;
+      transition: left 0.25s;
+    }
+    body.dark .dark-toggle .toggle-thumb { left: 15px; }
 
     /* ===== BUTTONS ===== */
     .btn {
@@ -126,32 +239,15 @@
     /* ===== MAIN ===== */
     main {
       max-width: 1600px;
-      margin: 24px auto;
+      margin: 20px auto;
       background: var(--card-bg);
       border-radius: 16px;
       padding: 28px;
       box-shadow: 0 6px 24px rgba(0,0,0,0.12);
     }
 
-    /* ===== TOOLBAR (filter + sort) ===== */
-    .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-    .toolbar label { font-weight: 600; font-size: 0.88rem; margin-right: 4px; }
-    .toolbar select, .filter-select {
-      padding: 8px 12px;
-      border: 1.5px solid var(--border);
-      border-radius: 8px;
-      font-size: 0.88rem;
-      background: var(--card-bg);
-      color: var(--text);
-      cursor: pointer;
-    }
-    .toolbar-sep { flex: 1; }
+    /* ===== TOOLBAR — hidden, controls moved to header ===== */
+    .toolbar { display: none; }
 
     /* ===== LEGEND ===== */
     .legend-box {
@@ -496,32 +592,64 @@
 
 <!-- ===== HEADER ===== -->
 <header>
-  <div class="hdr-inner">
+  <!-- Row 1: Logo + Action buttons -->
+  <div class="hdr-top">
     <div class="logo">
       <h1>📋 CECM 5W2H</h1>
       <p>Gerenciamento de Tarefas com Metodologia 5W2H</p>
     </div>
     <div class="hdr-actions">
-      <button class="btn btn-info"    onclick="sortAlpha()"     id="btnSort">🔤 Ordem Alfabética</button>
-      <button class="btn btn-gray"    onclick="clearFilters()">🔄 Limpar Filtros</button>
       <div class="export-wrap">
-        <button class="btn btn-success" onclick="toggleExportMenu(event)">💾 Baixar arquivo ▾</button>
+        <button class="btn btn-success" onclick="toggleExportMenu(event)">💾 Baixar ▾</button>
         <div class="export-menu" id="exportMenu">
           <button onclick="saveJSON();   closeExportMenu()">📄 JSON</button>
           <button onclick="exportXLSX(); closeExportMenu()">📊 Excel (XLSX)</button>
           <button onclick="exportPDF();  closeExportMenu()">📋 PDF</button>
         </div>
       </div>
-      <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">📥 Carregar JSON</button>
+      <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">📥 JSON</button>
       <input type="file" id="fileInput" accept=".json" style="display:none" onchange="loadJSON(event)">
-      <button class="btn btn-warning" onclick="importFromMain()" title="Importar tarefas do Sistema de Prioridades">🔄 Importar do Sistema</button>
-      <button class="btn btn-db" onclick="saveToDatabase5w2h()" title="Salvar no banco de dados">💾 Salvar Banco</button>
-      <button class="btn btn-info" onclick="loadFromDatabase5w2h()" title="Carregar do banco de dados">📥 Carregar Banco</button>
-      <button class="btn btn-dark"    onclick="openModal(null)" title="Nova tarefa">➕ Nova Tarefa</button>
-      <button class="btn btn-gray"    onclick="toggleDark()" id="btnDark">🌙 Dark</button>
-      <a      class="btn btn-gray"    href="index.html">🏠 Início</a>
-      <a      class="btn btn-primary" href="dashboard5w2h.html" title="Ver dashboard analítico">📊 Dashboard</a>
+      <button class="btn btn-warning" onclick="importFromMain()" title="Importar tarefas do Sistema de Prioridades">🔄 Importar</button>
+      <button class="btn btn-db" onclick="saveToDatabase5w2h()" title="Salvar no banco de dados">💾 Banco</button>
+      <button class="btn btn-info" onclick="loadFromDatabase5w2h()" title="Carregar do banco de dados">📥 Banco</button>
+      <button class="btn btn-dark" onclick="openModal(null)" title="Nova tarefa">➕ Nova</button>
+      <a class="btn btn-gray" href="index.html">🏠 Início</a>
+      <a class="btn btn-primary" href="dashboard5w2h.html" title="Ver dashboard analítico">📊 Dashboard</a>
+      <button class="dark-toggle" onclick="toggleDark()" id="btnDark" title="Alternar modo claro/escuro">
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span id="darkLabel">🌙 Dark</span>
+      </button>
     </div>
+  </div>
+
+  <!-- Row 2: Filters + sort + summary -->
+  <div class="hdr-filters">
+    <div class="hdr-filter-wrap">
+      <select id="filterStgHdr" class="hdr-filter-select" onchange="syncFilterStg(this.value); renderTable()">
+        <option value="">🔍 Todos os Estágios</option>
+        <option value="Em Execução">▶️ Em Execução</option>
+        <option value="Atrasado">⚠️ Atrasado</option>
+        <option value="Em Planejamento">📐 Em Planejamento</option>
+        <option value="Concluído">✅ Concluído</option>
+        <option value="Iniciado">🔵 Iniciado</option>
+      </select>
+    </div>
+    <div class="hdr-filter-wrap">
+      <select id="filterDeadlineHdr" class="hdr-filter-select" onchange="syncFilterDeadline(this.value); renderTable()">
+        <option value="">⏱️ Todos os Prazos</option>
+        <option value="today">⏰ Vence Hoje</option>
+        <option value="overdue">⚠️ Vencidas</option>
+      </select>
+    </div>
+    <div class="hdr-filters-sep"></div>
+    <button class="btn btn-sm btn-info" onclick="sortAlpha()" id="btnSort" style="font-size:0.76rem;">🔤 A–Z</button>
+    <button class="btn btn-sm btn-gray" onclick="clearFilters()" style="font-size:0.76rem;">� Limpar</button>
+    <div class="hdr-filters-sep"></div>
+    <span class="hdr-summary">
+      Total: <strong id="countTotal">0</strong> | Exibindo: <strong id="countShown">0</strong>
+      | ⏰ Hoje: <strong id="countDueToday">0</strong> | ⚠️ Vencidas: <strong id="countOverdue">0</strong>
+      | 💰 <strong id="sumCostShown">R$ 0,00</strong>
+    </span>
   </div>
 </header>
 
@@ -758,8 +886,29 @@ function toggleDark() {
 }
 function applyDark(on, save) {
   document.body.classList.toggle('dark', on);
-  document.getElementById('btnDark').textContent = on ? '☀️ Claro' : '🌙 Dark';
+  document.getElementById('darkLabel').textContent = on ? '☀️ Claro' : '🌙 Dark';
   if (save) localStorage.setItem(LS_KEY_DARK, on ? '1' : '0');
+}
+
+/* ──────────────────────────────────────────────
+   FILTER SYNC (header ↔ hidden toolbar selects)
+   ────────────────────────────────────────────── */
+function syncFilterStg(val) {
+  const el = document.getElementById('filterStg');
+  if (el) el.value = val;
+}
+function syncFilterDeadline(val) {
+  const el = document.getElementById('filterDeadline');
+  if (el) el.value = val;
+}
+// Also sync header selects when clearFilters() resets the hidden ones
+function syncHeaderFilters() {
+  const stg = document.getElementById('filterStg');
+  const dl  = document.getElementById('filterDeadline');
+  const stgH = document.getElementById('filterStgHdr');
+  const dlH  = document.getElementById('filterDeadlineHdr');
+  if (stg && stgH) stgH.value = stg.value;
+  if (dl  && dlH)  dlH.value  = dl.value;
 }
 
 /* ──────────────────────────────────────────────
@@ -1169,8 +1318,8 @@ function sortAlpha() {
   sortAlphaActive = !sortAlphaActive;
   if (sortAlphaActive) sortCost = null; // desativa custo ao ativar alfa
   const btn = document.getElementById('btnSort');
-  btn.textContent = sortAlphaActive ? '🔢 Ordem por Prioridade' : '🔤 Ordem Alfabética';
-  btn.className   = sortAlphaActive ? 'btn btn-warning' : 'btn btn-info';
+  btn.textContent = sortAlphaActive ? '🔢 Prior.' : '🔤 A–Z';
+  btn.className   = sortAlphaActive ? 'btn btn-sm btn-warning' : 'btn btn-sm btn-info';
   buildTableHeader();
   renderTable();
 }
@@ -1181,8 +1330,8 @@ function cycleSortCost() {
   if (sortCost) {
     // desativa alfabético ao ordenar por custo
     sortAlphaActive = false;
-    document.getElementById('btnSort').textContent = '🔤 Ordem Alfabética';
-    document.getElementById('btnSort').className   = 'btn btn-info';
+    document.getElementById('btnSort').textContent = '🔤 A–Z';
+    document.getElementById('btnSort').className   = 'btn btn-sm btn-info';
   }
   buildTableHeader();
   renderTable();
@@ -1197,9 +1346,10 @@ function clearFilters() {
   document.getElementById('filterDeadline').value = '';
   sortAlphaActive = false;
   sortCost = null;
-  document.getElementById('btnSort').textContent = '🔤 Ordem Alfabética';
-  document.getElementById('btnSort').className   = 'btn btn-info';
+  document.getElementById('btnSort').textContent = '🔤 A–Z';
+  document.getElementById('btnSort').className   = 'btn btn-sm btn-info';
   buildTableHeader();
+  syncHeaderFilters();
   renderTable();
   toast('Filtros limpos', 'info');
 }

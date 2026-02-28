@@ -77,20 +77,57 @@
 </head>
 <body>
     <header>
-        <div class="container">
+        <!-- Row 1: Logo + action buttons -->
+        <div class="container hdr-top-row">
             <div class="logo">
                 <h1>📊 Sistema de Prioridades</h1>
                 <p class="subtitle">Gerenciamento Colaborativo de Tarefas</p>
             </div>
             <div class="header-buttons">
-                <button class="btn-darkmode" id="btnDarkMode" onclick="toggleDarkMode()" title="Alternar modo escuro">🌙 Dark</button>
-                <a href="5w2h.html" class="btn-help" style="text-decoration:none;" title="Abrir CECM 5W2H">📋 CECM 5W2H</a>
-                <button class="btn-help" onclick="showHelp()" title="Ajuda">❓ Ajuda</button>
+                <button class="ctrl-btn ctrl-btn-outline" onclick="printToPDF()" title="Imprimir PDF">🖨️ PDF</button>
+                <button class="ctrl-btn ctrl-btn-primary" onclick="saveToDatabase()" title="Salvar no banco">💾 Salvar</button>
+                <button class="ctrl-btn ctrl-btn-primary" onclick="loadFromDatabase()" title="Carregar do banco">📥 Carregar</button>
+                <a href="5w2h.html" class="ctrl-btn ctrl-btn-kanban" style="text-decoration:none;" title="Abrir CECM 5W2H">📋 CECM 5W2H</a>
+                <a href="dashboard5w2h.html" class="ctrl-btn ctrl-btn-kanban" style="text-decoration:none;" title="Ver dashboard analítico">📊 Dashboard</a>
+                <button class="btn-help" onclick="showHelp()" title="Ajuda">❓</button>
                 <button class="btn-logout" onclick="handleLogout()" title="Sair">🚪 Sair</button>
+                <button class="dark-toggle-idx" id="btnDarkMode" onclick="toggleDarkMode()" title="Alternar modo escuro">
+                    <span class="toggle-track-idx"><span class="toggle-thumb-idx"></span></span>
+                    <span id="darkLabelIdx">🌙</span>
+                </button>
             </div>
         </div>
+
+        <!-- Row 2: Filter bar -->
+        <div class="hdr-filter-row">
+            <div class="ctrl-select-wrap-sm">
+                <select id="filterStageHdr" onchange="applyFiltersFromHeader()">
+                    <option value="">🔍 Todos os Estágios</option>
+                    <option value="ATRASADO">⚠️ Atrasado</option>
+                    <option value="EM PLANEJAMENTO">📐 Em Planejamento</option>
+                    <option value="INICIADO">🔵 Iniciado</option>
+                    <option value="EM EXECUÇÃO">▶️ Em Execução</option>
+                    <option value="CONCLUÍDO">✅ Concluído</option>
+                </select>
+            </div>
+            <div class="ctrl-select-wrap-sm">
+                <select id="filterDeadlineHdr" onchange="applyFiltersFromHeader()">
+                    <option value="">⏱️ Todos os Prazos</option>
+                    <option value="today">⏰ Vence Hoje</option>
+                    <option value="overdue">⚠️ Vencidas</option>
+                </select>
+            </div>
+            <div class="hdr-filter-sep"></div>
+            <button class="ctrl-btn ctrl-btn-ghost hdr-ctrl-btn-sm" onclick="toggleSortOrder()">
+                <span id="sortButtonText">🔤 Ordem Alfabética</span>
+            </button>
+            <button class="ctrl-btn ctrl-btn-ghost hdr-ctrl-btn-sm" onclick="clearFilters()">🔄 Limpar</button>
+            <div class="hdr-filter-sep"></div>
+            <span class="hdr-summary-idx" id="headerSummary"></span>
+        </div>
+
         <!-- Código do projeto visível -->
-        <div id="projectCodeBanner" style="display: none; background: #e8f5e9; padding: 10px 20px; text-align: center; font-weight: bold; color: #2e7d32; border-top: 2px solid #4caf50;">
+        <div id="projectCodeBanner" style="display: none; background: #e8f5e9; padding: 8px 20px; text-align: center; font-weight: bold; color: #2e7d32; border-top: 2px solid #4caf50; font-size: 0.85rem;">
             🔑 Código do Projeto: <span id="projectCodeDisplay"></span>
         </div>
     </header>
@@ -312,10 +349,9 @@
         </section>
 
         <!-- Filtros e Controles -->
-        <section class="controls-section">
+        <!-- Filtros ocultos — mantidos no DOM para compatibilidade JS -->
+        <section class="controls-section" style="display:none;">
             <div class="controls-bar">
-
-                <!-- Grupo esquerda: filtros -->
                 <div class="controls-group controls-filters">
                     <div class="ctrl-select-wrap">
                         <span class="ctrl-select-icon">&#9660;</span>
@@ -336,23 +372,7 @@
                             <option value="overdue">⚠️ Vencidas</option>
                         </select>
                     </div>
-                    <button class="ctrl-btn ctrl-btn-ghost" onclick="toggleSortOrder()">
-                        <span id="sortButtonText">🔤 Ordem Alfabética</span>
-                    </button>
-                    <button class="ctrl-btn ctrl-btn-ghost" onclick="clearFilters()">🔄 Limpar Filtros</button>
                 </div>
-
-                <!-- Divisor -->
-                <div class="controls-sep"></div>
-
-                <!-- Grupo direita: ações -->
-                <div class="controls-group controls-actions">
-                    <button class="ctrl-btn ctrl-btn-outline" onclick="printToPDF()">🖨️ PDF</button>
-                    <button class="ctrl-btn ctrl-btn-primary" onclick="saveToDatabase()">💾 Salvar</button>
-                    <button class="ctrl-btn ctrl-btn-primary" onclick="loadFromDatabase()">📥 Carregar</button>
-                    <a href="5w2h.html" class="ctrl-btn ctrl-btn-kanban" style="text-decoration:none;">📋 CECM 5W2H</a>
-                </div>
-
             </div>
         </section>
 
@@ -421,13 +441,14 @@
         function toggleDarkMode() {
             const isDark = document.body.classList.toggle('dark-mode');
             localStorage.setItem('darkMode', isDark ? '1' : '0');
-            document.getElementById('btnDarkMode').textContent = isDark ? '☀️ Claro' : '🌙 Dark';
+            const label = document.getElementById('darkLabelIdx');
+            if (label) label.textContent = isDark ? '☀️' : '🌙';
         }
         (function() {
             if (localStorage.getItem('darkMode') === '1') {
                 document.body.classList.add('dark-mode');
-                const btn = document.getElementById('btnDarkMode');
-                if (btn) btn.textContent = '☀️ Claro';
+                const label = document.getElementById('darkLabelIdx');
+                if (label) label.textContent = '☀️';
             }
         })();
     </script>
