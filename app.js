@@ -1134,12 +1134,18 @@ function formatSupabaseDate(dateString) {
 
 // Mostrar seleção de projetos (mesmo layout do "Salvar Tarefa")
 function showProjectSelection(projects) {
+    // Filtrar apenas projetos compatíveis com index.html:
+    // projetos do 5w2h.html não têm data.evaluator_names
+    const compatible = (projects || []).filter(p =>
+        p.data && p.data.evaluator_names !== undefined
+    );
+
     let projectsList = '';
 
-    if (projects && projects.length > 0) {
+    if (compatible.length > 0) {
         projectsList = '<div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 15px;">';
-        
-        projects.forEach(project => {
+
+        compatible.forEach(project => {
             const date = formatSupabaseDate(project.created_at);
             const projectCode = project.project_code ? `<br><small style="color: #667eea; font-weight: bold;">🔑 ${project.project_code}</small>` : '';
             projectsList += `
@@ -1150,7 +1156,7 @@ function showProjectSelection(projects) {
                 </div>
             `;
         });
-        
+
         projectsList += '</div>';
     } else {
         projectsList = '<p style="color: #666; margin-bottom: 15px;">Nenhum projeto encontrado para sua conta.</p>';
@@ -1183,8 +1189,8 @@ function showProjectSelection(projects) {
     `;
     
     document.body.appendChild(modal);
-    
-    window.projectsList = projects;
+
+    window.projectsList = compatible;
 }
 
 // Fechar modal de load
