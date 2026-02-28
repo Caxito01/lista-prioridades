@@ -428,6 +428,22 @@
     body.dark tbody tr.row-overdue td { background: rgba(220,53,69,0.18); }
     body.dark tbody tr.row-due-today td { background: rgba(255,193,7,0.22); }
 
+    /* ===== SORTABLE HEADER ===== */
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+    th.sortable:hover { background: #e0e4ff; }
+    body.dark th.sortable:hover { background: #3a3c55 !important; }
+    .sort-arrow {
+      display: inline-block;
+      margin-left: 4px;
+      font-size: 0.78rem;
+      opacity: 0.45;
+      transition: opacity 0.15s;
+    }
+    th.sortable.sort-active .sort-arrow { opacity: 1; color: var(--primary); }
+
     /* ===== EXPORT DROPDOWN ===== */
     .export-wrap {
       position: relative;
@@ -684,6 +700,7 @@ let tasks      = [];
 let evaluators = ['Avaliador 1', 'Avaliador 2', 'Avaliador 3', 'Avaliador 4'];
 let editingId  = null;
 let sortAlphaActive = false;
+let sortCost   = null;  // null | 'asc' | 'desc'
 let nextId     = 1;
 let projectSelectionMode = null;
 let projectSelectionList = [];
@@ -761,7 +778,9 @@ function buildTableHeader() {
     <th class="col-where">Onde <small style="font-weight:400;color:#888">(Where)</small></th>
     <th class="col-when">Quando</th>
     <th class="col-how">Como <small style="font-weight:400;color:#888">(How)</small></th>
-    <th class="col-howmuch">Custo</th>
+    <th class="col-howmuch sortable${sortCost ? ' sort-active' : ''}" onclick="cycleSortCost()" title="Clique para ordenar por custo">
+      Custo <span class="sort-arrow">${sortCost === 'asc' ? '↑' : sortCost === 'desc' ? '↓' : '↕'}</span>
+    </th>
     ${who}
     <th class="col-avg">Média</th>
     <th class="col-act">Ações</th>
@@ -787,7 +806,13 @@ function renderTable() {
   if (filterDeadline === 'today') list = list.filter(t => isDueToday(t));
   if (filterDeadline === 'overdue') list = list.filter(t => isOverdue(t));
 
-  if (sortAlphaActive) {
+  if (sortCost) {
+    list.sort((a,b) => {
+      const ca = parseCurrencyToNumber(a.howMuch);
+      const cb = parseCurrencyToNumber(b.howMuch);
+      return sortCost === 'asc' ? ca - cb : cb - ca;
+    });
+  } else if (sortAlphaActive) {
     list.sort((a,b) => (a.what||'').localeCompare(b.what||'', 'pt-BR'));
   } else {
     list.sort((a,b) => {
@@ -1141,18 +1166,39 @@ function formatHowMuchInput(el) {
    ────────────────────────────────────────────── */
 function sortAlpha() {
   sortAlphaActive = !sortAlphaActive;
+  if (sortAlphaActive) sortCost = null; // desativa custo ao ativar alfa
   const btn = document.getElementById('btnSort');
   btn.textContent = sortAlphaActive ? '🔢 Ordem por Prioridade' : '🔤 Ordem Alfabética';
   btn.className   = sortAlphaActive ? 'btn btn-warning' : 'btn btn-info';
+  buildTableHeader();
   renderTable();
+}
+
+function cycleSortCost() {
+  // ciclo: null → asc → desc → null
+  sortCost = sortCost === null ? 'asc' : sortCost === 'asc' ? 'desc' : null;
+  if (sortCost) {
+    // desativa alfabético ao ordenar por custo
+    sortAlphaActive = false;
+    document.getElementById('btnSort').textContent = '🔤 Ordem Alfabética';
+    document.getElementById('btnSort').className   = 'btn btn-info';
+  }
+  buildTableHeader();
+  renderTable();
+  const msg = sortCost === 'asc' ? 'Ordenado por custo: menor primeiro' :
+              sortCost === 'desc' ? 'Ordenado por custo: maior primeiro' :
+              'Ordem por custo desativada';
+  toast(msg, 'info');
 }
 
 function clearFilters() {
   document.getElementById('filterStg').value = '';
   document.getElementById('filterDeadline').value = '';
   sortAlphaActive = false;
+  sortCost = null;
   document.getElementById('btnSort').textContent = '🔤 Ordem Alfabética';
   document.getElementById('btnSort').className   = 'btn btn-info';
+  buildTableHeader();
   renderTable();
   toast('Filtros limpos', 'info');
 }
