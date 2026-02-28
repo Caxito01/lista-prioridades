@@ -649,6 +649,7 @@ tbody tr.row-due-today {
 /* Stage Select */
 .stage-select {
     width: 100%;
+    max-width: 100%;
     padding: 8px;
     border: 2px solid #e0e0e0;
     border-radius: 5px;
@@ -656,6 +657,10 @@ tbody tr.row-due-today {
     font-weight: 600;
     cursor: pointer;
     transition: border-color 0.3s;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .stage-select:focus {
@@ -1062,10 +1067,13 @@ td:nth-child(1) {
     width: 35px;
 }
 
-/* Estágio - Coluna pequena */
+/* Estágio - Coluna fixa para não invadir descrição */
 th:nth-child(2),
 td:nth-child(2) {
-    width: 150px;
+    width: 160px;
+    min-width: 160px;
+    max-width: 160px;
+    overflow: hidden;
 }
 
 /* Descrição - Coluna grande */
