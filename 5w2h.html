@@ -1962,21 +1962,22 @@ function exportXLSX() {
   if (!list.length) { toast('Nenhuma tarefa visível para exportar', 'error'); return; }
   if (typeof XLSX === 'undefined') { toast('Biblioteca XLSX não carregada', 'error'); return; }
 
-  // Cabeçalho igual à tabela: colunas fixas + uma por avaliador + Média
-  const evalCols = evaluators.map(ev => ev);
+  // Cabeçalho igual à tabela: colunas fixas + uma por avaliador (nome completo) + Média
   const header = [
     '#', 'Etapa', 'O Quê (What)', 'Por Quê (Why)', 'Onde (Where)',
     'Quando (When)', 'Como (How)', 'Custo (How Much)',
-    ...evalCols,
+    ...evaluators.map(ev => ev),
     'Média'
   ];
 
   const rows = list.map((t, i) => {
     const scores = evaluators.map((_, idx) => {
       const s = t.who?.[idx];
-      return (s && s > 0) ? s : '';
+      const nota = (s && s > 0) ? s : '';
+      // Destaque do responsável: prefixo "★ " antes da nota
+      return (idx === t.responsible && nota !== '') ? `★ ${nota}` : nota;
     });
-    const vals = scores.filter(s => s !== '');
+    const vals = evaluators.map((_, idx) => t.who?.[idx]).filter(s => s && s > 0);
     const avg = vals.length ? (vals.reduce((a,b) => a+b, 0) / vals.length).toFixed(2) : '';
 
     return [
@@ -1996,10 +1997,39 @@ function exportXLSX() {
   const wsData = [header, ...rows];
   const ws = XLSX.utils.aoa_to_sheet(wsData);
 
+  // Colunas de avaliadores começam na coluna índice 8 (A=0)
+  const evalStartCol = 8;
+
+  // Destacar célula do responsável: fundo amarelo + negrito
+  list.forEach((t, rowIdx) => {
+    if (t.responsible == null) return;
+    const col = evalStartCol + t.responsible;
+    const cellAddr = XLSX.utils.encode_cell({ r: rowIdx + 1, c: col }); // +1 pula o header
+    if (ws[cellAddr]) {
+      ws[cellAddr].s = {
+        fill:  { patternType: 'solid', fgColor: { rgb: 'FFF3CD' } },
+        font:  { bold: true, color: { rgb: '856404' } },
+        alignment: { horizontal: 'center' }
+      };
+    }
+  });
+
+  // Cabeçalho em negrito/cor
+  header.forEach((_, ci) => {
+    const cellAddr = XLSX.utils.encode_cell({ r: 0, c: ci });
+    if (ws[cellAddr]) {
+      ws[cellAddr].s = {
+        fill: { patternType: 'solid', fgColor: { rgb: '667EEA' } },
+        font: { bold: true, color: { rgb: 'FFFFFF' } },
+        alignment: { horizontal: 'center' }
+      };
+    }
+  });
+
   ws['!cols'] = [
     {wch:4}, {wch:18}, {wch:32}, {wch:28}, {wch:24},
     {wch:14}, {wch:30}, {wch:18},
-    ...evaluators.map(() => ({wch:12})),
+    ...evaluators.map(() => ({wch:14})),
     {wch:8}
   ];
 
@@ -2047,8 +2077,8 @@ function exportPDF() {
     `  |  ${sortDesc}`;
   doc.text(subtitle, 14, 20);
 
-  // Colunas: fixas + avaliadores + média
-  const evalColumns = evaluators.map((ev, i) => ({ header: abbrev(ev), dataKey: `ev${i}` }));
+  // Colunas: fixas + avaliadores (nome completo) + média
+  const evalColumns = evaluators.map((ev, i) => ({ header: ev, dataKey: `ev${i}` }));
   const columns = [
     { header: '#',       dataKey: 'num'     },
     { header: 'Etapa',   dataKey: 'stage'   },
@@ -2067,15 +2097,12 @@ function exportPDF() {
     const vals = [];
     evaluators.forEach((_, idx) => {
       const s = t.who?.[idx];
-      const v = (s && s > 0) ? s : '—';
-      evScores[`ev${idx}`] = v;
+      const nota = (s && s > 0) ? String(s) : '—';
+      // ★ antes da nota para o responsável
+      evScores[`ev${idx}`] = (idx === t.responsible && nota !== '—') ? `★ ${nota}` : nota;
       if (s && s > 0) vals.push(s);
     });
     const avg = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2) : '—';
-    // marca responsável com estrela
-    if (t.responsible != null && evScores[`ev${t.responsible}`] !== '—') {
-      evScores[`ev${t.responsible}`] = evScores[`ev${t.responsible}`] + '★';
-    }
     return {
       num:     i + 1,
       stage:   t.stage   || '',
@@ -2116,13 +2143,22 @@ function exportPDF() {
       ...evalColStyles
     },
     didParseCell(data) {
-      if (data.column.dataKey === 'stage' && data.section === 'body') {
+      if (data.section !== 'body') return;
+      // Cor de etapa
+      if (data.column.dataKey === 'stage') {
         const color = stageColor[data.cell.raw];
         if (color) {
           data.cell.styles.fillColor = color;
           data.cell.styles.textColor = data.cell.raw === 'Em Planejamento' ? [33,37,41] : [255,255,255];
           data.cell.styles.fontStyle = 'bold';
         }
+      }
+      // Destaque do responsável: célula com ★ recebe fundo amarelo + texto escuro
+      const key = data.column.dataKey;
+      if (key && key.startsWith('ev') && typeof data.cell.raw === 'string' && data.cell.raw.includes('★')) {
+        data.cell.styles.fillColor = [255, 243, 205];
+        data.cell.styles.textColor = [133, 100, 4];
+        data.cell.styles.fontStyle = 'bold';
       }
     },
     alternateRowStyles: { fillColor: [245,246,255] },
