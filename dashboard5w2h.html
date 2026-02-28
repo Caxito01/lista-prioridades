@@ -122,6 +122,9 @@
     }
     .kpi-card.danger .kpi-value { background: linear-gradient(135deg, var(--c-late), #fca5a5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .kpi-card.success .kpi-value { background: linear-gradient(135deg, var(--c-done), #86efac); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .kpi-card.exec .kpi-value { background: linear-gradient(135deg, var(--c-exec), #93c5fd); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .kpi-card.plan .kpi-value { background: linear-gradient(135deg, var(--c-plan), #fde68a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .kpi-card.init .kpi-value { background: linear-gradient(135deg, var(--c-init), #d1d5db); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .kpi-label { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
     .kpi-sub { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; opacity: 0.7; }
     .kpi-bar { height: 3px; border-radius: 99px; margin-top: 12px; background: var(--bg3); overflow: hidden; }
@@ -583,16 +586,22 @@ function renderKPI(data) {
   const avgCost    = total ? totalCost / total : 0;
   const late       = data.filter(p => p.estagio === 'Atrasado').length;
   const done       = data.filter(p => p.estagio === 'Concluído').length;
+  const exec       = data.filter(p => p.estagio === 'Em Execução').length;
+  const plan       = data.filter(p => p.estagio === 'Em Planejamento').length;
+  const init       = data.filter(p => p.estagio === 'Iniciado').length;
   const avgEval    = total ? (data.reduce((s,p) => s + avg(p), 0) / total).toFixed(2) : '—';
   const maxCost    = Math.max(...RAW_DATA.map(p => p.custo));
 
   const cards = [
-    { icon:'📁', value: total,          label:'Total de Projetos',        sub:`${total} projetos no filtro`,      bar: total / RAW_DATA.length, barColor:'#a78bfa', cls:'' },
-    { icon:'💰', value: fmtBRL(totalCost), label:'Custo Total',           sub:'soma dos projetos filtrados',      bar: totalCost / RAW_DATA.reduce((s,p)=>s+p.custo,0), barColor:'#06b6d4', cls:'' },
-    { icon:'📊', value: fmtBRL(avgCost),  label:'Custo Médio',            sub:'por projeto',                      bar: avgCost / maxCost, barColor:'#f59e0b', cls:'' },
-    { icon:'⚠️', value: late,            label:'Projetos Atrasados',      sub:'necessitam atenção imediata',      bar: total ? late/total : 0, barColor:'#ef4444', cls: late > 0 ? 'danger' : '' },
-    { icon:'⭐', value: avgEval,          label:'Média Geral de Avaliação', sub:'escala de 1 a 5',                 bar: avgEval / 5, barColor:'#f59e0b', cls:'' },
-    { icon:'✅', value: done,             label:'Projetos Concluídos',     sub:`${total ? Math.round(done/total*100) : 0}% do total filtrado`, bar: total ? done/total : 0, barColor:'#22c55e', cls: done > 0 ? 'success' : '' },
+    { icon:'📁', value: total,              label:'Total de Projetos',        sub:`${total} projetos no filtro`,                                    bar: total / RAW_DATA.length,                                     barColor:'#a78bfa', cls:'' },
+    { icon:'💰', value: fmtBRL(totalCost),  label:'Custo Total',              sub:'soma dos projetos filtrados',                                    bar: totalCost / RAW_DATA.reduce((s,p)=>s+p.custo,0),             barColor:'#06b6d4', cls:'' },
+    { icon:'📊', value: fmtBRL(avgCost),    label:'Custo Médio',              sub:'por projeto',                                                    bar: avgCost / maxCost,                                           barColor:'#f59e0b', cls:'' },
+    { icon:'⚠️', value: late,               label:'Projetos Atrasados',       sub:'necessitam atenção imediata',                                    bar: total ? late/total : 0,                                      barColor:'#ef4444', cls: late > 0 ? 'danger' : '' },
+    { icon:'⭐', value: avgEval,             label:'Média Geral de Avaliação', sub:'escala de 1 a 5',                                                bar: avgEval / 5,                                                 barColor:'#f59e0b', cls:'' },
+    { icon:'✅', value: done,               label:'Projetos Concluídos',      sub:`${total ? Math.round(done/total*100) : 0}% do total filtrado`,   bar: total ? done/total : 0,                                      barColor:'#22c55e', cls: done > 0 ? 'success' : '' },
+    { icon:'▶️', value: exec,               label:'Em Execução',              sub:`${total ? Math.round(exec/total*100) : 0}% do total filtrado`,   bar: total ? exec/total : 0,                                      barColor:'#3b82f6', cls: exec > 0 ? 'exec' : '' },
+    { icon:'📐', value: plan,               label:'Em Planejamento',          sub:`${total ? Math.round(plan/total*100) : 0}% do total filtrado`,   bar: total ? plan/total : 0,                                      barColor:'#f59e0b', cls: plan > 0 ? 'plan' : '' },
+    { icon:'🔵', value: init,               label:'Iniciados',                sub:`${total ? Math.round(init/total*100) : 0}% do total filtrado`,   bar: total ? init/total : 0,                                      barColor:'#6b7280', cls: init > 0 ? 'init' : '' },
   ];
 
   const grid = document.getElementById('kpiGrid');
