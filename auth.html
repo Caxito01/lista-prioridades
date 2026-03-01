@@ -755,7 +755,7 @@
                 if (error) {
                     showMessage('❌ ' + translateAuthError(error.message || ''), 'error');
                 } else {
-                    showMessage('✅ Link de recuperação enviado! Verifique sua caixa de entrada.', 'success');
+                    showMessage('✅ Link de recuperação enviado! Verifique sua caixa de entrada. se o e-mail for válido', 'success');
                     document.getElementById('forgotEmail').value = '';
                 }
             } catch (error) {
