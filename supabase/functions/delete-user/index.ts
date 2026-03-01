@@ -4,7 +4,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const ADMIN_EMAIL = 'carlos@caxito.com.br';
+const ADMIN_EMAIL = 'carloscaxito@yahoo.com.br';
 
 Deno.serve(async (req: Request) => {
   // CORS preflight
