@@ -71,6 +71,29 @@
                 alert('❌ Erro: ' + error.message);
             }
         }
+
+        async function open5w2hProtected() {
+            try {
+                await window.initSupabase();
+                const client = window.getClient();
+                if (!client || !client.auth) {
+                    alert('❌ Erro: Supabase não inicializado. Recarregue a página.');
+                    return;
+                }
+                const { data } = await client.auth.getSession();
+                if (!data?.session) {
+                    if (typeof showLoginRequiredModal === 'function') {
+                        showLoginRequiredModal('Você precisa estar logado para acessar essa página.');
+                    } else {
+                        alert('❌ Você precisa estar logado para acessar essa página.');
+                    }
+                    return;
+                }
+                window.location.href = '5w2h.html';
+            } catch (error) {
+                alert('❌ Erro: ' + error.message);
+            }
+        }
     </script>
     <script src="auth.js?v=1735000004"></script>
     <script src="app.js?v=1735000004"></script>
@@ -87,7 +110,7 @@
                 <button class="ctrl-btn ctrl-btn-outline" onclick="printToPDF()" title="Imprimir PDF">🖨️ PDF</button>
                 <button class="ctrl-btn ctrl-btn-primary" onclick="saveToDatabase()" title="Salvar no banco">💾 Salvar</button>
                 <button class="ctrl-btn ctrl-btn-primary" onclick="loadFromDatabase()" title="Carregar do banco">📥 Carregar</button>
-                <a href="5w2h.html" class="ctrl-btn ctrl-btn-kanban" style="text-decoration:none;" title="Abrir CECM 5W2H">📋 CECM 5W2H</a>
+                <button class="ctrl-btn ctrl-btn-kanban" onclick="open5w2hProtected()" title="Abrir CECM 5W2H">📋 CECM 5W2H</button>
                 <button class="btn-help" onclick="showHelp()" title="Ajuda">❓</button>
                 <button class="btn-logout" onclick="handleLogout()" title="Sair">🚪 Sair</button>
                 <button class="dark-toggle-idx" id="btnDarkMode" onclick="toggleDarkMode()" title="Alternar modo escuro">
