@@ -1318,13 +1318,70 @@ function askAiSuggestion(question) {
   submitAiQuestion(fakeEvent);
 }
 
+function normalizeAssistantTopic(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function getAssistantTaskPriorityScore(task) {
+  const avg = calcAvg(task);
+  const overdueWeight = isOverdue(task) ? 2 : 0;
+  const todayWeight = isDueToday(task) ? 1 : 0;
+  const stageWeight = task?.stage === 'Atrasado' ? 1 : 0;
+  return avg + overdueWeight + todayWeight + stageWeight;
+}
+
+function buildAttentionByAreaData() {
+  const groups = new Map();
+
+  tasks.forEach(task => {
+    const rawArea = (task?.where || '').trim();
+    const area = rawArea || 'Não informado';
+    const current = groups.get(area) || {
+      area,
+      total: 0,
+      overdue: 0,
+      dueToday: 0,
+      done: 0,
+      prioritySum: 0,
+      topTasks: []
+    };
+
+    current.total += 1;
+    if (isOverdue(task)) current.overdue += 1;
+    if (isDueToday(task)) current.dueToday += 1;
+    if (isDoneTask(task)) current.done += 1;
+    current.prioritySum += getAssistantTaskPriorityScore(task);
+    current.topTasks.push(task);
+    groups.set(area, current);
+  });
+
+  return [...groups.values()]
+    .map(group => ({
+      ...group,
+      avgPriority: group.total ? group.prioritySum / group.total : 0,
+      topTasks: group.topTasks
+        .sort((a, b) => getAssistantTaskPriorityScore(b) - getAssistantTaskPriorityScore(a))
+        .slice(0, 3)
+    }))
+    .sort((a, b) => {
+      if (b.overdue !== a.overdue) return b.overdue - a.overdue;
+      if (b.dueToday !== a.dueToday) return b.dueToday - a.dueToday;
+      return b.avgPriority - a.avgPriority;
+    });
+}
+
 function answerProjectQuestion(question) {
-  const q = String(question || '').toLowerCase();
+  const q = normalizeAssistantTopic(question);
   const projectName = getCurrentProjectNameForAssistant();
   const overdueTasks = tasks.filter(t => isOverdue(t));
   const todayTasks = tasks.filter(t => isDueToday(t));
   const doneTasks = tasks.filter(t => isDoneTask(t));
   const totalCost = tasks.reduce((acc, t) => acc + parseCurrencyToNumber(t.howMuch), 0);
+  const attentionByArea = buildAttentionByAreaData();
   const topCostTasks = [...tasks]
     .sort((a, b) => parseCurrencyToNumber(b.howMuch) - parseCurrencyToNumber(a.howMuch))
     .filter(t => parseCurrencyToNumber(t.howMuch) > 0)
@@ -1366,6 +1423,34 @@ function answerProjectQuestion(question) {
     return `Distribuição de responsabilidade:\n${leaders.map(item => `• ${item.name}: ${item.count} tarefa(s) como responsável`).join('\n')}`;
   }
 
+  if (
+    q.includes('departamento') ||
+    q.includes('departamentos') ||
+    q.includes('setor') ||
+    q.includes('setores') ||
+    q.includes('area') ||
+    q.includes('areas') ||
+    q.includes('aten') ||
+    q.includes('risco') ||
+    q.includes('critic')
+  ) {
+    const relevantAreas = attentionByArea.filter(item => item.overdue > 0 || item.dueToday > 0 || item.avgPriority >= 4).slice(0, 4);
+    const areasToUse = relevantAreas.length ? relevantAreas : attentionByArea.slice(0, 4);
+
+    if (!areasToUse.length) {
+      return `Ainda não há áreas/departamentos identificados no campo "Onde" de ${projectName}. Se você preencher esse campo, consigo apontar quais setores precisam de mais atenção.`;
+    }
+
+    return `Áreas que mais precisam de atenção em ${projectName}:\n${areasToUse.map(area => {
+      const reasons = [];
+      if (area.overdue) reasons.push(`${area.overdue} atrasada(s)`);
+      if (area.dueToday) reasons.push(`${area.dueToday} vencendo hoje`);
+      if (!area.overdue && !area.dueToday) reasons.push(`prioridade média ${area.avgPriority.toFixed(2)}`);
+      const highlights = area.topTasks.slice(0, 2).map(task => task.what || 'Sem título').join(', ');
+      return `• ${area.area}: ${reasons.join(' • ')}${highlights ? ` • tarefas-chave: ${highlights}` : ''}`;
+    }).join('\n')}`;
+  }
+
   if (q.includes('próxim') || q.includes('recom') || q.includes('sug') || q.includes('ação')) {
     const suggestions = [];
     if (overdueTasks.length) suggestions.push(`priorize ${overdueTasks.length} tarefa(s) atrasada(s) antes de abrir novas frentes`);
@@ -1384,7 +1469,7 @@ function answerProjectQuestion(question) {
     .slice(0, 3)
     .filter(t => t.avg > 0);
 
-  return `Posso te ajudar com resumos, atrasos, custos, responsáveis e próximos passos de ${projectName}. No momento, vejo ${tasks.length} tarefa(s), ${overdueTasks.length} atrasada(s) e ${doneTasks.length} concluída(s). ${highPriorityTasks.length ? `Prioridades mais altas: ${highPriorityTasks.map(t => `${t.what || 'Sem título'} (${t.avg.toFixed(2)})`).join(', ')}.` : ''}`.trim();
+  return `Entendi a pergunta, mas ainda não achei uma intenção exata. Posso responder sobre departamentos/áreas, atrasos, custos, responsáveis, riscos e próximos passos de ${projectName}. No momento, vejo ${tasks.length} tarefa(s), ${overdueTasks.length} atrasada(s) e ${doneTasks.length} concluída(s). ${highPriorityTasks.length ? `Prioridades mais altas: ${highPriorityTasks.map(t => `${t.what || 'Sem título'} (${t.avg.toFixed(2)})`).join(', ')}.` : ''}`.trim();
 }
 
 function ensureReadOnlyAccess(actionLabel = 'modificar este projeto') {
