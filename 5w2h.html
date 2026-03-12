@@ -1805,6 +1805,21 @@ function build5w2hPayload() {
   };
 }
 
+function generateProjectCode5w2h() {
+  const randomNumbers = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
+  const positions = ['inicio', 'meio', 'fim'];
+  const position = positions[Math.floor(Math.random() * positions.length)];
+
+  switch (position) {
+    case 'inicio':
+      return 'CEC' + randomNumbers;
+    case 'meio':
+      return randomNumbers.substring(0, 2) + 'CEC' + randomNumbers.substring(2);
+    case 'fim':
+      return randomNumbers + 'CEC';
+  }
+}
+
 function mergeProjectData(existingData) {
   const base = existingData && typeof existingData === 'object' ? { ...existingData } : {};
   base.fivew2h = build5w2hPayload();
@@ -2085,6 +2100,7 @@ async function performSaveAsNewProject(projectName) {
   if (!client || !session) return false;
 
   const now = new Date().toISOString();
+  const projectCode = generateProjectCode5w2h();
   // Não incluir evaluator_names no payload para que esses projetos
   // não apareçam no modal "Carregar Tarefa" do index.html
   // (o discriminador é: data.evaluator_names !== undefined → projeto do index.html)
@@ -2092,7 +2108,7 @@ async function performSaveAsNewProject(projectName) {
 
   const { data: inserted, error } = await client
     .from('projects')
-    .insert([{ name: projectName, data: payload, user_id: session.user.id, created_at: now }])
+    .insert([{ name: projectName, data: payload, user_id: session.user.id, created_at: now, project_code: projectCode }])
     .select('id, name, project_code')
     .single();
 
