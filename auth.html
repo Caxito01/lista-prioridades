@@ -328,7 +328,7 @@
             padding: 24px;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
         }
 
         .form-card {
@@ -648,7 +648,7 @@
 
             .auth-page {
                 grid-template-columns: minmax(0, 1.5fr) minmax(420px, 0.9fr);
-                align-items: stretch;
+                align-items: start;
             }
 
             .brand-panel,
@@ -662,6 +662,8 @@
 
             .auth-container {
                 padding: 26px;
+                position: sticky;
+                top: 24px;
             }
         }
 
@@ -734,8 +736,8 @@
                         <span>Planejamento, execução, atraso e concluído em um só fluxo.</span>
                     </div>
                     <div class="highlight-chip">
-                        <strong>💾 Banco + códigos</strong>
-                        <span>Salve no Supabase, compartilhe por código e retome rápido.</span>
+                        <strong>💾 Dados + acesso rápido</strong>
+                        <span>Salve seus projetos com segurança, compartilhe por código e continue de onde parou.</span>
                     </div>
                     <div class="highlight-chip">
                         <strong>📊 Visão de gestão</strong>
@@ -801,9 +803,9 @@
                 <article class="feature-slide">
                     <div class="feature-icon">🔄</div>
                     <h3>Importação e Exportação</h3>
-                    <p>Traga dados via JSON, salve no banco com código de projeto e faça download das informações sempre que precisar.</p>
+                    <p>Importe dados via JSON, salve projetos com código de acesso e faça download das informações sempre que precisar.</p>
                     <ul>
-                        <li>Integração com Supabase e códigos de acesso</li>
+                        <li>Armazenamento online com recuperação prática</li>
                         <li>Compartilhamento e retomada facilitados</li>
                     </ul>
                 </article>
@@ -830,7 +832,7 @@
                 </div>
                 <div class="metric-card">
                     <strong>JSON + DB</strong>
-                    <span>Backup local, importação e sincronização com Supabase.</span>
+                    <span>Backup local, importação e sincronização online simplificada.</span>
                 </div>
                 <div class="metric-card">
                     <strong>CXT / CEC</strong>
