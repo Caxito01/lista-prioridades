@@ -833,6 +833,7 @@ let sortCost   = null;  // null | 'asc' | 'desc'
 let nextId     = 1;
 let projectSelectionMode = null;
 let projectSelectionList = [];
+let isCodeAccessReadOnly = false;
 
 // Mapa de estágios do sistema principal → kanban (precisa estar antes do init)
 const STAGE_MAP = {
@@ -846,7 +847,7 @@ const STAGE_MAP = {
 /* ──────────────────────────────────────────────
    INIT
    ────────────────────────────────────────────── */
-(function init() {
+(async function init() {
   // Dark mode
   if (localStorage.getItem(LS_KEY_DARK) === '1') applyDark(true, false);
 
@@ -861,6 +862,8 @@ const STAGE_MAP = {
     nextId = tasks.length ? Math.max(...tasks.map(t => t.id)) + 1 : 1;
   } catch(e){}
 
+  isCodeAccessReadOnly = !!((localStorage.getItem('projectCode') || '').trim());
+
   // Se não há tarefas kanban, tenta importar do sistema principal automaticamente
   try {
     if (!tasks.length) {
@@ -871,9 +874,12 @@ const STAGE_MAP = {
     }
   } catch(e) { console.warn('Auto-import falhou:', e); }
 
+  await loadProjectByCode5w2h();
+
   buildTableHeader();
   updateDbBanner();
   refreshLinkedProjectCodeFromDb();
+  updateReadOnlyUi();
   renderTable();
 
   // Inicia sincronização em tempo real se houver projeto vinculado
@@ -993,6 +999,46 @@ function renderTable() {
   }
 
   tbody.innerHTML = list.map((t, idx) => buildRow(t, idx + 1)).join('');
+}
+
+function ensureReadOnlyAccess(actionLabel = 'modificar este projeto') {
+  if (!isCodeAccessReadOnly) return false;
+  toast(`Acesso por código é somente leitura. Você não pode ${actionLabel}.`, 'error');
+  return true;
+}
+
+function updateReadOnlyUi() {
+  const message = 'Acesso por código: somente leitura';
+  const selectors = [
+    '.hdr-actions .btn.btn-primary',
+    '.hdr-actions .btn.btn-warning',
+    '.hdr-actions .btn.btn-db',
+    '.hdr-actions .btn.btn-info',
+    '.hdr-actions .btn.btn-dark',
+    '#dbProjectBanner .btn'
+  ];
+
+  selectors.forEach(selector => {
+    document.querySelectorAll(selector).forEach(el => {
+      if (!isCodeAccessReadOnly) {
+        el.disabled = false;
+        el.style.opacity = '';
+        el.style.cursor = '';
+        if (el.dataset.originalTitle !== undefined) {
+          el.title = el.dataset.originalTitle;
+        }
+        return;
+      }
+
+      if (el.dataset.originalTitle === undefined) {
+        el.dataset.originalTitle = el.title || '';
+      }
+      el.disabled = true;
+      el.style.opacity = '0.55';
+      el.style.cursor = 'not-allowed';
+      el.title = message;
+    });
+  });
 }
 
 function buildRow(t, num) {
@@ -1361,6 +1407,7 @@ function clearFilters() {
    CHANGE STAGE (inline)
    ────────────────────────────────────────────── */
 function changeStage(id, newStage) {
+  if (ensureReadOnlyAccess('alterar o estágio')) return;
   const t = tasks.find(x => x.id === id);
   if (t) { t.stage = newStage; saveLocal(); renderTable(); }
 }
@@ -1369,6 +1416,7 @@ function changeStage(id, newStage) {
    DELETE
    ────────────────────────────────────────────── */
 function deleteTask(id) {
+  if (ensureReadOnlyAccess('excluir tarefas')) return;
   const t = tasks.find(x => x.id === id);
   if (!t) return;
   showConfirm(
@@ -1388,6 +1436,7 @@ function deleteTask(id) {
    MODAL
    ────────────────────────────────────────────── */
 function openModal(id) {
+  if (ensureReadOnlyAccess(id !== null ? 'editar tarefas' : 'criar tarefas')) return;
   editingId = id;
   const t = id !== null ? tasks.find(x => x.id === id) : null;
 
@@ -1455,6 +1504,7 @@ function showValidationError(message, fieldId) {
 }
 
 function saveModal() {
+  if (ensureReadOnlyAccess(editingId !== null ? 'salvar alterações' : 'criar tarefas')) return;
   const what = document.getElementById('mWhat').value.trim();
   if (!what) { showValidationError('O campo "O quê" é obrigatório', 'mWhat'); return; }
   const stage = document.getElementById('mStage').value;
@@ -1520,6 +1570,7 @@ function saveModal() {
    RENAME EVALUATOR (dbl-click on header)
    ────────────────────────────────────────────── */
 function renameEval(idx) {
+  if (ensureReadOnlyAccess('renomear avaliadores')) return;
   const cur = evaluators[idx];
   const name = prompt(`Renomear avaliador ${idx+1}:\n(Atual: "${cur}")`, cur);
   if (!name || name.trim() === cur) return;
@@ -1602,6 +1653,7 @@ function _doImportFromMain(interactive) {
 
 /** Botão "Importar do Sistema" — chamado manualmente pelo usuário */
 function importFromMain() {
+  if (ensureReadOnlyAccess('importar tarefas')) return;
   const mainRaw = localStorage.getItem('tasks');
   if (!mainRaw) {
     toast('Nenhuma tarefa encontrada no Sistema de Prioridades. Abra o sistema principal e carregue um projeto primeiro.', 'error');
@@ -1841,6 +1893,64 @@ async function fetchUserProjects(client, userId) {
   return projects || [];
 }
 
+async function loadProjectByCode5w2h() {
+  const projectCode = (localStorage.getItem('projectCode') || '').trim().toUpperCase();
+  const projectId = localStorage.getItem('projectId');
+  if (!projectCode || !projectCode.includes('CEC')) return false;
+
+  try {
+    await window.initSupabase();
+    const client = window.getClient();
+    if (!client) return false;
+
+    let project = null;
+
+    const { data: rpcResult, error: rpcError } = await client
+      .rpc('get_project_by_code', { p_code: projectCode });
+
+    if (!rpcError && rpcResult && rpcResult.length > 0) {
+      project = rpcResult[0];
+    } else if (projectId) {
+      const { data: byId } = await client
+        .from('projects')
+        .select('*')
+        .eq('id', projectId)
+        .limit(1)
+        .single();
+      project = byId || null;
+    }
+
+    if (!project) {
+      const { data: byCode } = await client
+        .from('projects')
+        .select('*')
+        .ilike('project_code', projectCode)
+        .limit(1)
+        .single();
+      project = byCode || null;
+    }
+
+    if (!project) return false;
+
+    const parsed = parseFivew2hFromProjectData(project.data);
+    if (!parsed || !Array.isArray(parsed.tasks)) return false;
+
+    tasks = parsed.tasks;
+    if (Array.isArray(parsed.evaluators) && parsed.evaluators.length >= 4) {
+      evaluators = parsed.evaluators.slice(0, 4);
+    }
+
+    nextId = tasks.length ? Math.max(...tasks.map(t => Number(t.id) || 0)) + 1 : 1;
+    localStorage.setItem(LS_KEY_EVALS, JSON.stringify(evaluators));
+    localStorage.setItem(LS_KEY_TASKS, JSON.stringify(tasks));
+    setCurrentDbProject(project.id, project.name || 'Projeto 5W2H', project.project_code || projectCode);
+    return true;
+  } catch (e) {
+    console.warn('Falha ao carregar projeto 5W2H por código:', e?.message || e);
+    return false;
+  }
+}
+
 function updateDbBanner() {
   const projectId = localStorage.getItem(LS_KEY_DB_PROJECT_ID);
   const projectName = localStorage.getItem(LS_KEY_DB_PROJECT_NAME);
@@ -2049,6 +2159,7 @@ async function confirmNewProjectFromModal() {
 }
 
 async function saveToDatabase5w2h() {
+  if (ensureReadOnlyAccess('salvar no banco')) return;
   if (!tasks.length) {
     toast('A lista está vazia. Adicione ao menos uma tarefa antes de salvar.', 'error');
     return;

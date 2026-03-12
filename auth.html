@@ -590,7 +590,7 @@
             }
 
             if (!validarCodigoProject(code)) {
-                showMessage('❌ Código inválido! Use o formato: 8 caracteres contendo CXT (ex: CXT12345)', 'error');
+                showMessage('❌ Código inválido! Use o formato: 8 caracteres contendo CXT ou CEC (ex: CXT12345 ou CEC12345)', 'error');
                 return;
             }
 
@@ -647,9 +647,10 @@
                     localStorage.setItem('projectId',   project.id);
                     localStorage.setItem('projectName', project.name);
                     console.log('💾 Salvo no localStorage — code:', storedCode, '| id:', project.id);
+                    const targetPage = storedCode.toUpperCase().includes('CEC') ? '5w2h.html' : 'index.html';
                     showMessage('✅ Acesso concedido! Carregando...', 'success');
                     setTimeout(() => {
-                        window.location.href = 'index.html?t=' + Date.now();
+                        window.location.href = targetPage + '?t=' + Date.now();
                     }, 800);
                 }
             } catch (error) {
@@ -669,8 +670,9 @@
                 return false;
             }
             
-            // Verifica se contém CXT em qualquer posição (case-insensitive)
-            if (!cleaned.toUpperCase().includes('CXT')) {
+            // Verifica se contém CXT ou CEC em qualquer posição (case-insensitive)
+            const upper = cleaned.toUpperCase();
+            if (!upper.includes('CXT') && !upper.includes('CEC')) {
                 return false;
             }
             
