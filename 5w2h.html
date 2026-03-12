@@ -1374,6 +1374,54 @@ function buildAttentionByAreaData() {
     });
 }
 
+function buildCostByAreaData() {
+  const groups = new Map();
+
+  tasks.forEach(task => {
+    const area = (task?.where || '').trim() || 'Não informado';
+    const current = groups.get(area) || { area, totalCost: 0, taskCount: 0, topTasks: [] };
+    current.totalCost += parseCurrencyToNumber(task?.howMuch);
+    current.taskCount += 1;
+    current.topTasks.push(task);
+    groups.set(area, current);
+  });
+
+  return [...groups.values()]
+    .map(group => ({
+      ...group,
+      topTasks: group.topTasks
+        .sort((a, b) => parseCurrencyToNumber(b.howMuch) - parseCurrencyToNumber(a.howMuch))
+        .slice(0, 3)
+    }))
+    .sort((a, b) => b.totalCost - a.totalCost);
+}
+
+function buildResponsibilityLoadData() {
+  return evaluators.map((name, idx) => {
+    const assignedTasks = tasks.filter(t => t.responsible === idx);
+    const overdue = assignedTasks.filter(t => isOverdue(t)).length;
+    const dueToday = assignedTasks.filter(t => isDueToday(t)).length;
+    const avgPriority = assignedTasks.length
+      ? assignedTasks.reduce((acc, task) => acc + getAssistantTaskPriorityScore(task), 0) / assignedTasks.length
+      : 0;
+
+    return {
+      name,
+      count: assignedTasks.length,
+      overdue,
+      dueToday,
+      avgPriority,
+      topTasks: assignedTasks
+        .sort((a, b) => getAssistantTaskPriorityScore(b) - getAssistantTaskPriorityScore(a))
+        .slice(0, 3)
+    };
+  }).sort((a, b) => {
+    if (b.overdue !== a.overdue) return b.overdue - a.overdue;
+    if (b.count !== a.count) return b.count - a.count;
+    return b.avgPriority - a.avgPriority;
+  });
+}
+
 function answerProjectQuestion(question) {
   const q = normalizeAssistantTopic(question);
   const projectName = getCurrentProjectNameForAssistant();
@@ -1382,17 +1430,12 @@ function answerProjectQuestion(question) {
   const doneTasks = tasks.filter(t => isDoneTask(t));
   const totalCost = tasks.reduce((acc, t) => acc + parseCurrencyToNumber(t.howMuch), 0);
   const attentionByArea = buildAttentionByAreaData();
+  const costByArea = buildCostByAreaData();
   const topCostTasks = [...tasks]
     .sort((a, b) => parseCurrencyToNumber(b.howMuch) - parseCurrencyToNumber(a.howMuch))
     .filter(t => parseCurrencyToNumber(t.howMuch) > 0)
     .slice(0, 3);
-  const responsibilityStats = evaluators.map((name, idx) => {
-    const responsibleTasks = tasks.filter(t => t.responsible === idx);
-    const avgScore = responsibleTasks.length
-      ? (responsibleTasks.reduce((acc, t) => acc + (Number(t.who?.[idx]) || 0), 0) / responsibleTasks.length)
-      : 0;
-    return { name, count: responsibleTasks.length, avgScore };
-  }).sort((a, b) => b.count - a.count || b.avgScore - a.avgScore);
+  const responsibilityStats = buildResponsibilityLoadData();
 
   if (!tasks.length) {
     return `O projeto ${projectName} ainda não possui tarefas carregadas. Adicione ou carregue um projeto para eu analisar melhor.`;
@@ -1417,10 +1460,41 @@ function answerProjectQuestion(question) {
     return `O custo total do projeto é ${formatBRL(totalCost)}. As tarefas com maior custo são:\n${topCostTasks.map(t => `• ${t.what || 'Sem título'} — ${t.howMuch || formatBRL(parseCurrencyToNumber(t.howMuch))}`).join('\n')}`;
   }
 
+  if ((q.includes('cust') || q.includes('gasto') || q.includes('orc')) && (q.includes('area') || q.includes('areas') || q.includes('departamento') || q.includes('setor'))) {
+    const relevantAreas = costByArea.filter(item => item.totalCost > 0).slice(0, 4);
+    if (!relevantAreas.length) return `Ainda não há custos distribuídos por área em ${projectName}. Preencha o campo de custo e o campo "Onde" para eu detalhar isso.`;
+    return `Áreas com maior custo em ${projectName}:\n${relevantAreas.map(area => {
+      const highlights = area.topTasks.slice(0, 2).map(task => `${task.what || 'Sem título'} (${task.howMuch || formatBRL(parseCurrencyToNumber(task.howMuch))})`).join(', ');
+      return `• ${area.area}: ${formatBRL(area.totalCost)} em ${area.taskCount} tarefa(s)${highlights ? ` • destaques: ${highlights}` : ''}`;
+    }).join('\n')}`;
+  }
+
   if (q.includes('respons') || q.includes('quem') || q.includes('dono')) {
     const leaders = responsibilityStats.filter(item => item.count > 0).slice(0, 3);
     if (!leaders.length) return `Ainda não há responsáveis definidos nas tarefas de ${projectName}.`;
     return `Distribuição de responsabilidade:\n${leaders.map(item => `• ${item.name}: ${item.count} tarefa(s) como responsável`).join('\n')}`;
+  }
+
+  if (
+    q.includes('sobrecar') ||
+    q.includes('sobrecarga') ||
+    q.includes('quem precisa de ajuda') ||
+    q.includes('precisa de ajuda') ||
+    q.includes('ajuda') ||
+    q.includes('apoio') ||
+    q.includes('carregado')
+  ) {
+    const criticalPeople = responsibilityStats.filter(item => item.count > 0).slice(0, 4);
+    if (!criticalPeople.length) return `Ainda não há responsáveis definidos em ${projectName}, então não consigo medir sobrecarga por pessoa.`;
+
+    return `Pessoas que merecem mais atenção em ${projectName}:\n${criticalPeople.map(person => {
+      const reasons = [];
+      if (person.overdue) reasons.push(`${person.overdue} tarefa(s) atrasada(s)`);
+      if (person.dueToday) reasons.push(`${person.dueToday} vencendo hoje`);
+      reasons.push(`${person.count} tarefa(s) sob responsabilidade`);
+      const highlights = person.topTasks.slice(0, 2).map(task => task.what || 'Sem título').join(', ');
+      return `• ${person.name}: ${reasons.join(' • ')}${highlights ? ` • foco em: ${highlights}` : ''}`;
+    }).join('\n')}`;
   }
 
   if (
