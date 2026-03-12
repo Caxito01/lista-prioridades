@@ -1958,13 +1958,13 @@ function showProjectSelectModal(mode, projects) {
   document.body.appendChild(modal);
 }
 
-function selectProjectFromModal(projectId) {
+async function selectProjectFromModal(projectId) {
   const project = projectSelectionList.find(p => p.id === projectId);
   if (!project) return;
   if (projectSelectionMode === 'save') {
     performSaveToExistingProject(project);
   } else {
-    performLoadProject(project);
+    await performLoadProject(project);
   }
 }
 
@@ -2182,12 +2182,36 @@ async function loadFromDatabase5w2h() {
   showProjectSelectModal('load', projects);
 }
 
-function performLoadProject(project) {
+async function ensureCecProjectCode(project) {
+  const existingCode = project?.project_code || '';
+  if (existingCode.toUpperCase().includes('CEC')) return existingCode;
+
+  const { client, session } = await getSupabaseSession();
+  if (!client || !session) return existingCode;
+
+  const newCode = generateProjectCode5w2h();
+  const { error } = await client
+    .from('projects')
+    .update({ project_code: newCode, updated_at: new Date().toISOString() })
+    .eq('id', project.id)
+    .eq('user_id', session.user.id);
+
+  if (error) {
+    console.warn('Não foi possível atualizar o código do projeto:', error.message);
+    return existingCode;
+  }
+
+  return newCode;
+}
+
+async function performLoadProject(project) {
   const parsed = parseFivew2hFromProjectData(project.data);
   if (!parsed || !Array.isArray(parsed.tasks)) {
     toast('Este projeto não possui dados 5W2H salvos.', 'error');
     return;
   }
+
+  const projectCode = await ensureCecProjectCode(project);
 
   tasks = parsed.tasks;
   if (Array.isArray(parsed.evaluators) && parsed.evaluators.length >= 4) {
@@ -2197,7 +2221,7 @@ function performLoadProject(project) {
   nextId = tasks.length ? Math.max(...tasks.map(t => Number(t.id) || 0)) + 1 : 1;
   localStorage.setItem(LS_KEY_EVALS, JSON.stringify(evaluators));
   saveLocal();
-  setCurrentDbProject(project.id, project.name || 'Projeto 5W2H', project.project_code || '');
+  setCurrentDbProject(project.id, project.name || 'Projeto 5W2H', projectCode || '');
 
   closeProjectSelectModal();
   buildTableHeader();
