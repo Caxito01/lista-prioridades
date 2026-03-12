@@ -2076,12 +2076,16 @@ async function performSaveToExistingProject(project) {
   if (!client || !session) return;
 
   const payload = mergeProjectData(project.data);
+  const existingCode = project.project_code || '';
+  const projectCode = existingCode.toUpperCase().includes('CEC')
+    ? existingCode
+    : generateProjectCode5w2h();
   // Garantir que projetos 5W2H não tenham evaluator_names no nível raiz
   // (esse campo é o discriminador usado pelo index.html para filtrar projetos compatíveis)
   delete payload.evaluator_names;
   const { error } = await client
     .from('projects')
-    .update({ data: payload, updated_at: new Date().toISOString() })
+    .update({ data: payload, updated_at: new Date().toISOString(), project_code: projectCode })
     .eq('id', project.id)
     .eq('user_id', session.user.id);
 
@@ -2090,7 +2094,7 @@ async function performSaveToExistingProject(project) {
     return;
   }
 
-  setCurrentDbProject(project.id, project.name || 'Projeto 5W2H', project.project_code || '');
+  setCurrentDbProject(project.id, project.name || 'Projeto 5W2H', projectCode);
   closeProjectSelectModal();
   toast('Projeto atualizado no banco com sucesso!', 'success');
 }
