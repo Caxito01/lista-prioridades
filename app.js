@@ -1134,11 +1134,20 @@ function formatSupabaseDate(dateString) {
 
 // Mostrar seleção de projetos (mesmo layout do "Salvar Tarefa")
 function showProjectSelection(projects) {
-    // Filtrar apenas projetos compatíveis com index.html:
-    // projetos do 5w2h.html não têm data.evaluator_names
-    const compatible = (projects || []).filter(p =>
-        p.data && p.data.evaluator_names !== undefined
-    );
+    // Filtrar projetos compatíveis com index.html.
+    // Regra principal: códigos CXT sempre aparecem no index, mesmo que também
+    // tenham payload fivew2h após exportação/integração com a outra tela.
+    // Compatibilidade legada: projetos antigos sem project_code continuam
+    // aparecendo se tiverem a estrutura clássica do index (evaluator_names + tasks).
+    const compatible = (projects || []).filter(p => {
+        const code = String(p?.project_code || '').toUpperCase();
+        const data = p?.data || {};
+        const hasMainStructure = data.evaluator_names !== undefined || Array.isArray(data.tasks);
+
+        if (code.includes('CXT')) return true;
+        if (code.includes('CEC')) return false;
+        return !!(p.data && hasMainStructure);
+    });
 
     let projectsList = '';
 
