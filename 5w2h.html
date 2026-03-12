@@ -835,6 +835,23 @@ let projectSelectionMode = null;
 let projectSelectionList = [];
 let isCodeAccessReadOnly = false;
 
+async function detectCodeAccessReadOnly() {
+  const projectCode = (localStorage.getItem('projectCode') || '').trim();
+  if (!projectCode) return false;
+
+  try {
+    await window.initSupabase();
+    const client = window.getClient();
+    if (!client || !client.auth) return true;
+
+    const { data, error } = await client.auth.getSession();
+    if (error) return true;
+    return !data?.session;
+  } catch (e) {
+    return true;
+  }
+}
+
 // Mapa de estágios do sistema principal → kanban (precisa estar antes do init)
 const STAGE_MAP = {
   'ATRASADO':        'Atrasado',
@@ -862,7 +879,7 @@ const STAGE_MAP = {
     nextId = tasks.length ? Math.max(...tasks.map(t => t.id)) + 1 : 1;
   } catch(e){}
 
-  isCodeAccessReadOnly = !!((localStorage.getItem('projectCode') || '').trim());
+  isCodeAccessReadOnly = await detectCodeAccessReadOnly();
 
   // Se não há tarefas kanban, tenta importar do sistema principal automaticamente
   try {
