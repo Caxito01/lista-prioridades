@@ -488,6 +488,170 @@
       font-size: 0.82rem;
     }
 
+    .ai-assistant-dock {
+      position: sticky;
+      bottom: 0;
+      z-index: 950;
+      max-width: 1600px;
+      margin: 0 auto 18px;
+      padding: 0 18px;
+    }
+
+    .ai-assistant-card {
+      background: rgba(255,255,255,0.96);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(102,126,234,0.18);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+      border-radius: 18px;
+      overflow: hidden;
+    }
+
+    body.dark .ai-assistant-card {
+      background: rgba(30,30,46,0.96);
+      border-color: rgba(203,166,247,0.2);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+
+    .ai-assistant-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 16px 8px;
+    }
+
+    .ai-assistant-title {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .ai-assistant-title strong {
+      font-size: 0.92rem;
+      color: var(--primary);
+    }
+
+    .ai-assistant-title span {
+      font-size: 0.76rem;
+      color: #666;
+    }
+
+    body.dark .ai-assistant-title span { color: #a6adc8; }
+
+    .ai-assistant-chat {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 220px;
+      overflow-y: auto;
+      padding: 0 16px 12px;
+    }
+
+    .ai-msg {
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-size: 0.84rem;
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+
+    .ai-msg-user {
+      align-self: flex-end;
+      background: rgba(102,126,234,0.12);
+      border: 1px solid rgba(102,126,234,0.18);
+      max-width: min(78%, 680px);
+    }
+
+    .ai-msg-assistant {
+      align-self: flex-start;
+      background: rgba(40,167,69,0.08);
+      border: 1px solid rgba(40,167,69,0.16);
+      max-width: min(88%, 820px);
+    }
+
+    body.dark .ai-msg-user {
+      background: rgba(102,126,234,0.18);
+      border-color: rgba(102,126,234,0.28);
+    }
+
+    body.dark .ai-msg-assistant {
+      background: rgba(166,227,161,0.08);
+      border-color: rgba(166,227,161,0.18);
+    }
+
+    .ai-assistant-form {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      padding: 0 16px 16px;
+      align-items: end;
+    }
+
+    .ai-input-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .ai-input-wrap small {
+      font-size: 0.72rem;
+      color: #777;
+    }
+
+    body.dark .ai-input-wrap small { color: #9399b2; }
+
+    #aiQuestionInput {
+      width: 100%;
+      min-height: 48px;
+      max-height: 120px;
+      resize: vertical;
+      padding: 12px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      font-size: 0.88rem;
+      font-family: inherit;
+      background: var(--card-bg);
+      color: var(--text);
+    }
+
+    #aiQuestionInput:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(102,126,234,0.12);
+    }
+
+    .ai-assistant-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .ai-chip-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 0 16px 12px;
+    }
+
+    .ai-chip {
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .ai-chip:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+
     /* ===== PRINT ===== */
 
     /* ===== RESPONSIVE ===== */
@@ -495,6 +659,9 @@
       .hdr-inner { flex-direction: column; align-items: flex-start; }
       .form-grid { grid-template-columns: 1fr; }
       .scores-row { grid-template-columns: 1fr 1fr; }
+      .ai-assistant-form { grid-template-columns: 1fr; }
+      .ai-assistant-actions { justify-content: flex-end; }
+      .ai-msg-user, .ai-msg-assistant { max-width: 100%; }
     }
 
     /* ===== EVALUATOR HEADER TOOLTIP ===== */
@@ -719,6 +886,42 @@
 
 </main>
 
+<div class="ai-assistant-dock">
+  <section class="ai-assistant-card" aria-label="Assistente do projeto">
+    <div class="ai-assistant-header">
+      <div class="ai-assistant-title">
+        <strong>🤖 Assistente do projeto</strong>
+        <span id="aiAssistantSubtitle">Pergunte sobre tarefas, prazos, custos, responsáveis ou riscos do projeto atual.</span>
+      </div>
+      <button class="btn btn-sm btn-gray" type="button" onclick="clearAiAssistantChat()" title="Limpar conversa">🧹 Limpar</button>
+    </div>
+
+    <div class="ai-chip-row">
+      <button class="ai-chip" type="button" onclick="askAiSuggestion('Resuma este projeto')">Resumo</button>
+      <button class="ai-chip" type="button" onclick="askAiSuggestion('Quais tarefas estão atrasadas?')">Atrasos</button>
+      <button class="ai-chip" type="button" onclick="askAiSuggestion('Qual o custo total e as tarefas mais caras?')">Custos</button>
+      <button class="ai-chip" type="button" onclick="askAiSuggestion('Quem está com mais responsabilidade?')">Responsáveis</button>
+      <button class="ai-chip" type="button" onclick="askAiSuggestion('Quais próximos passos você recomenda?')">Próximos passos</button>
+    </div>
+
+    <div class="ai-assistant-chat" id="aiAssistantChat">
+      <div class="ai-msg ai-msg-assistant" id="aiAssistantWelcome">
+        Estou pronto para responder com base no projeto 5W2H carregado nesta tela. Posso resumir, apontar atrasos, custos, gargalos e próximos passos.
+      </div>
+    </div>
+
+    <form class="ai-assistant-form" onsubmit="submitAiQuestion(event)">
+      <div class="ai-input-wrap">
+        <textarea id="aiQuestionInput" placeholder="Ex.: Quais tarefas estão atrasadas e quem é responsável por elas?"></textarea>
+        <small>Obs.: esta versão responde com base nos dados do projeto atual na própria página. Posso plugar um provedor externo depois.</small>
+      </div>
+      <div class="ai-assistant-actions">
+        <button class="btn btn-primary" type="submit">Perguntar</button>
+      </div>
+    </form>
+  </section>
+</div>
+
 <footer>
   &copy; CECM — Sistema de Gerenciamento de Prioridades &nbsp;|&nbsp; CECM 5W2H
 </footer>
@@ -834,6 +1037,7 @@ let nextId     = 1;
 let projectSelectionMode = null;
 let projectSelectionList = [];
 let isCodeAccessReadOnly = false;
+let aiChatHistory = [];
 
 async function detectCodeAccessReadOnly() {
   const projectCode = (localStorage.getItem('projectCode') || '').trim();
@@ -898,6 +1102,7 @@ const STAGE_MAP = {
   refreshLinkedProjectCodeFromDb();
   updateReadOnlyUi();
   renderTable();
+  initializeAiAssistant();
 
   // Inicia sincronização em tempo real se houver projeto vinculado
   setTimeout(startRealtimeSync, 1000);
@@ -1012,10 +1217,142 @@ function renderTable() {
     tbody.innerHTML = `<tr class="empty-row"><td colspan="${8 + evaluators.length + 2}">
       Nenhuma tarefa encontrada. Clique em <strong>➕ Nova Tarefa</strong> para começar.
     </td></tr>`;
+    refreshAiAssistantSubtitle();
     return;
   }
 
   tbody.innerHTML = list.map((t, idx) => buildRow(t, idx + 1)).join('');
+  refreshAiAssistantSubtitle();
+}
+
+function getCurrentProjectNameForAssistant() {
+  return localStorage.getItem(LS_KEY_DB_PROJECT_NAME) || 'Projeto 5W2H atual';
+}
+
+function refreshAiAssistantSubtitle() {
+  const el = document.getElementById('aiAssistantSubtitle');
+  if (!el) return;
+  const projectName = getCurrentProjectNameForAssistant();
+  const overdue = tasks.filter(t => isOverdue(t)).length;
+  const totalCost = tasks.reduce((acc, t) => acc + parseCurrencyToNumber(t.howMuch), 0);
+  el.textContent = `${projectName} • ${tasks.length} tarefa(s) • ${overdue} atrasada(s) • custo total ${formatBRL(totalCost)}`;
+}
+
+function initializeAiAssistant() {
+  aiChatHistory = [];
+  refreshAiAssistantSubtitle();
+}
+
+function clearAiAssistantChat() {
+  aiChatHistory = [];
+  const chat = document.getElementById('aiAssistantChat');
+  if (!chat) return;
+  chat.innerHTML = `<div class="ai-msg ai-msg-assistant" id="aiAssistantWelcome">
+    Estou pronto para responder com base no projeto 5W2H carregado nesta tela. Posso resumir, apontar atrasos, custos, gargalos e próximos passos.
+  </div>`;
+}
+
+function appendAiMessage(role, text) {
+  const chat = document.getElementById('aiAssistantChat');
+  if (!chat) return;
+  const div = document.createElement('div');
+  div.className = `ai-msg ${role === 'user' ? 'ai-msg-user' : 'ai-msg-assistant'}`;
+  div.textContent = text;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function submitAiQuestion(event) {
+  event.preventDefault();
+  const input = document.getElementById('aiQuestionInput');
+  const question = input?.value?.trim();
+  if (!question) {
+    toast('Digite uma pergunta sobre o projeto.', 'error');
+    input?.focus();
+    return;
+  }
+
+  appendAiMessage('user', question);
+  const answer = answerProjectQuestion(question);
+  aiChatHistory.push({ role: 'user', content: question }, { role: 'assistant', content: answer });
+  appendAiMessage('assistant', answer);
+  input.value = '';
+}
+
+function askAiSuggestion(question) {
+  const input = document.getElementById('aiQuestionInput');
+  if (input) input.value = question;
+  const fakeEvent = { preventDefault() {} };
+  submitAiQuestion(fakeEvent);
+}
+
+function answerProjectQuestion(question) {
+  const q = String(question || '').toLowerCase();
+  const projectName = getCurrentProjectNameForAssistant();
+  const overdueTasks = tasks.filter(t => isOverdue(t));
+  const todayTasks = tasks.filter(t => isDueToday(t));
+  const doneTasks = tasks.filter(t => isDoneTask(t));
+  const totalCost = tasks.reduce((acc, t) => acc + parseCurrencyToNumber(t.howMuch), 0);
+  const topCostTasks = [...tasks]
+    .sort((a, b) => parseCurrencyToNumber(b.howMuch) - parseCurrencyToNumber(a.howMuch))
+    .filter(t => parseCurrencyToNumber(t.howMuch) > 0)
+    .slice(0, 3);
+  const responsibilityStats = evaluators.map((name, idx) => {
+    const responsibleTasks = tasks.filter(t => t.responsible === idx);
+    const avgScore = responsibleTasks.length
+      ? (responsibleTasks.reduce((acc, t) => acc + (Number(t.who?.[idx]) || 0), 0) / responsibleTasks.length)
+      : 0;
+    return { name, count: responsibleTasks.length, avgScore };
+  }).sort((a, b) => b.count - a.count || b.avgScore - a.avgScore);
+
+  if (!tasks.length) {
+    return `O projeto ${projectName} ainda não possui tarefas carregadas. Adicione ou carregue um projeto para eu analisar melhor.`;
+  }
+
+  if (q.includes('resum') || q.includes('visão geral') || q.includes('geral')) {
+    return `Resumo de ${projectName}: ${tasks.length} tarefa(s) no total, ${doneTasks.length} concluída(s), ${overdueTasks.length} atrasada(s) e ${todayTasks.length} vencendo hoje. O custo total informado é ${formatBRL(totalCost)}.`;
+  }
+
+  if (q.includes('atras')) {
+    if (!overdueTasks.length) return `Boa notícia: não encontrei tarefas atrasadas em ${projectName}.`;
+    return `Tarefas atrasadas em ${projectName} (${overdueTasks.length}):\n${overdueTasks.slice(0, 5).map(t => `• ${t.what || 'Sem título'} — prazo ${fmtDate(t.when)} — responsável ${evaluators[t.responsible] || 'não definido'}`).join('\n')}`;
+  }
+
+  if (q.includes('hoje') || q.includes('vence')) {
+    if (!todayTasks.length) return `Nenhuma tarefa vence hoje em ${projectName}.`;
+    return `Tarefas que vencem hoje:\n${todayTasks.slice(0, 5).map(t => `• ${t.what || 'Sem título'} — estágio ${t.stage || 'não definido'}`).join('\n')}`;
+  }
+
+  if (q.includes('cust') || q.includes('cara') || q.includes('finance')) {
+    if (!topCostTasks.length) return `Ainda não há custos preenchidos nas tarefas de ${projectName}.`;
+    return `O custo total do projeto é ${formatBRL(totalCost)}. As tarefas com maior custo são:\n${topCostTasks.map(t => `• ${t.what || 'Sem título'} — ${t.howMuch || formatBRL(parseCurrencyToNumber(t.howMuch))}`).join('\n')}`;
+  }
+
+  if (q.includes('respons') || q.includes('quem') || q.includes('dono')) {
+    const leaders = responsibilityStats.filter(item => item.count > 0).slice(0, 3);
+    if (!leaders.length) return `Ainda não há responsáveis definidos nas tarefas de ${projectName}.`;
+    return `Distribuição de responsabilidade:\n${leaders.map(item => `• ${item.name}: ${item.count} tarefa(s) como responsável`).join('\n')}`;
+  }
+
+  if (q.includes('próxim') || q.includes('recom') || q.includes('sug') || q.includes('ação')) {
+    const suggestions = [];
+    if (overdueTasks.length) suggestions.push(`priorize ${overdueTasks.length} tarefa(s) atrasada(s) antes de abrir novas frentes`);
+    if (todayTasks.length) suggestions.push(`acompanhe hoje ${todayTasks.length} entrega(s) com vencimento imediato`);
+    if (topCostTasks.length) suggestions.push(`revise as tarefas de maior custo para evitar estouro de orçamento`);
+    const leader = responsibilityStats.find(item => item.count > 0);
+    if (leader) suggestions.push(`confirme a capacidade de ${leader.name}, que concentra ${leader.count} responsabilidade(s)`);
+    return suggestions.length
+      ? `Próximos passos sugeridos para ${projectName}:\n${suggestions.map(item => `• ${item}`).join('\n')}`
+      : `Meu principal conselho para ${projectName} é preencher mais dados de prazo, custo e responsável para gerar recomendações melhores.`;
+  }
+
+  const highPriorityTasks = [...tasks]
+    .map(t => ({ ...t, avg: calcAvg(t) }))
+    .sort((a, b) => b.avg - a.avg)
+    .slice(0, 3)
+    .filter(t => t.avg > 0);
+
+  return `Posso te ajudar com resumos, atrasos, custos, responsáveis e próximos passos de ${projectName}. No momento, vejo ${tasks.length} tarefa(s), ${overdueTasks.length} atrasada(s) e ${doneTasks.length} concluída(s). ${highPriorityTasks.length ? `Prioridades mais altas: ${highPriorityTasks.map(t => `${t.what || 'Sem título'} (${t.avg.toFixed(2)})`).join(', ')}.` : ''}`.trim();
 }
 
 function ensureReadOnlyAccess(actionLabel = 'modificar este projeto') {
