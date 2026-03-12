@@ -652,6 +652,12 @@
       transform: translateY(-1px);
     }
 
+    .ai-assistant-dock.is-hidden .ai-chip-row,
+    .ai-assistant-dock.is-hidden .ai-assistant-chat,
+    .ai-assistant-dock.is-hidden .ai-assistant-form {
+      display: none;
+    }
+
     /* ===== PRINT ===== */
 
     /* ===== RESPONSIVE ===== */
@@ -893,7 +899,10 @@
         <strong>🤖 Assistente do projeto</strong>
         <span id="aiAssistantSubtitle">Pergunte sobre tarefas, prazos, custos, responsáveis ou riscos do projeto atual.</span>
       </div>
-      <button class="btn btn-sm btn-gray" type="button" onclick="clearAiAssistantChat()" title="Limpar conversa">🧹 Limpar</button>
+      <div class="ai-assistant-actions">
+        <button class="btn btn-sm btn-gray" type="button" onclick="clearAiAssistantChat()" title="Limpar conversa">🧹 Limpar</button>
+        <button class="btn btn-sm btn-dark" id="aiToggleBtn" type="button" onclick="toggleAiAssistantVisibility()" title="Ocultar assistente">🙈 Ocultar</button>
+      </div>
     </div>
 
     <div class="ai-chip-row">
@@ -1024,6 +1033,7 @@
 const LS_KEY_TASKS = 'kanban5w2h_tasks';
 const LS_KEY_EVALS = 'kanban5w2h_evaluators';
 const LS_KEY_DARK  = 'kanban5w2h_dark';
+const LS_KEY_AI_ASSISTANT_HIDDEN = 'kanban5w2h_ai_hidden';
 const LS_KEY_DB_PROJECT_ID   = 'kanban5w2h_project_id';
 const LS_KEY_DB_PROJECT_NAME = 'kanban5w2h_project_name';
 const LS_KEY_DB_PROJECT_CODE = 'kanban5w2h_project_code';
@@ -1241,6 +1251,28 @@ function refreshAiAssistantSubtitle() {
 function initializeAiAssistant() {
   aiChatHistory = [];
   refreshAiAssistantSubtitle();
+  applyAiAssistantVisibility();
+}
+
+function isAiAssistantHidden() {
+  return localStorage.getItem(LS_KEY_AI_ASSISTANT_HIDDEN) === '1';
+}
+
+function applyAiAssistantVisibility() {
+  const dock = document.querySelector('.ai-assistant-dock');
+  const btn = document.getElementById('aiToggleBtn');
+  if (!dock || !btn) return;
+
+  const hidden = isAiAssistantHidden();
+  dock.classList.toggle('is-hidden', hidden);
+  btn.textContent = hidden ? '👁️ Mostrar' : '🙈 Ocultar';
+  btn.title = hidden ? 'Mostrar assistente' : 'Ocultar assistente';
+}
+
+function toggleAiAssistantVisibility() {
+  const hidden = !isAiAssistantHidden();
+  localStorage.setItem(LS_KEY_AI_ASSISTANT_HIDDEN, hidden ? '1' : '0');
+  applyAiAssistantVisibility();
 }
 
 function clearAiAssistantChat() {
