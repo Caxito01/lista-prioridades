@@ -8,6 +8,28 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
     <style>
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5568d3;
+            --secondary: #764ba2;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 52%, #5a67d8 100%);
+            --text: #2d3748;
+            --muted: #6b7280;
+            --border: #dfe3f2;
+            --card: rgba(255, 255, 255, 0.94);
+            --card-strong: #ffffff;
+            --shadow: 0 24px 60px rgba(76, 81, 191, 0.22);
+            --success-bg: #d4edda;
+            --success-text: #155724;
+            --success-border: #c3e6cb;
+            --error-bg: #f8d7da;
+            --error-text: #721c24;
+            --error-border: #f5c6cb;
+            --info-bg: #dbeafe;
+            --info-text: #1e40af;
+            --info-border: #bfdbfe;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -16,58 +38,391 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--bg-gradient);
             min-height: 100vh;
+            color: var(--text);
+            padding: 18px;
+            overflow-x: hidden;
+        }
+
+        body::before,
+        body::after {
+            content: '';
+            position: fixed;
+            inset: auto;
+            width: 420px;
+            height: 420px;
+            border-radius: 50%;
+            filter: blur(50px);
+            opacity: 0.24;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::before {
+            top: -120px;
+            left: -80px;
+            background: #ffffff;
+        }
+
+        body::after {
+            bottom: -140px;
+            right: -90px;
+            background: #a78bfa;
+        }
+
+        .auth-page {
+            position: relative;
+            z-index: 1;
+            min-height: calc(100vh - 36px);
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        .btn-darkmode-auth {
+            position: fixed;
+            top: 18px;
+            right: 18px;
+            background: rgba(255,255,255,0.16);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.22);
+            padding: 10px 16px;
+            border-radius: 999px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            z-index: 20;
+            transition: all 0.25s ease;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.16);
+        }
+
+        .btn-darkmode-auth:hover {
+            transform: translateY(-2px);
+            background: rgba(255,255,255,0.25);
+        }
+
+        .brand-panel,
+        .auth-container {
+            border-radius: 28px;
+            overflow: hidden;
+            min-height: 320px;
+        }
+
+        .brand-panel {
+            background: linear-gradient(160deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08));
+            border: 1px solid rgba(255,255,255,0.18);
+            box-shadow: var(--shadow);
+            color: #fff;
+            padding: 28px 24px;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 28px;
+            position: relative;
+        }
+
+        .brand-panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(145deg, rgba(255,255,255,0.18), transparent 55%);
+            pointer-events: none;
+        }
+
+        .brand-top,
+        .brand-carousel,
+        .brand-metrics {
+            position: relative;
+            z-index: 1;
+        }
+
+        .eyebrow {
+            display: inline-flex;
             align-items: center;
-            padding: 20px;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.16);
+            border: 1px solid rgba(255,255,255,0.14);
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .brand-title {
+            margin-top: 18px;
+            font-size: clamp(2rem, 4vw, 3.2rem);
+            line-height: 1.05;
+            font-weight: 800;
+            max-width: 10ch;
+        }
+
+        .brand-description {
+            margin-top: 16px;
+            max-width: 58ch;
+            font-size: 1rem;
+            line-height: 1.65;
+            color: rgba(255,255,255,0.92);
+        }
+
+        .brand-highlights {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 14px;
+            margin-top: 24px;
+        }
+
+        .highlight-chip {
+            padding: 14px 16px;
+            border-radius: 18px;
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(12px);
+        }
+
+        .highlight-chip strong {
+            display: block;
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+
+        .highlight-chip span {
+            font-size: 0.86rem;
+            color: rgba(255,255,255,0.88);
+        }
+
+        .brand-carousel {
+            background: rgba(255,255,255,0.14);
+            border: 1px solid rgba(255,255,255,0.14);
+            border-radius: 24px;
+            padding: 22px;
+            backdrop-filter: blur(16px);
+        }
+
+        .carousel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .carousel-header h2 {
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .carousel-progress {
+            display: flex;
+            gap: 8px;
+        }
+
+        .carousel-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.35);
+            transition: all 0.25s ease;
+        }
+
+        .carousel-dot.active {
+            width: 28px;
+            border-radius: 999px;
+            background: #fff;
+        }
+
+        .feature-slide {
+            display: none;
+            animation: fadeSlide 0.45s ease;
+        }
+
+        .feature-slide.active {
+            display: block;
+        }
+
+        @keyframes fadeSlide {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .feature-icon {
+            width: 54px;
+            height: 54px;
+            border-radius: 18px;
+            background: rgba(255,255,255,0.18);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 16px;
+        }
+
+        .feature-slide h3 {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+        }
+
+        .feature-slide p {
+            font-size: 0.96rem;
+            line-height: 1.65;
+            color: rgba(255,255,255,0.92);
+            margin-bottom: 14px;
+        }
+
+        .feature-slide ul {
+            list-style: none;
+            display: grid;
+            gap: 10px;
+        }
+
+        .feature-slide li {
+            position: relative;
+            padding-left: 18px;
+            font-size: 0.92rem;
+            color: rgba(255,255,255,0.9);
+        }
+
+        .feature-slide li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #fff;
+            font-weight: 900;
+        }
+
+        .brand-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 14px;
+        }
+
+        .metric-card {
+            background: rgba(255,255,255,0.14);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 20px;
+            padding: 18px;
+            backdrop-filter: blur(14px);
+        }
+
+        .metric-card strong {
+            display: block;
+            font-size: 1.4rem;
+            margin-bottom: 4px;
+        }
+
+        .metric-card span {
+            color: rgba(255,255,255,0.86);
+            font-size: 0.88rem;
+            line-height: 1.5;
         }
 
         .auth-container {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            width: 100%;
-            max-width: 400px;
-            padding: 40px;
+            background: var(--card);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(18px);
+            border: 1px solid rgba(255,255,255,0.7);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .form-card {
+            background: var(--card-strong);
+            border-radius: 24px;
+            padding: 28px 24px;
+            box-shadow: 0 18px 40px rgba(107, 114, 128, 0.12);
+            border: 1px solid rgba(226,232,240,0.9);
         }
 
         .auth-header {
-            text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 26px;
+        }
+
+        .auth-header .mini-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: #eef2ff;
+            color: var(--primary);
+            font-size: 0.82rem;
+            font-weight: 700;
+            margin-bottom: 14px;
         }
 
         .auth-header h1 {
-            color: #333;
+            color: #1f2937;
+            font-size: clamp(1.9rem, 3vw, 2.4rem);
+            line-height: 1.1;
             margin-bottom: 10px;
-            font-size: 28px;
         }
 
         .auth-header p {
-            color: #666;
-            font-size: 14px;
+            color: var(--muted);
+            font-size: 0.96rem;
+            line-height: 1.65;
+        }
+
+        #messageContainer {
+            min-height: 0;
+        }
+
+        .tabs-shell {
+            border-radius: 18px;
+            background: #f4f6ff;
+            padding: 6px;
+            margin-bottom: 22px;
+        }
+
+        .tab-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .tab-buttons button {
+            padding: 12px 14px;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.95rem;
+            transition: all 0.25s ease;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
 
         label {
             display: block;
-            color: #333;
-            font-weight: 500;
+            color: #374151;
+            font-weight: 700;
             margin-bottom: 8px;
-            font-size: 14px;
+            font-size: 0.9rem;
         }
 
         input {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s;
+            padding: 14px 15px;
+            border: 1.8px solid var(--border);
+            border-radius: 14px;
+            font-size: 0.95rem;
+            transition: all 0.25s ease;
+            background: #fff;
+            color: var(--text);
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(102,126,234,0.12);
         }
 
         .password-field {
@@ -75,89 +430,82 @@
         }
 
         .password-field input {
-            padding-right: 44px;
+            padding-right: 48px;
         }
 
         .toggle-password {
             position: absolute;
-            right: 10px;
+            right: 12px;
             top: 50%;
             transform: translateY(-50%);
             border: none;
             background: transparent;
             cursor: pointer;
             font-size: 16px;
-            color: #667eea;
+            color: var(--primary);
             padding: 4px;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
         }
 
         .toggle-password:hover {
-            color: #5568d3;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #667eea;
+            color: var(--primary-dark);
         }
 
         .btn-submit {
             width: 100%;
-            padding: 12px;
-            background: #667eea;
-            color: white;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #fff;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
+            border-radius: 16px;
+            font-size: 1rem;
+            font-weight: 800;
             cursor: pointer;
-            transition: background 0.3s;
-            margin-top: 10px;
+            transition: all 0.25s ease;
+            margin-top: 8px;
+            box-shadow: 0 16px 28px rgba(102,126,234,0.28);
         }
 
         .btn-submit:hover {
-            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 20px 34px rgba(102,126,234,0.34);
         }
 
         .btn-submit:disabled {
-            background: #ccc;
+            background: #cbd5e1;
             cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
         }
 
         .toggle-form {
             text-align: center;
-            margin-top: 20px;
-            color: #666;
-            font-size: 14px;
+            margin-top: 18px;
+            color: var(--muted);
+            font-size: 0.92rem;
+            line-height: 1.6;
         }
 
-        .toggle-form a {
-            color: #667eea;
+        .toggle-form a,
+        .forgot-link a {
+            color: var(--primary);
             cursor: pointer;
-            font-weight: bold;
+            font-weight: 700;
+            text-decoration: none;
         }
 
-        .toggle-form a:hover {
+        .toggle-form a:hover,
+        .forgot-link a:hover {
             text-decoration: underline;
         }
 
         .forgot-link {
             text-align: right;
-            margin-top: -10px;
+            margin-top: -6px;
             margin-bottom: 16px;
-            font-size: 13px;
-        }
-
-        .forgot-link a {
-            color: #667eea;
-            cursor: pointer;
-            font-weight: 500;
-        }
-
-        .forgot-link a:hover {
-            text-decoration: underline;
+            font-size: 0.86rem;
         }
 
         .form-section {
@@ -166,39 +514,42 @@
 
         .form-section.active {
             display: block;
+            animation: fadeSlide 0.3s ease;
         }
 
         .message {
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            margin-bottom: 18px;
+            font-size: 0.92rem;
+            line-height: 1.6;
+            border: 1px solid transparent;
         }
 
         .message.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            background: var(--success-bg);
+            color: var(--success-text);
+            border-color: var(--success-border);
         }
 
         .message.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+            background: var(--error-bg);
+            color: var(--error-text);
+            border-color: var(--error-border);
         }
 
         .message.info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
+            background: var(--info-bg);
+            color: var(--info-text);
+            border-color: var(--info-border);
         }
 
         .spinner {
             display: inline-block;
             width: 14px;
             height: 14px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #667eea;
+            border: 2px solid rgba(255,255,255,0.55);
+            border-top: 2px solid #fff;
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin-right: 8px;
@@ -209,181 +560,398 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Dark Mode - Auth */
-        .btn-darkmode-auth {
-            position: fixed;
-            top: 16px;
-            right: 16px;
-            background: #444;
-            color: #fff;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            z-index: 9999;
-            transition: all 0.3s;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        .auth-footer-note {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: #f8faff;
+            border: 1px solid #e6ebff;
+            color: var(--muted);
+            font-size: 0.88rem;
+            line-height: 1.5;
         }
-        .btn-darkmode-auth:hover {
-            background: #222;
-            transform: translateY(-2px);
-        }
+
         body.dark-mode {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            --bg-gradient: linear-gradient(135deg, #161322 0%, #1c1a31 52%, #202750 100%);
+            --text: #e5e7eb;
+            --muted: #b7bfd3;
+            --border: #43476a;
+            --card: rgba(28, 28, 48, 0.88);
+            --card-strong: rgba(24, 24, 40, 0.96);
         }
+
         body.dark-mode .auth-container {
-            background: #1e1e2e;
-            color: #e0e0e0;
+            border-color: rgba(142, 152, 255, 0.18);
         }
+
+        body.dark-mode .form-card,
+        body.dark-mode .brand-carousel,
+        body.dark-mode .metric-card,
+        body.dark-mode .highlight-chip {
+            box-shadow: none;
+        }
+
+        body.dark-mode .form-card {
+            background: rgba(20, 20, 35, 0.92);
+            border-color: rgba(92, 99, 146, 0.45);
+        }
+
         body.dark-mode .auth-header h1 {
-            color: #a89be8;
+            color: #f5f7ff;
         }
-        body.dark-mode .auth-header p {
-            color: #aaa;
+
+        body.dark-mode .auth-header .mini-badge,
+        body.dark-mode .tabs-shell,
+        body.dark-mode .auth-footer-note {
+            background: rgba(103, 114, 229, 0.14);
+            color: #dbe5ff;
+            border-color: rgba(103, 114, 229, 0.16);
         }
+
         body.dark-mode label {
-            color: #ccc;
+            color: #dde3f4;
         }
+
         body.dark-mode input {
-            background: #2a2a3e;
-            border-color: #444;
-            color: #e0e0e0;
+            background: rgba(31, 34, 56, 0.95);
+            border-color: #464b72;
+            color: #eef2ff;
         }
-        body.dark-mode .toggle-password {
-            color: #a89be8;
-        }
+
         body.dark-mode input::placeholder {
-            color: #888;
+            color: #9aa3c3;
         }
-        body.dark-mode input:focus {
-            border-color: #a89be8;
+
+        body.dark-mode .toggle-password,
+        body.dark-mode .toggle-form a,
+        body.dark-mode .forgot-link a {
+            color: #b8c3ff;
         }
-        body.dark-mode .toggle-form {
-            color: #aaa;
+
+        body.dark-mode .tab-buttons button {
+            background: transparent !important;
+            color: #c7d2fe !important;
         }
-        body.dark-mode .toggle-form a {
-            color: #a89be8;
-        }
+
         body.dark-mode .btn-darkmode-auth {
-            background: #667eea;
+            background: rgba(15,23,42,0.55);
+            border-color: rgba(148,163,184,0.18);
         }
-        body.dark-mode .btn-darkmode-auth:hover {
-            background: #5568d3;
+
+        @media (min-width: 980px) {
+            body {
+                padding: 24px;
+            }
+
+            .auth-page {
+                grid-template-columns: minmax(0, 1.5fr) minmax(420px, 0.9fr);
+                align-items: stretch;
+            }
+
+            .brand-panel,
+            .auth-container {
+                min-height: calc(100vh - 48px);
+            }
+
+            .brand-panel {
+                padding: 44px;
+            }
+
+            .auth-container {
+                padding: 26px;
+            }
+        }
+
+        @media (max-width: 979px) {
+            .btn-darkmode-auth {
+                top: 12px;
+                right: 12px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 12px;
+            }
+
+            .brand-panel,
+            .auth-container,
+            .form-card {
+                border-radius: 22px;
+            }
+
+            .brand-panel,
+            .auth-container {
+                min-height: auto;
+            }
+
+            .brand-panel {
+                padding: 22px 18px;
+                gap: 20px;
+            }
+
+            .form-card {
+                padding: 22px 18px;
+            }
+
+            .brand-highlights,
+            .brand-metrics {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .brand-highlights,
+            .brand-metrics {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
     <button class="btn-darkmode-auth" id="btnDarkModeAuth" onclick="toggleDarkMode()" title="Alternar modo escuro">🌙 Dark</button>
-    <div class="auth-container">
-        <div class="auth-header">
-            <h1>📊 Sistema de Prioridades</h1>
-            <p>Gerenciamento Inteligente de Tarefas</p>
-        </div>
 
-        <div id="messageContainer"></div>
+    <main class="auth-page">
+        <section class="brand-panel">
+            <div class="brand-top">
+                <span class="eyebrow">✨ Plataforma profissional para priorização e execução</span>
+                <h1 class="brand-title">Sistema de Prioridades — Gerenciamento Inteligente de Tarefas</h1>
+                <p class="brand-description">
+                    Organize projetos com a metodologia <strong>5W2H</strong>, acompanhe prioridades em tempo real,
+                    distribua responsabilidades e tome decisões com mais clareza usando indicadores visuais, avaliações em equipe e dados consolidados.
+                </p>
 
-        <!-- Abas de Login -->
-        <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0;">
-            <button onclick="switchTab('email')" id="emailTab" style="flex: 1; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: bold;">📧 Email</button>
-            <button onclick="switchTab('code')" id="codeTab" style="flex: 1; padding: 12px; background: #e0e0e0; color: #666; border: none; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: bold;">🔑 Código</button>
-        </div>
-
-        <!-- Form de Login por Email -->
-        <div id="emailForm" class="form-section active">
-            <div class="form-group">
-                <label for="loginEmail">Email:</label>
-                <input type="email" id="loginEmail" placeholder="seu@email.com.br" required>
-            </div>
-            <div class="form-group">
-                <label for="loginPassword">Senha:</label>
-                <div class="password-field">
-                    <input type="password" id="loginPassword" placeholder="Sua senha" required>
-                    <button type="button" class="toggle-password" onclick="togglePassword('loginPassword', this)" aria-label="Mostrar senha">👁️</button>
+                <div class="brand-highlights">
+                    <div class="highlight-chip">
+                        <strong>🎯 Prioridade visual</strong>
+                        <span>Vermelho, amarelo e verde com média automática por equipe.</span>
+                    </div>
+                    <div class="highlight-chip">
+                        <strong>📌 Estágios claros</strong>
+                        <span>Planejamento, execução, atraso e concluído em um só fluxo.</span>
+                    </div>
+                    <div class="highlight-chip">
+                        <strong>💾 Banco + códigos</strong>
+                        <span>Salve no Supabase, compartilhe por código e retome rápido.</span>
+                    </div>
+                    <div class="highlight-chip">
+                        <strong>📊 Visão de gestão</strong>
+                        <span>Custos, prazos, vencimentos e relatórios em poucos cliques.</span>
+                    </div>
                 </div>
             </div>
-            <div class="forgot-link">
-                <a onclick="switchToForgotPassword()">Esqueci minha senha</a>
-            </div>
-            <button class="btn-submit" onclick="handleLogin()" id="loginBtn">Entrar</button>
-            <div class="toggle-form">
-                Não tem conta? <a onclick="switchToRegister()">Cadastre-se aqui Gratuitamente</a>
-            </div>
-        </div>
 
-        <!-- Form de Login por Código -->
-        <div id="codeForm" class="form-section">
-            <div class="form-group">
-                <label for="projectCode">Código do Projeto:</label>
-                <input type="text" id="projectCode" placeholder="Ex: CXT12345 ou 12345CXT" required maxlength="8">
-            </div>
-            <button class="btn-submit" onclick="handleCodeLogin()" id="codeBtn">Acessar Projeto</button>
-            <div class="toggle-form">
-                Novo por aqui? <a onclick="switchToRegister()">Crie uma conta</a>
-            </div>
-        </div>
+            <div class="brand-carousel">
+                <div class="carousel-header">
+                    <h2>Recursos que fazem diferença</h2>
+                    <div class="carousel-progress" id="featureDots">
+                        <span class="carousel-dot active"></span>
+                        <span class="carousel-dot"></span>
+                        <span class="carousel-dot"></span>
+                        <span class="carousel-dot"></span>
+                        <span class="carousel-dot"></span>
+                        <span class="carousel-dot"></span>
+                    </div>
+                </div>
 
-        <!-- Form de Esqueci Senha -->
-        <div id="forgotForm" class="form-section">
-            <div class="form-group">
-                <label for="forgotEmail">Email cadastrado:</label>
-                <input type="email" id="forgotEmail" placeholder="seu@email.com" required>
-            </div>
-            <button class="btn-submit" onclick="handleForgotPassword()" id="forgotBtn">Enviar link de recuperação</button>
-            <div class="toggle-form">
-                Lembrou a senha? <a onclick="switchTab('email')">Voltar ao login</a>
-            </div>
-        </div>
+                <article class="feature-slide active">
+                    <div class="feature-icon">🗂️</div>
+                    <h3>Gestão de Tarefas com 5W2H</h3>
+                    <p>Cada tarefa é estruturada com What, Why, Where, When, How, How Much e responsáveis, trazendo clareza operacional desde o planejamento.</p>
+                    <ul>
+                        <li>O quê, por quê, onde, quando, como e custo em cada entrega</li>
+                        <li>Responsáveis e critérios de execução bem definidos</li>
+                    </ul>
+                </article>
 
-        <!-- Form de Nova Senha (recuperação) -->
-        <div id="resetForm" class="form-section">
-            <div style="text-align:center; margin-bottom: 16px; color: #555; font-size: 14px;">
-                🔐 Digite sua nova senha abaixo
+                <article class="feature-slide">
+                    <div class="feature-icon">🚦</div>
+                    <h3>Priorização Inteligente</h3>
+                    <p>Múltiplos membros da equipe avaliam cada tarefa com notas de 1 a 5, gerando prioridade média automática com leitura imediata por cor.</p>
+                    <ul>
+                        <li>🔴 Alta prioridade: média ≥ 4</li>
+                        <li>🟡 Média: de 3 a 3,99</li>
+                        <li>🟢 Baixa: abaixo de 3</li>
+                    </ul>
+                </article>
+
+                <article class="feature-slide">
+                    <div class="feature-icon">📍</div>
+                    <h3>Controle de Estágios</h3>
+                    <p>Monitore o andamento das tarefas com badges visuais para Em Planejamento, Em Execução, Atrasado e Concluído.</p>
+                    <ul>
+                        <li>Leitura rápida do status atual do projeto</li>
+                        <li>Fácil identificação de gargalos e atrasos</li>
+                    </ul>
+                </article>
+
+                <article class="feature-slide">
+                    <div class="feature-icon">📈</div>
+                    <h3>Dashboard e Relatórios</h3>
+                    <p>Veja totais de tarefas, custo acumulado, vencimentos e filtros por estágio ou prazo para orientar decisões executivas.</p>
+                    <ul>
+                        <li>Exemplo de custo acumulado: R$ 204.000</li>
+                        <li>Filtros dinâmicos para gestão rápida</li>
+                    </ul>
+                </article>
+
+                <article class="feature-slide">
+                    <div class="feature-icon">🔄</div>
+                    <h3>Importação e Exportação</h3>
+                    <p>Traga dados via JSON, salve no banco com código de projeto e faça download das informações sempre que precisar.</p>
+                    <ul>
+                        <li>Integração com Supabase e códigos de acesso</li>
+                        <li>Compartilhamento e retomada facilitados</li>
+                    </ul>
+                </article>
+
+                <article class="feature-slide">
+                    <div class="feature-icon">🤝</div>
+                    <h3>Colaboração em Equipe</h3>
+                    <p>Notas individuais, estrelas e critérios visíveis ajudam a alinhar percepção de prioridade entre várias pessoas da equipe.</p>
+                    <ul>
+                        <li>Avaliações transparentes por membro</li>
+                        <li>Mais consenso e menos achismo nas decisões</li>
+                    </ul>
+                </article>
             </div>
-            <div class="form-group">
-                <label for="newPassword">Nova Senha:</label>
-                <div class="password-field">
-                    <input type="password" id="newPassword" placeholder="Mínimo 6 caracteres" required>
-                    <button type="button" class="toggle-password" onclick="togglePassword('newPassword', this)" aria-label="Mostrar senha">👁️</button>
+
+            <div class="brand-metrics">
+                <div class="metric-card">
+                    <strong>5W2H</strong>
+                    <span>Metodologia aplicada na prática para organizar ações e custos.</span>
+                </div>
+                <div class="metric-card">
+                    <strong>1–5</strong>
+                    <span>Avaliação colaborativa da prioridade por múltiplos membros.</span>
+                </div>
+                <div class="metric-card">
+                    <strong>JSON + DB</strong>
+                    <span>Backup local, importação e sincronização com Supabase.</span>
+                </div>
+                <div class="metric-card">
+                    <strong>CXT / CEC</strong>
+                    <span>Códigos de projeto para acesso rápido e compartilhamento seguro.</span>
                 </div>
             </div>
-            <div class="form-group">
-                <label for="newPasswordConfirm">Confirmar Nova Senha:</label>
-                <div class="password-field">
-                    <input type="password" id="newPasswordConfirm" placeholder="Confirme a nova senha" required>
-                    <button type="button" class="toggle-password" onclick="togglePassword('newPasswordConfirm', this)" aria-label="Mostrar senha">👁️</button>
-                </div>
-            </div>
-            <button class="btn-submit" onclick="handleResetPassword()" id="resetBtn">Salvar Nova Senha</button>
-        </div>
+        </section>
 
-        <!-- Form de Cadastro -->
-        <div id="registerForm" class="form-section">
-            <div class="form-group">
-                <label for="registerEmail">Email:</label>
-                <input type="email" id="registerEmail" placeholder="seu@email.com" required>
-            </div>
-            <div class="form-group">
-                <label for="registerPassword">Senha:</label>
-                <div class="password-field">
-                    <input type="password" id="registerPassword" placeholder="Mínimo 6 caracteres" required>
-                    <button type="button" class="toggle-password" onclick="togglePassword('registerPassword', this)" aria-label="Mostrar senha">👁️</button>
+        <section class="auth-container">
+            <div class="form-card">
+                <div class="auth-header">
+                    <span class="mini-badge">🔐 Acesso seguro ao sistema</span>
+                    <h1>Entre na sua conta</h1>
+                    <p>Acesse por email e senha ou use o código do projeto para abrir rapidamente o ambiente correto.</p>
+                </div>
+
+                <div id="messageContainer"></div>
+
+                <div class="tabs-shell">
+                    <div class="tab-buttons">
+                        <button onclick="switchTab('email')" id="emailTab" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white;">📧 Email</button>
+                        <button onclick="switchTab('code')" id="codeTab" style="background: transparent; color: #666;">🔑 Código</button>
+                    </div>
+                </div>
+
+                <div id="emailForm" class="form-section active">
+                    <div class="form-group">
+                        <label for="loginEmail">Email</label>
+                        <input type="email" id="loginEmail" placeholder="seu@email.com.br" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Senha</label>
+                        <div class="password-field">
+                            <input type="password" id="loginPassword" placeholder="Sua senha" required>
+                            <button type="button" class="toggle-password" onclick="togglePassword('loginPassword', this)" aria-label="Mostrar senha">👁️</button>
+                        </div>
+                    </div>
+                    <div class="forgot-link">
+                        <a onclick="switchToForgotPassword()">Esqueci minha senha</a>
+                    </div>
+                    <button class="btn-submit" onclick="handleLogin()" id="loginBtn">Entrar</button>
+                    <div class="toggle-form">
+                        Não tem conta? <a onclick="switchToRegister()">Cadastre-se aqui Gratuitamente</a>
+                    </div>
+                </div>
+
+                <div id="codeForm" class="form-section">
+                    <div class="form-group">
+                        <label for="projectCode">Código do Projeto</label>
+                        <input type="text" id="projectCode" placeholder="Ex: CXT12345 ou 12345CEC" required maxlength="8">
+                    </div>
+                    <button class="btn-submit" onclick="handleCodeLogin()" id="codeBtn">Acessar Projeto</button>
+                    <div class="toggle-form">
+                        Novo por aqui? <a onclick="switchToRegister()">Cadastre-se gratuitamente</a>
+                    </div>
+                </div>
+
+                <div id="forgotForm" class="form-section">
+                    <div class="form-group">
+                        <label for="forgotEmail">Email cadastrado</label>
+                        <input type="email" id="forgotEmail" placeholder="seu@email.com" required>
+                    </div>
+                    <button class="btn-submit" onclick="handleForgotPassword()" id="forgotBtn">Enviar link de recuperação</button>
+                    <div class="toggle-form">
+                        Lembrou a senha? <a onclick="switchTab('email')">Voltar ao login</a>
+                    </div>
+                </div>
+
+                <div id="resetForm" class="form-section">
+                    <div class="toggle-form" style="margin-top:0; margin-bottom: 14px; text-align:left;">
+                        🔐 Digite sua nova senha abaixo
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword">Nova Senha</label>
+                        <div class="password-field">
+                            <input type="password" id="newPassword" placeholder="Mínimo 6 caracteres" required>
+                            <button type="button" class="toggle-password" onclick="togglePassword('newPassword', this)" aria-label="Mostrar senha">👁️</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPasswordConfirm">Confirmar Nova Senha</label>
+                        <div class="password-field">
+                            <input type="password" id="newPasswordConfirm" placeholder="Confirme a nova senha" required>
+                            <button type="button" class="toggle-password" onclick="togglePassword('newPasswordConfirm', this)" aria-label="Mostrar senha">👁️</button>
+                        </div>
+                    </div>
+                    <button class="btn-submit" onclick="handleResetPassword()" id="resetBtn">Salvar Nova Senha</button>
+                </div>
+
+                <div id="registerForm" class="form-section">
+                    <div class="form-group">
+                        <label for="registerEmail">Email</label>
+                        <input type="email" id="registerEmail" placeholder="seu@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">Senha</label>
+                        <div class="password-field">
+                            <input type="password" id="registerPassword" placeholder="Mínimo 6 caracteres" required>
+                            <button type="button" class="toggle-password" onclick="togglePassword('registerPassword', this)" aria-label="Mostrar senha">👁️</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPasswordConfirm">Confirmar Senha</label>
+                        <div class="password-field">
+                            <input type="password" id="registerPasswordConfirm" placeholder="Confirme sua senha" required>
+                            <button type="button" class="toggle-password" onclick="togglePassword('registerPasswordConfirm', this)" aria-label="Mostrar senha">👁️</button>
+                        </div>
+                    </div>
+                    <button class="btn-submit" onclick="handleRegister()" id="registerBtn">Cadastrar</button>
+                    <div class="toggle-form">
+                        Já tem conta? <a onclick="switchTab('email')">Entre aqui</a>
+                    </div>
+                </div>
+
+                <div class="auth-footer-note">
+                    <span>🛡️</span>
+                    <span>Se preferir, você também pode entrar com o código do projeto e abrir diretamente o ambiente correspondente.</span>
                 </div>
             </div>
-            <div class="form-group">
-                <label for="registerPasswordConfirm">Confirmar Senha:</label>
-                <div class="password-field">
-                    <input type="password" id="registerPasswordConfirm" placeholder="Confirme sua senha" required>
-                    <button type="button" class="toggle-password" onclick="togglePassword('registerPasswordConfirm', this)" aria-label="Mostrar senha">👁️</button>
-                </div>
-            </div>
-            <button class="btn-submit" onclick="handleRegister()" id="registerBtn">Cadastrar</button>
-            <div class="toggle-form">
-                Já tem conta? <a onclick="switchTab('email')">Entre aqui</a>
-            </div>
-        </div>
-    </div>
+        </section>
+    </main>
 
     <script src="supabase-config.js"></script>
     <script>
@@ -411,6 +979,44 @@
 
         let currentTab = 'email';
 
+        function setTabButtonState(button, active) {
+            if (!button) return;
+            if (active) {
+                button.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
+                button.style.color = 'white';
+                button.style.boxShadow = '0 10px 20px rgba(102,126,234,0.22)';
+            } else {
+                button.style.background = 'transparent';
+                button.style.color = document.body.classList.contains('dark-mode') ? '#c7d2fe' : '#666';
+                button.style.boxShadow = 'none';
+            }
+        }
+
+        function refreshTabVisualState(activeTab) {
+            const emailTab = document.getElementById('emailTab');
+            const codeTab = document.getElementById('codeTab');
+            setTabButtonState(emailTab, activeTab === 'email');
+            setTabButtonState(codeTab, activeTab === 'code');
+        }
+
+        let currentFeatureSlide = 0;
+
+        function rotateFeatureSlides() {
+            const slides = document.querySelectorAll('.feature-slide');
+            const dots = document.querySelectorAll('.carousel-dot');
+            if (!slides.length) return;
+
+            slides.forEach((slide, index) => {
+                slide.classList.toggle('active', index === currentFeatureSlide);
+            });
+
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentFeatureSlide);
+            });
+
+            currentFeatureSlide = (currentFeatureSlide + 1) % slides.length;
+        }
+
         function switchTab(tab) {
             currentTab = tab;
             const emailForm = document.getElementById('emailForm');
@@ -426,19 +1032,14 @@
             registerForm.classList.remove('active');
             forgotForm.classList.remove('active');
             resetForm.classList.remove('active');
-            emailTab.style.background = '#e0e0e0';
-            emailTab.style.color = '#666';
-            codeTab.style.background = '#e0e0e0';
-            codeTab.style.color = '#666';
+            refreshTabVisualState('none');
 
             if (tab === 'email') {
                 emailForm.classList.add('active');
-                emailTab.style.background = '#667eea';
-                emailTab.style.color = 'white';
+                refreshTabVisualState('email');
             } else {
                 codeForm.classList.add('active');
-                codeTab.style.background = '#667eea';
-                codeTab.style.color = 'white';
+                refreshTabVisualState('code');
             }
 
             clearMessages();
@@ -450,10 +1051,7 @@
             document.getElementById('forgotForm').classList.remove('active');
             document.getElementById('registerForm').classList.remove('active');
             document.getElementById('resetForm').classList.add('active');
-            document.getElementById('emailTab').style.background = '#e0e0e0';
-            document.getElementById('emailTab').style.color = '#666';
-            document.getElementById('codeTab').style.background = '#e0e0e0';
-            document.getElementById('codeTab').style.color = '#666';
+            refreshTabVisualState('none');
             clearMessages();
         }
 
@@ -463,10 +1061,7 @@
             document.getElementById('forgotForm').classList.remove('active');
             document.getElementById('resetForm').classList.remove('active');
             document.getElementById('registerForm').classList.add('active');
-            document.getElementById('emailTab').style.background = '#e0e0e0';
-            document.getElementById('emailTab').style.color = '#666';
-            document.getElementById('codeTab').style.background = '#e0e0e0';
-            document.getElementById('codeTab').style.color = '#666';
+            refreshTabVisualState('none');
             clearMessages();
         }
 
@@ -476,10 +1071,7 @@
             document.getElementById('registerForm').classList.remove('active');
             document.getElementById('resetForm').classList.remove('active');
             document.getElementById('forgotForm').classList.add('active');
-            document.getElementById('emailTab').style.background = '#e0e0e0';
-            document.getElementById('emailTab').style.color = '#666';
-            document.getElementById('codeTab').style.background = '#e0e0e0';
-            document.getElementById('codeTab').style.color = '#666';
+            refreshTabVisualState('none');
             clearMessages();
         }
 
@@ -833,6 +1425,11 @@
             const isDark = document.body.classList.toggle('dark-mode');
             localStorage.setItem('darkMode', isDark ? '1' : '0');
             document.getElementById('btnDarkModeAuth').textContent = isDark ? '☀️ Claro' : '🌙 Dark';
+            if (currentTab === 'email' || currentTab === 'code') {
+                refreshTabVisualState(currentTab);
+            } else {
+                refreshTabVisualState('none');
+            }
         }
         (function() {
             if (localStorage.getItem('darkMode') === '1') {
@@ -840,6 +1437,9 @@
                 const btn = document.getElementById('btnDarkModeAuth');
                 if (btn) btn.textContent = '☀️ Claro';
             }
+            refreshTabVisualState('email');
+            rotateFeatureSlides();
+            setInterval(rotateFeatureSlides, 4500);
         })();
 
         // Permitir Enter nas inputs
