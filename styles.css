@@ -735,52 +735,144 @@ footer {
 }
 
 /* Responsive */
+/* ============================================================
+   RESPONSIVE — 768px (tablets e celulares maiores)
+   ============================================================ */
 @media (max-width: 768px) {
-    .logo h1 {
-        font-size: 1.5rem;
+    /* Header */
+    .hdr-top-row {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 10px 14px;
+        gap: 8px;
     }
 
+    .header-buttons {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .header-buttons .ctrl-btn,
+    .header-buttons .btn-help,
+    .header-buttons .btn-logout {
+        flex: 1 1 auto;
+        min-width: 0;
+        justify-content: center;
+        font-size: 0.78rem;
+        padding: 7px 8px;
+    }
+
+    .hdr-filter-row {
+        padding: 6px 14px;
+        gap: 6px;
+    }
+
+    .hdr-filter-sep { display: none; }
+
+    .hdr-summary-idx {
+        width: 100%;
+        text-align: left;
+        margin-left: 0;
+        margin-top: 2px;
+        font-size: 0.7rem;
+    }
+
+    /* Logo */
+    .logo h1 { font-size: 1.3rem; }
+    .hdr-top-row .logo h1 { font-size: 1.3rem; }
+
+    /* Main */
     main {
-        padding: 20px;
+        padding: 16px 14px;
+        border-radius: 10px;
+        margin-top: 10px !important;
     }
 
+    /* Config section */
+    .config-section { padding: 14px; }
+    .evaluators-config { grid-template-columns: 1fr 1fr; }
+
+    /* Form */
+    .form-section { padding: 14px; }
     .form-row,
     .evaluations-row {
         grid-template-columns: 1fr;
     }
 
+    /* Controls */
     .controls {
         flex-direction: column;
         align-items: stretch;
     }
-
     .controls-bar {
         flex-direction: column;
         align-items: stretch;
     }
     .controls-sep { display: none; }
     .controls-actions { margin-left: 0; }
+    .btn { width: 100%; }
 
-    .btn {
-        width: 100%;
+    /* Table: horizontal scroll on mobile */
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
+    table { min-width: 640px; }
 
     th, td {
-        padding: 10px 8px;
-        font-size: 0.85rem;
+        padding: 9px 8px;
+        font-size: 0.82rem;
     }
 
-    .stage-badge {
-        font-size: 0.75rem;
-    }
+    .stage-badge { font-size: 0.72rem; padding: 5px 8px; }
 
+    /* Legend */
     .legend-container {
-        gap: 15px;
+        gap: 10px;
         flex-direction: column;
     }
+    .legend-item { font-size: 0.82rem; }
 
-    .legend-item {
-        font-size: 0.85rem;
+    /* Modal */
+    .modal-content {
+        margin: 4% auto;
+        padding: 20px 16px;
+        width: 96%;
+    }
+}
+
+/* ============================================================
+   RESPONSIVE — 480px (celulares compactos)
+   ============================================================ */
+@media (max-width: 480px) {
+    body { padding: 0; }
+
+    header { margin-bottom: 14px; }
+
+    .hdr-top-row { padding: 8px 10px; }
+
+    .header-buttons .btn-help,
+    .header-buttons .btn-logout {
+        padding: 7px 10px;
+        font-size: 0.78rem;
+    }
+
+    .evaluators-config { grid-template-columns: 1fr; }
+
+    .ctrl-select-wrap-sm select {
+        font-size: 0.72rem;
+        padding: 5px 22px 5px 8px;
+    }
+
+    .form-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+    .form-actions .btn { width: 100%; }
+
+    .table-summary {
+        font-size: 0.78rem;
     }
 }
 
