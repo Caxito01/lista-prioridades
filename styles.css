@@ -1734,10 +1734,19 @@ body {
         letter-spacing: 0.3px;
         margin-top: 2px;
     }
+    /* Stage cell — label acima, select abaixo ocupando toda a largura */
+    .table-container tbody td[data-label="Estágio"] {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .table-container tbody td[data-label="Estágio"]::before {
+        min-width: unset;
+    }
     /* Stage select full width */
     .table-container .stage-select {
-        flex: 1;
+        width: 100%;
         min-width: 0;
+        box-sizing: border-box;
     }
     /* Evaluator scores row — inline chips */
     .table-container td.evaluator-col {
