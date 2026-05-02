@@ -1,6 +1,134 @@
 // Versão de build para depuração
 console.log('app.js v1735000001 carregado');
 
+// ── Análise IA com Gemini ─────────────────────────────────────────────────────
+function abrirAnaliseIA() {
+    const modal = document.getElementById('iaModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+
+    // Preencher campo com chave salva (oculta)
+    const saved = localStorage.getItem('geminiApiKey');
+    const input = document.getElementById('iaApiKeyInput');
+    if (input) input.value = saved ? '••••••••••••••••' : '';
+
+    document.getElementById('respostaIA').innerText =
+        'Clique em "Analisar Projeto com IA" para obter uma análise inteligente das suas tarefas.';
+}
+
+function fecharAnaliseIA() {
+    const modal = document.getElementById('iaModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function salvarChaveIA() {
+    const input = document.getElementById('iaApiKeyInput');
+    const val = input ? input.value.trim() : '';
+    if (!val || val.startsWith('•')) {
+        showNotification('⚠️ Cole uma chave válida antes de salvar.');
+        return;
+    }
+    localStorage.setItem('geminiApiKey', val);
+    input.value = '••••••••••••••••';
+    showNotification('✅ Chave API salva com sucesso!');
+}
+
+function limparChaveIA() {
+    localStorage.removeItem('geminiApiKey');
+    const input = document.getElementById('iaApiKeyInput');
+    if (input) input.value = '';
+    showNotification('🗑️ Chave API removida.');
+}
+
+async function executarAnaliseIA() {
+    const apiKey = localStorage.getItem('geminiApiKey');
+    if (!apiKey) {
+        showNotification('❌ Cole e salve sua chave API do Gemini antes de analisar!');
+        return;
+    }
+
+    const respostaEl = document.getElementById('respostaIA');
+    const btn = document.getElementById('btnAnaliseIA');
+    respostaEl.innerText = '⏳ Analisando projeto com IA...';
+    if (btn) { btn.disabled = true; btn.innerText = '⏳ Analisando...'; }
+
+    // Coletar tarefas da tabela
+    const tarefas = [];
+    document.querySelectorAll('#tasksTableBody tr').forEach(row => {
+        const cols = row.querySelectorAll('td');
+        if (cols.length < 4) return;
+        const select = cols[1]?.querySelector('select');
+        tarefas.push({
+            status:     select ? select.value : (cols[1]?.innerText?.trim() || ''),
+            descricao:  cols[2]?.innerText?.trim() || '',
+            vencimento: cols[3]?.innerText?.trim() || '',
+            media:      cols[cols.length - 2]?.innerText?.trim() || ''
+        });
+    });
+
+    if (tarefas.length === 0) {
+        respostaEl.innerText = '⚠️ Nenhuma tarefa encontrada para analisar. Adicione tarefas primeiro.';
+        if (btn) { btn.disabled = false; btn.innerText = '🚀 Analisar Projeto com IA'; }
+        return;
+    }
+
+    const nomeAvaliadores = Object.values(evaluatorNames).join(', ');
+
+    const prompt = `Você é um consultor de gestão de projetos. Analise a lista de tarefas abaixo e responda em português brasileiro de forma clara, objetiva e prática.
+
+Avaliadores do projeto: ${nomeAvaliadores}
+Total de tarefas: ${tarefas.length}
+
+Tarefas:
+${JSON.stringify(tarefas, null, 2)}
+
+Responda com:
+1. 🔴 Tarefas críticas (média baixa ou status atrasado)
+2. ⚠️ Tarefas que precisam de atenção imediata
+3. ✅ Pontos positivos do projeto
+4. 💡 Sugestões práticas para melhorar o andamento
+5. 📊 Diagnóstico geral em 2-3 linhas`;
+
+    try {
+        const res = await fetch(
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-goog-api-key': apiKey
+                },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }]
+                })
+            }
+        );
+
+        const data = await res.json();
+
+        if (data.error) {
+            respostaEl.innerText = '❌ Erro da API: ' + (data.error.message || JSON.stringify(data.error));
+        } else {
+            const texto = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            respostaEl.innerText = texto || '⚠️ Sem resposta da IA.';
+        }
+    } catch (err) {
+        respostaEl.innerText = '❌ Erro de conexão: ' + err.message;
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerText = '🚀 Analisar Projeto com IA'; }
+    }
+}
+
+// Fechar modal IA ao clicar fora
+document.addEventListener('DOMContentLoaded', () => {
+    const iaModal = document.getElementById('iaModal');
+    if (iaModal) {
+        iaModal.addEventListener('click', e => {
+            if (e.target === iaModal) fecharAnaliseIA();
+        });
+    }
+});
+
 // ── Registrar Service Worker (PWA) ────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

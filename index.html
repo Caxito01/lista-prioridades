@@ -122,6 +122,7 @@
                 <button class="ctrl-btn ctrl-btn-primary" onclick="saveToDatabase()" title="Salvar no banco">💾 Salvar</button>
                 <button class="ctrl-btn ctrl-btn-primary" onclick="loadFromDatabase()" title="Carregar do banco">📥 Carregar</button>
                 <button class="ctrl-btn ctrl-btn-kanban" onclick="open5w2hProtected()" title="Abrir CECM 5W2H">📋 CECM 5W2H</button>
+                <button class="ctrl-btn" style="background:linear-gradient(135deg,#f093fb,#f5576c);color:white;border:none;" onclick="abrirAnaliseIA()" title="Análise com Inteligência Artificial">🤖 Análise IA</button>
                 <button class="btn-help" onclick="showHelp()" title="Ajuda">❓</button>
                 <button class="btn-logout" onclick="handleLogout()" title="Sair">🚪 Sair</button>
                 <button class="dark-toggle-idx" id="btnDarkMode" onclick="toggleDarkMode()" title="Alternar modo escuro">
@@ -438,6 +439,41 @@
             <div class="pwa-banner-actions">
                 <button class="pwa-btn-install" id="pwa-btn-install">Instalar</button>
                 <button class="pwa-btn-dismiss" id="pwa-btn-dismiss">Agora não</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Modal Análise IA (Gemini) ─────────────────────────────── -->
+    <div id="iaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:10010;padding:16px;box-sizing:border-box;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:16px;box-shadow:0 12px 48px rgba(0,0,0,0.3);width:100%;max-width:700px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;">
+            <!-- Header -->
+            <div style="background:linear-gradient(135deg,#f093fb,#f5576c);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+                <div>
+                    <div style="color:white;font-size:1.3rem;font-weight:700;">🤖 Análise de IA — Gemini</div>
+                    <div style="color:rgba(255,255,255,0.85);font-size:0.82rem;margin-top:2px;">Análise inteligente das suas tarefas</div>
+                </div>
+                <button onclick="fecharAnaliseIA()" style="background:rgba(255,255,255,0.2);border:none;color:white;font-size:1.4rem;cursor:pointer;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;">✕</button>
+            </div>
+            <!-- API Key config -->
+            <div id="iaApiKeySection" style="padding:16px 24px;border-bottom:1px solid #eee;flex-shrink:0;display:flex;gap:10px;align-items:center;">
+                <input type="password" id="iaApiKeyInput" placeholder="🔑 Cole sua chave API do Gemini aqui..."
+                    style="flex:1;padding:10px 14px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px;outline:none;"
+                    onfocus="this.style.borderColor='#f5576c'" onblur="this.style.borderColor='#e0e0e0'">
+                <button onclick="salvarChaveIA()" style="padding:10px 18px;background:#f5576c;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;white-space:nowrap;">Salvar Chave</button>
+                <button onclick="limparChaveIA()" style="padding:10px 14px;background:#ddd;color:#555;border:none;border-radius:8px;cursor:pointer;font-size:13px;" title="Apagar chave salva">🗑️</button>
+            </div>
+            <!-- Botão analisar -->
+            <div style="padding:12px 24px;border-bottom:1px solid #eee;flex-shrink:0;">
+                <button id="btnAnaliseIA" onclick="executarAnaliseIA()"
+                    style="width:100%;padding:13px;background:linear-gradient(135deg,#f093fb,#f5576c);color:white;border:none;border-radius:10px;cursor:pointer;font-size:15px;font-weight:700;">
+                    🚀 Analisar Projeto com IA
+                </button>
+            </div>
+            <!-- Resultado -->
+            <div style="padding:20px 24px;overflow-y:auto;flex:1;">
+                <div id="respostaIA" style="white-space:pre-wrap;font-size:14px;line-height:1.7;color:#333;min-height:80px;">
+                    Clique em "Analisar Projeto com IA" para obter uma análise inteligente das suas tarefas.
+                </div>
             </div>
         </div>
     </div>
