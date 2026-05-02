@@ -106,8 +106,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     loadEvaluatorNames();
 
+    const accessByCode = !!localStorage.getItem('projectCode');
+
     // Se numEvaluators não estava no localStorage, perguntar ao usuário
-    if (!localStorage.getItem('numEvaluators')) {
+    // — mas NÃO quando o acesso é por código de projeto (o projeto já define o número)
+    if (!localStorage.getItem('numEvaluators') && !accessByCode) {
         showNumEvaluatorsModal(async function() {
             await loadTasks();
             renderTasks();
