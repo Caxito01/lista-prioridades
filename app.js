@@ -358,6 +358,20 @@ function confirmNumEvaluators() {
     }
 }
 
+// Reiniciar o assistente de configuração (passo 1 → 2)
+function restartSetup() {
+    localStorage.removeItem('numEvaluators');
+    localStorage.removeItem('evaluatorNamesConfirmed');
+    localStorage.removeItem('evaluatorNames');
+    hideMainSections();
+    showNumEvaluatorsModal(function() {
+        showEvaluatorNamesSetupModal(async function() {
+            showMainSections();
+            renderTasks();
+        });
+    });
+}
+
 // Ocultar seções principais (usadas no fluxo de primeira configuração)
 function hideMainSections() {
     const sections = ['.form-section', '.table-section', '.config-section'];
