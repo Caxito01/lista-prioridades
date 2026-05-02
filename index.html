@@ -2,8 +2,19 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Sistema de Gerenciamento de Prioridades</title>
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Prioridades">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Prioridades CECM">
+    <meta name="description" content="Sistema de gerenciamento de prioridades com avaliadores">
+    <!-- /PWA -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -411,6 +422,24 @@
             <p>&copy; CECM - 2025 Sistema de Gerenciamento de Prioridades. Todos os direitos reservados.</p>
         </div>
     </footer>
+
+    <!-- FAB: Adicionar Tarefa (mobile) -->
+    <button id="fab-add-task" onclick="document.querySelector('.form-section').scrollIntoView({behavior:'smooth'})" title="Nova Tarefa">＋</button>
+
+    <!-- PWA Install Banner -->
+    <div id="pwa-install-banner">
+        <div class="pwa-banner-inner">
+            <div class="pwa-banner-icon">📊</div>
+            <div class="pwa-banner-text">
+                <strong>Instalar como App</strong>
+                Adicione à tela inicial para acesso rápido, mesmo offline!
+            </div>
+            <div class="pwa-banner-actions">
+                <button class="pwa-btn-install" id="pwa-btn-install">Instalar</button>
+                <button class="pwa-btn-dismiss" id="pwa-btn-dismiss">Agora não</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         // Dark Mode

@@ -1,6 +1,54 @@
 // Versão de build para depuração
 console.log('app.js v1735000001 carregado');
 
+// ── Registrar Service Worker (PWA) ────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('[SW] Registrado:', reg.scope))
+            .catch(err => console.log('[SW] Erro:', err));
+    });
+}
+
+// ── PWA Install Prompt ────────────────────────────────────────────────────────
+let _deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    _deferredInstallPrompt = e;
+
+    // Show banner after 3 seconds if not already dismissed
+    if (!localStorage.getItem('pwa-banner-dismissed')) {
+        setTimeout(() => {
+            const banner = document.getElementById('pwa-install-banner');
+            if (banner) banner.style.display = 'block';
+        }, 3000);
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const btnInstall  = document.getElementById('pwa-btn-install');
+    const btnDismiss  = document.getElementById('pwa-btn-dismiss');
+    const banner      = document.getElementById('pwa-install-banner');
+
+    if (btnInstall) {
+        btnInstall.addEventListener('click', async () => {
+            if (!_deferredInstallPrompt) return;
+            _deferredInstallPrompt.prompt();
+            const { outcome } = await _deferredInstallPrompt.userChoice;
+            console.log('[PWA] Install outcome:', outcome);
+            _deferredInstallPrompt = null;
+            if (banner) banner.style.display = 'none';
+        });
+    }
+    if (btnDismiss) {
+        btnDismiss.addEventListener('click', () => {
+            if (banner) banner.style.display = 'none';
+            localStorage.setItem('pwa-banner-dismissed', '1');
+        });
+    }
+});
+
 // Estado da aplicação
 let tasks = [];
 let editingTaskId = null;
@@ -889,10 +937,15 @@ function renderTasks() {
         noTasksMessage.style.display = 'none';
     }
     
-    tbody.innerHTML = sortedTasks.map((task, index) => `
+    tbody.innerHTML = sortedTasks.map((task, index) => {
+        const evalCells = Array.from({length: numEvaluators}, (_, i) => {
+            const name = evaluatorNames[`eval${i+1}`] || `Avaliador ${i+1}`;
+            return `<td class="score-cell evaluator-col" data-label="${name}">${task.evaluations[`eval${i+1}`] ?? '—'}</td>`;
+        }).join('');
+        return `
         <tr class="${isOverdue(task) ? 'row-overdue' : isDueToday(task) ? 'row-due-today' : ''}">
             <td class="row-number">${index + 1}</td>
-            <td>
+            <td data-label="Estágio">
                 <select class="stage-select" data-stage="${task.stage}" onchange="updateTaskStage(${task.id}, this.value)">
                     <option value="ATRASADO" ${task.stage === 'ATRASADO' ? 'selected' : ''}>ATRASADO</option>
                     <option value="EM PLANEJAMENTO" ${task.stage === 'EM PLANEJAMENTO' ? 'selected' : ''}>EM PLANEJAMENTO</option>
@@ -901,25 +954,21 @@ function renderTasks() {
                     <option value="CONCLUÍDO" ${task.stage === 'CONCLUÍDO' ? 'selected' : ''}>CONCLUÍDO</option>
                 </select>
             </td>
-            <td>${task.description}</td>
-            <td>${buildDueDateCell(task)}</td>
-            <td>${task.cost || '—'}</td>
-            ${Array.from({length: numEvaluators}, (_, i) => `<td class="score-cell evaluator-col">${task.evaluations[`eval${i+1}`] ?? '—'}</td>`).join('')}
-            <td class="media-col">
+            <td data-label="Descrição">${task.description}</td>
+            <td data-label="Vencimento">${buildDueDateCell(task)}</td>
+            <td data-label="Custo">${task.cost || '—'}</td>
+            ${evalCells}
+            <td class="media-col" data-label="Média">
                 <span class="${getAverageClass(parseFloat(task.average))}">
                     ${task.average}
                 </span>
             </td>
             <td class="actions-cell">
-                <button class="btn btn-edit" onclick="editTask(${task.id})" title="Editar">
-                    ✏️
-                </button>
-                <button class="btn btn-danger" onclick="deleteTask(${task.id})" title="Excluir">
-                    🗑️
-                </button>
+                <button class="btn btn-edit" onclick="editTask(${task.id})" title="Editar">✏️</button>
+                <button class="btn btn-danger" onclick="deleteTask(${task.id})" title="Excluir">🗑️</button>
             </td>
-        </tr>
-    `).join('');
+        </tr>`;
+    }).join('');
 }
 
 // Atualizar estágio da tarefa rapidamente

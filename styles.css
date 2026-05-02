@@ -1588,3 +1588,263 @@ body.dark-mode .dark-toggle-idx {
 main {
     margin-top: 20px !important;
 }
+
+/* ============================================================
+   PWA & MOBILE APP — Extra styles
+   ============================================================ */
+
+/* Safe-area support (iPhone notch / home bar) */
+body {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── PWA Install Banner ─────────────────────────────────────── */
+#pwa-install-banner {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 14px 18px;
+    z-index: 9999;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+    animation: slideUpBanner 0.4s ease-out;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+}
+@keyframes slideUpBanner {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+}
+#pwa-install-banner .pwa-banner-inner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 600px;
+    margin: 0 auto;
+}
+#pwa-install-banner .pwa-banner-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+#pwa-install-banner .pwa-banner-text {
+    flex: 1;
+    font-size: 0.88rem;
+    line-height: 1.4;
+}
+#pwa-install-banner .pwa-banner-text strong {
+    display: block;
+    font-size: 1rem;
+    margin-bottom: 2px;
+}
+#pwa-install-banner .pwa-banner-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+#pwa-install-banner .pwa-btn-install {
+    background: white;
+    color: #667eea;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+#pwa-install-banner .pwa-btn-dismiss {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 20px;
+    padding: 8px 12px;
+    font-weight: 600;
+    font-size: 0.82rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+/* ── MOBILE CARD VIEW for task table (< 640px) ──────────────── */
+@media (max-width: 640px) {
+    /* Hide the real table, show cards */
+    .table-container table,
+    .table-container thead,
+    .table-container tbody,
+    .table-container tr,
+    .table-container td,
+    .table-container th {
+        display: block;
+    }
+    .table-container thead {
+        display: none; /* headers hidden — labels shown inline in card */
+    }
+    .table-container tbody tr {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(102,126,234,0.12);
+        margin-bottom: 12px;
+        padding: 14px;
+        border: 1px solid #e8ecf5;
+        position: relative;
+    }
+    .table-container tbody tr.row-overdue {
+        border-left: 4px solid #dc3545;
+        background: rgba(220,53,69,0.04);
+    }
+    .table-container tbody tr.row-due-today {
+        border-left: 4px solid #ff9800;
+        background: rgba(255,152,0,0.04);
+    }
+    .table-container tbody td {
+        padding: 4px 0;
+        border: none;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+    }
+    /* Número da linha — badge no canto */
+    .table-container tbody td.row-number {
+        position: absolute;
+        top: 12px;
+        right: 14px;
+        width: 28px;
+        height: 28px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border-radius: 50%;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 0;
+    }
+    /* Data-label pseudo-element */
+    .table-container tbody td[data-label]::before {
+        content: attr(data-label) ': ';
+        font-weight: 700;
+        color: #667eea;
+        font-size: 0.78rem;
+        min-width: 90px;
+        flex-shrink: 0;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        margin-top: 2px;
+    }
+    /* Stage select full width */
+    .table-container .stage-select {
+        flex: 1;
+        min-width: 0;
+    }
+    /* Evaluator scores row — inline chips */
+    .table-container td.evaluator-col {
+        display: inline-flex !important;
+        width: auto;
+        margin-right: 4px;
+        padding: 4px 8px;
+        background: #f0f2ff;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #667eea;
+    }
+    .table-container td.evaluator-col::before {
+        display: none !important;
+    }
+    /* Scores wrapper — wrap to not go full-width */
+    .task-card-scores {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 2px 0;
+    }
+    /* Media cell */
+    .table-container td.media-col {
+        padding: 6px 0;
+    }
+    /* Actions cell */
+    .table-container td.actions-cell {
+        justify-content: flex-start;
+        padding-top: 8px;
+        border-top: 1px solid #f0f0f0;
+        margin-top: 4px;
+    }
+    .table-container td.actions-cell::before {
+        display: none;
+    }
+
+    /* Push content down for bottom spacing on phones */
+    main {
+        padding-bottom: 80px !important;
+    }
+
+    /* Floating Add button */
+    #fab-add-task {
+        display: flex;
+    }
+}
+
+/* ── Floating Action Button (FAB) ───────────────────────────── */
+#fab-add-task {
+    display: none; /* shown only on mobile via media query */
+    position: fixed;
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    right: 20px;
+    width: 58px;
+    height: 58px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 1.8rem;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(102,126,234,0.45);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+#fab-add-task:active {
+    transform: scale(0.93);
+    box-shadow: 0 3px 12px rgba(102,126,234,0.4);
+}
+
+/* ── Better touch targets on all small screens ──────────────── */
+@media (max-width: 768px) {
+    /* Bigger tap targets */
+    .btn, .ctrl-btn {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .form-group input,
+    .form-group select {
+        min-height: 48px;
+        font-size: 16px; /* prevents iOS auto-zoom */
+    }
+    .stage-select {
+        min-height: 44px;
+        font-size: 14px;
+    }
+    /* Inputs */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="date"],
+    select {
+        font-size: 16px !important; /* prevents iOS auto-zoom on focus */
+    }
+    /* Config section actions stacked */
+    .evaluators-config-actions {
+        flex-direction: column;
+    }
+    .evaluators-config-actions .btn {
+        width: 100%;
+    }
+}
+
