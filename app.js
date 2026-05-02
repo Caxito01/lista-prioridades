@@ -107,15 +107,32 @@ document.addEventListener('DOMContentLoaded', async function() {
     loadEvaluatorNames();
 
     const accessByCode = !!localStorage.getItem('projectCode');
+    const namesConfirmed = !!localStorage.getItem('evaluatorNamesConfirmed');
 
-    // Se numEvaluators não estava no localStorage, perguntar ao usuário
-    // — mas NÃO quando o acesso é por código de projeto (o projeto já define o número)
-    if (!localStorage.getItem('numEvaluators') && !accessByCode) {
-        showNumEvaluatorsModal(async function() {
-            await loadTasks();
-            renderTasks();
-        });
+    if (!accessByCode && !namesConfirmed) {
+        // ── Primeira visita: ocultar form + tabela, guiar usuário passo a passo
+        hideMainSections();
+
+        if (!localStorage.getItem('numEvaluators')) {
+            // Passo 1: quantidade → Passo 2: nomes
+            showNumEvaluatorsModal(function() {
+                showEvaluatorNamesSetupModal(async function() {
+                    showMainSections();
+                    await loadTasks();
+                    renderTasks();
+                });
+            });
+        } else {
+            // Número já definido mas nomes ainda não confirmados → pular para passo 2
+            buildEvaluatorUI(numEvaluators);
+            showEvaluatorNamesSetupModal(async function() {
+                showMainSections();
+                await loadTasks();
+                renderTasks();
+            });
+        }
     } else {
+        // ── Visita normal (retorno) ou acesso por código
         buildEvaluatorUI(numEvaluators);
         await loadTasks();
         renderTasks();
@@ -167,6 +184,7 @@ function saveEvaluatorNames() {
             if (input) evaluatorNames[`eval${i}`] = input.value.trim() || `Avaliador ${i}`;
         }
         localStorage.setItem('evaluatorNames', JSON.stringify(evaluatorNames));
+        localStorage.setItem('evaluatorNamesConfirmed', '1');
         updateEvaluatorLabels();
         renderTasks();
         showNotification('✅ Nomes dos avaliadores salvos com sucesso!');
@@ -340,9 +358,93 @@ function confirmNumEvaluators() {
     }
 }
 
+// Ocultar seções principais (usadas no fluxo de primeira configuração)
+function hideMainSections() {
+    const sections = ['.form-section', '.table-section', '.config-section'];
+    sections.forEach(sel => {
+        const el = document.querySelector(sel);
+        if (el) el.style.display = 'none';
+    });
+}
+
+// Revelar seções principais
+function showMainSections() {
+    const sections = ['.form-section', '.table-section', '.config-section'];
+    sections.forEach(sel => {
+        const el = document.querySelector(sel);
+        if (el) el.style.display = '';
+    });
+}
+
+// Modal passo 2: definir nomes dos avaliadores (primeira configuração)
+function showEvaluatorNamesSetupModal(onConfirm) {
+    const existing = document.getElementById('evaluatorNamesSetupModal');
+    if (existing) existing.remove();
+
+    let inputs = '';
+    for (let i = 1; i <= numEvaluators; i++) {
+        const val = evaluatorNames[`eval${i}`] || `Avaliador ${i}`;
+        inputs += `
+            <div style="margin-bottom:14px;">
+                <label style="display:block;font-weight:600;color:#555;margin-bottom:4px;font-size:14px;">
+                    👤 Avaliador ${i}
+                </label>
+                <input type="text" id="setupEval${i}" value="${val}"
+                    placeholder="Nome do avaliador ${i}"
+                    style="width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:8px;box-sizing:border-box;font-size:16px;outline:none;"
+                >
+            </div>`;
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'evaluatorNamesSetupModal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:10003;padding:16px;box-sizing:border-box;';
+    modal.innerHTML = `
+        <div style="background:white;padding:28px;border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,0.3);width:100%;max-width:440px;max-height:90vh;overflow-y:auto;box-sizing:border-box;">
+            <div style="text-align:center;margin-bottom:20px;">
+                <div style="font-size:2.5rem;margin-bottom:8px;">✍️</div>
+                <h2 style="margin:0 0 6px;color:#333;font-size:1.3rem;">Passo 2 de 2: Nomes dos Avaliadores</h2>
+                <p style="color:#888;font-size:13px;margin:0;">Defina o nome de cada avaliador do projeto</p>
+            </div>
+            ${inputs}
+            <button onclick="confirmEvaluatorNamesSetup()"
+                style="width:100%;padding:14px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:10px;cursor:pointer;font-size:16px;font-weight:bold;margin-top:8px;">
+                ✅ Confirmar e Começar
+            </button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    const lastInput = document.getElementById(`setupEval${numEvaluators}`);
+    if (lastInput) lastInput.addEventListener('keypress', e => { if (e.key === 'Enter') confirmEvaluatorNamesSetup(); });
+    const firstInput = document.getElementById('setupEval1');
+    if (firstInput) setTimeout(() => firstInput.focus(), 100);
+
+    window._onConfirmEvaluatorNames = onConfirm || null;
+}
+
+// Confirmar nomes dos avaliadores (passo 2 do setup)
+function confirmEvaluatorNamesSetup() {
+    for (let i = 1; i <= numEvaluators; i++) {
+        const input = document.getElementById(`setupEval${i}`);
+        if (input) evaluatorNames[`eval${i}`] = input.value.trim() || `Avaliador ${i}`;
+    }
+    localStorage.setItem('evaluatorNames', JSON.stringify(evaluatorNames));
+    localStorage.setItem('evaluatorNamesConfirmed', '1');
+
+    buildEvaluatorUI(numEvaluators);
+
+    const modal = document.getElementById('evaluatorNamesSetupModal');
+    if (modal) modal.remove();
+
+    if (typeof window._onConfirmEvaluatorNames === 'function') {
+        window._onConfirmEvaluatorNames();
+        window._onConfirmEvaluatorNames = null;
+    }
+}
+
 // Carregar tarefas
 async function loadTasks() {
-    const projectId   = localStorage.getItem('projectId');
     const projectCode = localStorage.getItem('projectCode');
 
     console.log('📂 Carregando tarefas... (projectId:', projectId, '| projectCode:', projectCode, ')');

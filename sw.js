@@ -1,5 +1,5 @@
 // Service Worker — CECM Prioridades PWA
-const CACHE_NAME = 'cecm-prioridades-v3';
+const CACHE_NAME = 'cecm-prioridades-v4';
 
 const APP_SHELL = [
   './',
