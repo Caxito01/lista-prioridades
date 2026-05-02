@@ -450,6 +450,20 @@ function saveTasks() {
     localStorage.setItem('tasks', JSON.stringify(tasks));
 }
 
+// Marcar automaticamente como ATRASADO tarefas vencidas que não estão CONCLUÍDAS
+function autoMarkOverdueTasks() {
+    let changed = false;
+    tasks.forEach(task => {
+        if (task.stage !== 'CONCLUÍDO' && isOverdue(task)) {
+            if (task.stage !== 'ATRASADO') {
+                task.stage = 'ATRASADO';
+                changed = true;
+            }
+        }
+    });
+    if (changed) saveTasks();
+}
+
 // Calcular média das avaliações
 function calculateAverage(evaluations) {
     let sum = 0;
@@ -855,6 +869,7 @@ function renderTasks() {
         return;
     }
     
+    autoMarkOverdueTasks();
     let filteredTasks = filterTasks();
     let sortedTasks = sortTasks(filteredTasks);
     updateSummary(sortedTasks);
