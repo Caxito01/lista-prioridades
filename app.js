@@ -17,6 +17,9 @@ let evaluatorNames = {
     eval4: 'Avaliador 4'
 };
 
+// Número de avaliadores (dinâmico, 1-10, padrão 4)
+let numEvaluators = parseInt(localStorage.getItem('numEvaluators') || '4', 10);
+
 // Gerar código de projeto (CXT + 5 números aleatórios)
 function generateProjectCode() {
     const randomNumbers = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
@@ -54,9 +57,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     await window.initSupabase();
 
     loadEvaluatorNames();
-    await loadTasks();
-    updateEvaluatorLabels();
-    renderTasks();
+
+    // Se numEvaluators não estava no localStorage, perguntar ao usuário
+    if (!localStorage.getItem('numEvaluators')) {
+        showNumEvaluatorsModal(async function() {
+            await loadTasks();
+            renderTasks();
+        });
+    } else {
+        buildEvaluatorUI(numEvaluators);
+        await loadTasks();
+        renderTasks();
+    }
 
     // Verificar acesso por código
     const projectCode = localStorage.getItem('projectCode');
@@ -82,57 +94,31 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 // Carregar nomes dos avaliadores do localStorage
 function loadEvaluatorNames() {
-    const saved = localStorage.getItem('evaluatorNames');
-    if (saved) {
-        evaluatorNames = JSON.parse(saved);
-        document.getElementById('evaluator1').value = evaluatorNames.eval1;
-        document.getElementById('evaluator2').value = evaluatorNames.eval2;
-        document.getElementById('evaluator3').value = evaluatorNames.eval3;
-        document.getElementById('evaluator4').value = evaluatorNames.eval4;
+    try {
+        const savedNames = localStorage.getItem('evaluatorNames');
+        if (savedNames) {
+            evaluatorNames = JSON.parse(savedNames);
+        }
+        const savedNum = localStorage.getItem('numEvaluators');
+        if (savedNum) {
+            numEvaluators = parseInt(savedNum, 10);
+        }
+    } catch (e) {
+        console.log('⚠️ Erro ao carregar nomes dos avaliadores:', e?.message);
     }
 }
 
 // Salvar nomes dos avaliadores
 function saveEvaluatorNames() {
-    console.log('💾 Salvando nomes dos avaliadores...');
-    
     try {
-        // Obter valores dos campos
-        const eval1Value = document.getElementById('evaluator1')?.value || 'Avaliador 1';
-        const eval2Value = document.getElementById('evaluator2')?.value || 'Avaliador 2';
-        const eval3Value = document.getElementById('evaluator3')?.value || 'Avaliador 3';
-        const eval4Value = document.getElementById('evaluator4')?.value || 'Avaliador 4';
-        
-        console.log('📝 Valores obtidos:');
-        console.log('   1:', eval1Value);
-        console.log('   2:', eval2Value);
-        console.log('   3:', eval3Value);
-        console.log('   4:', eval4Value);
-        
-        // Atualizar objeto global
-        evaluatorNames = {
-            eval1: eval1Value,
-            eval2: eval2Value,
-            eval3: eval3Value,
-            eval4: eval4Value
-        };
-        
-        // Salvar no localStorage
+        for (let i = 1; i <= numEvaluators; i++) {
+            const input = document.getElementById(`evaluator${i}`);
+            if (input) evaluatorNames[`eval${i}`] = input.value.trim() || `Avaliador ${i}`;
+        }
         localStorage.setItem('evaluatorNames', JSON.stringify(evaluatorNames));
-        console.log('✅ Nomes salvos no localStorage');
-        
-        // Atualizar labels
         updateEvaluatorLabels();
-        console.log('✅ Labels atualizados');
-        
-        // Renderizar tarefas
         renderTasks();
-        console.log('✅ Tarefas renderizadas');
-        
-        // Mostrar notificação
         showNotification('✅ Nomes dos avaliadores salvos com sucesso!');
-        console.log('✅ Notificação exibida');
-        
     } catch (error) {
         console.error('❌ Erro ao salvar nomes:', error);
         showNotification('❌ Erro ao salvar nomes: ' + error.message);
@@ -172,32 +158,134 @@ window.onclick = function(event) {
 
 // Atualizar labels dos avaliadores na interface
 function updateEvaluatorLabels() {
-    console.log('🔄 Atualizando labels dos avaliadores...');
-    
-    const evaluatorNameSpans = document.querySelectorAll('.evaluator-name');
-    console.log('📍 Encontrados .evaluator-name:', evaluatorNameSpans.length);
-    
-    if (evaluatorNameSpans.length >= 4) {
-        evaluatorNameSpans[0].textContent = evaluatorNames.eval1;
-        evaluatorNameSpans[1].textContent = evaluatorNames.eval2;
-        evaluatorNameSpans[2].textContent = evaluatorNames.eval3;
-        evaluatorNameSpans[3].textContent = evaluatorNames.eval4;
-        console.log('✅ Labels de nomes atualizados:', evaluatorNames);
-    } else {
-        console.warn('⚠️ Nem todos os elementos .evaluator-name encontrados');
+    // Update form labels
+    for (let i = 1; i <= numEvaluators; i++) {
+        const span = document.querySelector(`label[for="eval${i}"] .evaluator-name`);
+        if (span) span.textContent = evaluatorNames[`eval${i}`] || `Avaliador ${i}`;
     }
-    
+    // Update table headers
     const headers = document.querySelectorAll('.evaluator-header');
-    console.log('📍 Encontrados .evaluator-header:', headers.length);
-    
-    if (headers.length >= 4) {
-        headers[0].textContent = evaluatorNames.eval1;
-        headers[1].textContent = evaluatorNames.eval2;
-        headers[2].textContent = evaluatorNames.eval3;
-        headers[3].textContent = evaluatorNames.eval4;
-        console.log('✅ Headers atualizados');
-    } else {
-        console.warn('⚠️ Nem todos os elementos .evaluator-header encontrados');
+    headers.forEach((h, i) => {
+        h.textContent = evaluatorNames[`eval${i + 1}`] || `Avaliador ${i + 1}`;
+    });
+}
+
+// Construir toda a UI de avaliadores dinamicamente
+function buildEvaluatorUI(n) {
+    numEvaluators = Math.max(1, Math.min(10, parseInt(n, 10) || 4));
+    localStorage.setItem('numEvaluators', numEvaluators);
+
+    // Garantir que evaluatorNames tem entradas para todos os avaliadores
+    for (let i = 1; i <= numEvaluators; i++) {
+        if (!evaluatorNames[`eval${i}`]) {
+            evaluatorNames[`eval${i}`] = `Avaliador ${i}`;
+        }
+    }
+    // Remover entradas extras (de configurações antigas com mais avaliadores)
+    Object.keys(evaluatorNames).forEach(k => {
+        const idx = parseInt(k.replace('eval', ''), 10);
+        if (idx > numEvaluators) delete evaluatorNames[k];
+    });
+
+    // 1. Construir inputs de configuração
+    const configContainer = document.getElementById('evaluatorsConfigContainer');
+    if (configContainer) {
+        configContainer.innerHTML = '';
+        for (let i = 1; i <= numEvaluators; i++) {
+            const div = document.createElement('div');
+            div.className = 'evaluator-input';
+            div.innerHTML = `<label>Avaliador ${i}:</label><input type="text" id="evaluator${i}" value="${evaluatorNames[`eval${i}`]}">`;
+            configContainer.appendChild(div);
+        }
+    }
+
+    // 2. Construir inputs do formulário
+    const formRow = document.getElementById('evaluationsFormRow');
+    if (formRow) {
+        formRow.innerHTML = '';
+        for (let i = 1; i <= numEvaluators; i++) {
+            const div = document.createElement('div');
+            div.className = 'form-group';
+            div.innerHTML = `<label for="eval${i}">Nota <span class="evaluator-name">${evaluatorNames[`eval${i}`]}</span> (1-5) *</label><input type="number" id="eval${i}" min="1" max="5" required>`;
+            formRow.appendChild(div);
+        }
+    }
+
+    // 3. Construir cabeçalhos da tabela
+    buildTableHeader(numEvaluators);
+}
+
+// Construir cabeçalhos da tabela dinamicamente
+function buildTableHeader(n) {
+    const headerRow = document.getElementById('tableHeaderRow');
+    if (!headerRow) return;
+    const evalHeaders = Array.from({ length: n }, (_, i) =>
+        `<th class="evaluator-col evaluator-header">${evaluatorNames[`eval${i + 1}`] || `Avaliador ${i + 1}`}</th>`
+    ).join('');
+    headerRow.innerHTML = `
+        <th class="col-number">Nº</th>
+        <th>Estágio</th>
+        <th>Descrição</th>
+        <th>Vencimento</th>
+        <th>Custo</th>
+        ${evalHeaders}
+        <th class="media-col">Média</th>
+        <th class="actions-header">Ações</th>
+    `;
+}
+
+// Modal para definir quantidade de avaliadores
+function showNumEvaluatorsModal(onConfirm) {
+    const existing = document.getElementById('numEvaluatorsModal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'numEvaluatorsModal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:10002;';
+    modal.innerHTML = `
+        <div style="background:white;padding:32px;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.3);max-width:380px;width:90%;text-align:center;">
+            <h2 style="margin-top:0;color:#333;">👥 Avaliadores do Projeto</h2>
+            <p style="color:#666;margin-bottom:20px;">Quantos avaliadores terá este projeto?<br><small style="color:#999;">(entre 1 e 10 avaliadores)</small></p>
+            <input type="number" id="numEvaluatorsInput" min="1" max="10" value="${numEvaluators}" style="width:100%;padding:14px;border:2px solid #667eea;border-radius:8px;box-sizing:border-box;font-size:22px;text-align:center;margin-bottom:20px;outline:none;">
+            <button onclick="confirmNumEvaluators()" style="width:100%;padding:14px;background:#667eea;color:white;border:none;border-radius:8px;cursor:pointer;font-size:16px;font-weight:bold;">✅ Confirmar</button>
+            <p style="color:#aaa;font-size:12px;margin-top:12px;margin-bottom:0;">⚠️ Alterar este valor após cadastrar tarefas reiniciará as avaliações.</p>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    const input = document.getElementById('numEvaluatorsInput');
+    input.focus();
+    input.select();
+    input.addEventListener('keypress', e => { if (e.key === 'Enter') confirmNumEvaluators(); });
+    window._onConfirmNumEvaluators = onConfirm || null;
+}
+
+// Confirmar quantidade de avaliadores
+function confirmNumEvaluators() {
+    const val = parseInt(document.getElementById('numEvaluatorsInput').value, 10);
+    if (!val || val < 1 || val > 10) {
+        showNotification('❌ Escolha um número entre 1 e 10!');
+        return;
+    }
+    const modal = document.getElementById('numEvaluatorsModal');
+    if (modal) modal.remove();
+
+    const prevNum = numEvaluators;
+    buildEvaluatorUI(val);
+
+    // Se havia tarefas e o número mudou, recalcular médias para não ficarem incorretas
+    if (val !== prevNum && tasks.length > 0) {
+        tasks.forEach(t => {
+            t.average = calculateAverage(t.evaluations);
+        });
+        saveTasks();
+        renderTasks();
+        showNotification(`⚠️ Avaliadores alterados para ${val}. Revise as notas das tarefas existentes.`);
+    }
+
+    if (typeof window._onConfirmNumEvaluators === 'function') {
+        window._onConfirmNumEvaluators(val);
+        window._onConfirmNumEvaluators = null;
     }
 }
 
@@ -309,20 +397,20 @@ function _applyProjectData(project) {
         const data = project.data;
         const loadedTasks = Array.isArray(data.tasks) ? data.tasks : [];
         const loadedEvaluators = data.evaluator_names || evaluatorNames;
+        const loadedNum = parseInt(data.num_evaluators || '4', 10);
 
         tasks = loadedTasks;
         evaluatorNames = loadedEvaluators;
+        numEvaluators = loadedNum;
 
         localStorage.setItem('tasks', JSON.stringify(tasks));
         localStorage.setItem('evaluatorNames', JSON.stringify(evaluatorNames));
+        localStorage.setItem('numEvaluators', numEvaluators);
 
-        // Atualizar campos de nome dos avaliadores na tela
-        ['eval1','eval2','eval3','eval4'].forEach((k, i) => {
-            const el = document.getElementById('evaluator' + (i + 1));
-            if (el) el.value = evaluatorNames[k] || ('Avaliador ' + (i + 1));
-        });
+        // Rebuild UI for the loaded evaluator count
+        buildEvaluatorUI(numEvaluators);
 
-        console.log('✅ Tarefas carregadas do Supabase:', tasks.length, '| Avaliadores:', loadedEvaluators);
+        console.log('✅ Tarefas carregadas do Supabase:', tasks.length, '| Avaliadores:', numEvaluators);
     } else if (project && Array.isArray(project.tasks)) {
         tasks = project.tasks;
         localStorage.setItem('tasks', JSON.stringify(tasks));
@@ -336,8 +424,8 @@ function _applyProjectData(project) {
 // Função para carregar todos os dados
 async function loadData() {
     await loadEvaluatorNames();
+    buildEvaluatorUI(numEvaluators);
     await loadTasks();
-    updateEvaluatorLabels();
     renderTasks();
 }
 
@@ -364,8 +452,13 @@ function saveTasks() {
 
 // Calcular média das avaliações
 function calculateAverage(evaluations) {
-    const sum = evaluations.eval1 + evaluations.eval2 + evaluations.eval3 + evaluations.eval4;
-    return (sum / 4).toFixed(2);
+    let sum = 0;
+    let count = 0;
+    for (let i = 1; i <= numEvaluators; i++) {
+        const val = parseFloat(evaluations[`eval${i}`]);
+        if (!isNaN(val)) { sum += val; count++; }
+    }
+    return count > 0 ? (sum / count).toFixed(2) : '0.00';
 }
 
 function getTodayISO() {
@@ -489,12 +582,10 @@ function handleFormSubmit(e) {
     const costRaw = document.getElementById('taskCost').value.trim();
     const costValue = parseCurrencyToNumber(costRaw);
 
-    const evaluations = {
-        eval1: parseInt(document.getElementById('eval1').value),
-        eval2: parseInt(document.getElementById('eval2').value),
-        eval3: parseInt(document.getElementById('eval3').value),
-        eval4: parseInt(document.getElementById('eval4').value)
-    };
+    const evaluations = {};
+    for (let i = 1; i <= numEvaluators; i++) {
+        evaluations[`eval${i}`] = parseInt(document.getElementById(`eval${i}`).value);
+    }
 
     if (!description) {
         showNotification('❌ A descrição da tarefa é obrigatória.');
@@ -571,10 +662,10 @@ function editTask(id) {
     document.getElementById('taskStage').value = task.stage;
     document.getElementById('taskDueDate').value = task.dueDate || '';
     document.getElementById('taskCost').value = normalizeCost(task.cost || '');
-    document.getElementById('eval1').value = task.evaluations.eval1;
-    document.getElementById('eval2').value = task.evaluations.eval2;
-    document.getElementById('eval3').value = task.evaluations.eval3;
-    document.getElementById('eval4').value = task.evaluations.eval4;
+    for (let i = 1; i <= numEvaluators; i++) {
+        const el = document.getElementById(`eval${i}`);
+        if (el) el.value = task.evaluations[`eval${i}`] || '';
+    }
     
     document.getElementById('formTitle').textContent = '✏️ Editar Tarefa';
     document.getElementById('submitBtn').textContent = 'Salvar Alterações';
@@ -798,11 +889,8 @@ function renderTasks() {
             <td>${task.description}</td>
             <td>${buildDueDateCell(task)}</td>
             <td>${task.cost || '—'}</td>
-            <td class="score-cell">${task.evaluations.eval1}</td>
-            <td class="score-cell">${task.evaluations.eval2}</td>
-            <td class="score-cell">${task.evaluations.eval3}</td>
-            <td class="score-cell">${task.evaluations.eval4}</td>
-            <td>
+            ${Array.from({length: numEvaluators}, (_, i) => `<td class="score-cell evaluator-col">${task.evaluations[`eval${i+1}`] ?? '—'}</td>`).join('')}
+            <td class="media-col">
                 <span class="${getAverageClass(parseFloat(task.average))}">
                     ${task.average}
                 </span>
@@ -1068,6 +1156,7 @@ async function performSaveProject(projectName) {
         
         const projectData = {
             evaluator_names: evaluatorNames,
+            num_evaluators: numEvaluators,
             tasks: tasks,
             project_code: projectCode
         };
@@ -1228,12 +1317,14 @@ async function confirmLoadProject(projectId) {
         // Carregar dados
         evaluatorNames = project.data.evaluator_names || evaluatorNames;
         tasks = project.data.tasks || [];
+        numEvaluators = parseInt(project.data.num_evaluators || numEvaluators, 10);
 
         // Persistir projeto atual para recarregar corretamente após F5
         try {
             localStorage.setItem('projectId', project.id);
             localStorage.setItem('tasks', JSON.stringify(tasks));
             localStorage.setItem('evaluatorNames', JSON.stringify(evaluatorNames));
+            localStorage.setItem('numEvaluators', numEvaluators);
         } catch (e) {
             console.log('⚠️ Erro ao salvar dados do projeto no localStorage:', e?.message);
         }
@@ -1246,12 +1337,7 @@ async function confirmLoadProject(projectId) {
         }
         
         // Atualizar interface
-        document.getElementById('evaluator1').value = evaluatorNames.eval1;
-        document.getElementById('evaluator2').value = evaluatorNames.eval2;
-        document.getElementById('evaluator3').value = evaluatorNames.eval3;
-        document.getElementById('evaluator4').value = evaluatorNames.eval4;
-        
-        updateEvaluatorLabels();
+        buildEvaluatorUI(numEvaluators);
         renderTasks();
         
         showNotification('✅ Projeto carregado com sucesso!');

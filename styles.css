@@ -115,10 +115,22 @@ section h2 {
 }
 
 .evaluators-config {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 15px;
     margin-bottom: 15px;
+}
+
+#evaluatorsConfigContainer {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 15px;
+}
+
+.evaluators-config-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 .evaluator-input {
@@ -791,7 +803,7 @@ footer {
 
     /* Config section */
     .config-section { padding: 14px; }
-    .evaluators-config { grid-template-columns: 1fr 1fr; }
+    #evaluatorsConfigContainer { grid-template-columns: 1fr 1fr; }
 
     /* Form */
     .form-section { padding: 14px; }
@@ -858,7 +870,7 @@ footer {
         font-size: 0.78rem;
     }
 
-    .evaluators-config { grid-template-columns: 1fr; }
+    #evaluatorsConfigContainer { grid-template-columns: 1fr; }
 
     .ctrl-select-wrap-sm select {
         font-size: 0.72rem;
@@ -1019,17 +1031,10 @@ tbody tr {
         display: none !important;
     }
 
-    /* Ocultar colunas de avaliadores (6-9) e ações (11), mantendo Nº, Estágio, Descrição, Vencimento, Custo e Média */
-    th:nth-child(6),
-    th:nth-child(7),
-    th:nth-child(8),
-    th:nth-child(9),
-    th:nth-child(11),
-    td:nth-child(6),
-    td:nth-child(7),
-    td:nth-child(8),
-    td:nth-child(9),
-    td:nth-child(11) {
+    /* Ocultar colunas de avaliadores e ações na impressão — usar classes dinâmicas */
+    .evaluator-col,
+    .actions-header,
+    .actions-cell {
         display: none !important;
     }
 
@@ -1081,17 +1086,15 @@ tbody tr {
         word-wrap: break-word;
     }
 
-    th:nth-child(10),
-    td:nth-child(10) {
+    .media-col {
         width: 8%;
         white-space: nowrap;
     }
 
-    /* Centralizar as colunas Nº (1) e Média (10) */
+    /* Centralizar as colunas Nº e Média */
     th:nth-child(1),
-    th:nth-child(10),
     td:nth-child(1),
-    td:nth-child(10) {
+    .media-col {
         text-align: center;
     }
 
@@ -1186,30 +1189,20 @@ td:nth-child(5) {
     width: 120px;
 }
 
-/* Avaliadores 1-4 - Colunas médias */
-th:nth-child(6),
-td:nth-child(6),
-th:nth-child(7),
-td:nth-child(7) {
+/* Avaliadores - Colunas dinâmicas (classe gerada por buildTableHeader) */
+.evaluator-col {
     width: 80px;
-}
-
-th:nth-child(8),
-td:nth-child(8),
-th:nth-child(9),
-td:nth-child(9) {
-    width: 80px;
+    min-width: 64px;
 }
 
 /* Média - Coluna pequena */
-th:nth-child(10),
-td:nth-child(10) {
+.media-col {
     width: 90px;
 }
 
 /* Ações - Coluna pequena */
-th:nth-child(11),
-td:nth-child(11) {
+.actions-header,
+.actions-cell {
     width: 110px;
 }
 

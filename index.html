@@ -282,32 +282,11 @@
         <section class="config-section">
             <h2>⚙️ Configurações de Avaliadores</h2>
             <div class="evaluators-config">
-                <div class="evaluator-input">
-                    <label>Avaliador 1:</label>
-                    <input type="text" id="evaluator1" value="Avaliador 1">
+                <div id="evaluatorsConfigContainer"></div>
+                <div class="evaluators-config-actions">
+                    <button class="btn btn-primary" onclick="saveEvaluatorNames()">Salvar Nomes</button>
+                    <button class="btn btn-secondary" onclick="showNumEvaluatorsModal()" title="Alterar quantidade de avaliadores">🔧 Alterar Nº de Avaliadores</button>
                 </div>
-                <div class="evaluator-input">
-                    <label>Avaliador 2:</label>
-                    <input type="text" id="evaluator2" value="Avaliador 2">
-                </div>
-                <div class="evaluator-input">
-                    <label>Avaliador 3:</label>
-                    <input type="text" id="evaluator3" value="Avaliador 3">
-                </div>
-                <div class="evaluator-input">
-                    <label>Avaliador 4:</label>
-                    <input type="text" id="evaluator4" value="Avaliador 4">
-                </div>
-                <button class="btn btn-primary" onclick="
-                    console.log('🔘 Botão Salvar Nomes clicado');
-                    if (typeof saveEvaluatorNames === 'function') {
-                        console.log('✅ saveEvaluatorNames existe, executando...');
-                        saveEvaluatorNames();
-                    } else {
-                        console.error('❌ saveEvaluatorNames NÃO DEFINIDA!');
-                        alert('ERRO: Função saveEvaluatorNames não encontrada. Pressione Ctrl+Shift+Delete, limpe o cache e recarregue.');
-                    }
-                ">Salvar Nomes</button>
             </div>
         </section>
 
@@ -344,23 +323,8 @@
                     </div>
                 </div>
 
-                <div class="form-row evaluations-row">
-                    <div class="form-group">
-                        <label for="eval1">Nota <span class="evaluator-name">Avaliador 1</span> (1-5) *</label>
-                        <input type="number" id="eval1" min="1" max="5" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="eval2">Nota <span class="evaluator-name">Avaliador 2</span> (1-5) *</label>
-                        <input type="number" id="eval2" min="1" max="5" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="eval3">Nota <span class="evaluator-name">Avaliador 3</span> (1-5) *</label>
-                        <input type="number" id="eval3" min="1" max="5" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="eval4">Nota <span class="evaluator-name">Avaliador 4</span> (1-5) *</label>
-                        <input type="number" id="eval4" min="1" max="5" required>
-                    </div>
+                <div class="form-row evaluations-row" id="evaluationsFormRow">
+                    <!-- Evaluator inputs generated dynamically by buildEvaluatorUI() -->
                 </div>
 
                 <div class="form-actions">
@@ -421,18 +385,8 @@
             <div class="table-container">
                 <table id="tasksTable">
                     <thead>
-                        <tr>
-                            <th class="col-number">Nº</th>
-                            <th>Estágio</th>
-                            <th>Descrição</th>
-                            <th>Vencimento</th>
-                            <th>Custo</th>
-                            <th class="evaluator-header">Avaliador 1</th>
-                            <th class="evaluator-header">Avaliador 2</th>
-                            <th class="evaluator-header">Avaliador 3</th>
-                            <th class="evaluator-header">Avaliador 4</th>
-                            <th>Média</th>
-                            <th>Ações</th>
+                        <tr id="tableHeaderRow">
+                            <!-- Table headers generated dynamically by buildTableHeader() -->
                         </tr>
                     </thead>
                     <tbody id="tasksTableBody">

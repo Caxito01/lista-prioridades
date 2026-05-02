@@ -372,6 +372,7 @@ async function performSaveProject(projectName) {
         
         const projectData = {
             evaluator_names: evaluatorNames,
+            num_evaluators: typeof numEvaluators !== 'undefined' ? numEvaluators : 4,
             tasks: tasks
         };
         
@@ -450,6 +451,7 @@ async function performUpdateProject(projectId) {
         
         const projectData = {
             evaluator_names: evaluatorNames,
+            num_evaluators: typeof numEvaluators !== 'undefined' ? numEvaluators : 4,
             tasks: tasks
         };
         
