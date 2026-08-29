@@ -1,13 +1,13 @@
 // Service Worker — CECM Prioridades PWA
-const CACHE_NAME = 'cecm-prioridades-v9';
+const CACHE_NAME = 'cecm-prioridades-v10';
 
 const APP_SHELL = [
   './',
   './index.html',
   './auth.html',
-  './5w2h.html',
+  './backup/index.html',
+  './backup/app.js',
   './styles.css',
-  './app.js',
   './auth.js',
   './supabase-config.js',
   './supabase-init.js',

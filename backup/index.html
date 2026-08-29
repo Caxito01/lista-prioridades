@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Sistema de Gerenciamento de Prioridades</title>
+    <!-- PWA -->
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Prioridades">
+    <link rel="apple-touch-icon" href="../icons/icon-192.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Prioridades CECM">
+    <meta name="description" content="Sistema de gerenciamento de prioridades com avaliadores">
+    <!-- /PWA -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+    <link rel="stylesheet" href="../styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase-init.js?v=1735000004"></script>
+    <script>
+        // Funções críticas inline para evitar problemas de cache
+        async function handleLogout() {
+            const confirmLogout = confirm('Tem certeza que deseja sair?');
+            if (!confirmLogout) return;
+            
+            try {
+                const projectCode = localStorage.getItem('projectCode');
+                if (!projectCode) {
+                    await window.initSupabase();
+                    const client = window.getClient();
+                    if (client && client.auth) {
+                        await client.auth.signOut().catch(e => console.log('⚠️ Erro:', e?.message));
+                    }
+                }
+                localStorage.clear();
+                window.location.replace('/auth.html?t=' + Date.now());
+            } catch (e) {
+                console.log('⚠️ Erro geral:', e?.message);
+                localStorage.clear();
+                window.location.replace('/auth.html?t=' + Date.now());
+            }
+        }
+        
+        async function loadFromDatabase() {
+            try {
+                await window.initSupabase();
+                const client = window.getClient();
+                if (!client || !client.auth) {
+                    alert('❌ Erro: Supabase não inicializado. Recarregue a página.');
+                    return;
+                }
+                const { data, error: sessionError } = await client.auth.getSession();
+                if (!data?.session) {
+                    if (typeof showLoginRequiredModal === 'function') {
+                        showLoginRequiredModal('Você precisa estar logado para carregar suas tarefas no banco de dados.');
+                    } else {
+                        alert('❌ Você precisa estar logado para carregar projetos!');
+                    }
+                    return;
+                }
+                const { data: projects, error } = await client
+                    .from('projects')
+                    .select('*')
+                    .eq('user_id', data.session.user.id)
+                    .order('created_at', { ascending: false })
+                    .limit(10);
+                if (error) {
+                    alert('❌ Erro ao carregar: ' + error.message);
+                    return;
+                }
+                if (!projects || projects.length === 0) {
+                    alert('Nenhum projeto encontrado para sua conta.');
+                    return;
+                }
+                showProjectSelection(projects);
+            } catch (error) {
+                alert('❌ Erro: ' + error.message);
+            }
+        }
+
+        async function open5w2hProtected() {
+            try {
+                await window.initSupabase();
+                const client = window.getClient();
+                if (!client || !client.auth) {
+                    alert('❌ Erro: Supabase não inicializado. Recarregue a página.');
+                    return;
+                }
+                const { data } = await client.auth.getSession();
+                if (!data?.session) {
+                    if (typeof showLoginRequiredModal === 'function') {
+                        showLoginRequiredModal('Você precisa estar logado para acessar essa página.');
+                    } else {
+                        alert('❌ Você precisa estar logado para acessar essa página.');
+                    }
+                    return;
+                }
+                window.location.href = '../index.html';
+            } catch (error) {
+                alert('❌ Erro: ' + error.message);
+            }
+        }
+    </script>
+    <script src="../auth.js?v=1735000004"></script>
+    <script src="app.js?v=1735000004"></script>
+</head>
+<body>
+    <header>
+        <!-- Row 1: Logo + action buttons -->
+        <div class="container hdr-top-row">
+            <div class="logo">
+                <h1>📊 Sistema de Prioridades</h1>
+                <p class="subtitle">Gerenciamento Colaborativo de Tarefas</p>
+            </div>
+            <div class="header-buttons">
+                <button class="ctrl-btn ctrl-btn-outline" onclick="printToPDF()" title="Imprimir PDF">🖨️ PDF</button>
+                <button class="ctrl-btn ctrl-btn-primary" onclick="saveToDatabase()" title="Salvar no banco">💾 Salvar</button>
+                <button class="ctrl-btn ctrl-btn-primary" onclick="loadFromDatabase()" title="Carregar do banco">📥 Carregar</button>
+                <button class="ctrl-btn ctrl-btn-kanban" onclick="open5w2hProtected()" title="Abrir CECM 5W2H">📋 CECM 5W2H</button>
+                <button class="ctrl-btn" style="background:linear-gradient(135deg,#f093fb,#f5576c);color:white;border:none;" onclick="abrirAnaliseIA()" title="Análise com Inteligência Artificial">🤖 Análise IA</button>
+                <button class="btn-help" onclick="showHelp()" title="Ajuda">❓</button>
+                <button class="btn-logout" onclick="handleLogout()" title="Sair">🚪 Sair</button>
+                <button class="dark-toggle-idx" id="btnDarkMode" onclick="toggleDarkMode()" title="Alternar modo escuro">
+                    <span class="toggle-track-idx"><span class="toggle-thumb-idx"></span></span>
+                    <span id="darkLabelIdx">🌙</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Row 2: Filter bar -->
+        <div class="hdr-filter-row">
+            <div class="ctrl-select-wrap-sm">
+                <select id="filterStageHdr" onchange="applyFiltersFromHeader()">
+                    <option value="">🔍 Todos os Estágios</option>
+                    <option value="ATRASADO">⚠️ Atrasado</option>
+                    <option value="EM PLANEJAMENTO">📐 Em Planejamento</option>
+                    <option value="INICIADO">🔵 Iniciado</option>
+                    <option value="EM EXECUÇÃO">▶️ Em Execução</option>
+                    <option value="CONCLUÍDO">✅ Concluído</option>
+                </select>
+            </div>
+            <div class="ctrl-select-wrap-sm">
+                <select id="filterDeadlineHdr" onchange="applyFiltersFromHeader()">
+                    <option value="">⏱️ Todos os Prazos</option>
+                    <option value="today">⏰ Vence Hoje</option>
+                    <option value="overdue">⚠️ Vencidas</option>
+                </select>
+            </div>
+            <div class="hdr-filter-sep"></div>
+            <button class="ctrl-btn ctrl-btn-ghost hdr-ctrl-btn-sm" onclick="toggleSortOrder()">
+                <span id="sortButtonText">🔤 Ordem Alfabética</span>
+            </button>
+            <button class="ctrl-btn ctrl-btn-ghost hdr-ctrl-btn-sm" onclick="clearFilters()">🔄 Limpar</button>
+            <div class="hdr-filter-sep"></div>
+            <span class="hdr-summary-idx" id="headerSummary"></span>
+        </div>
+
+        <!-- Código do projeto visível -->
+        <div id="projectCodeBanner" style="display: none; background: #e8f5e9; padding: 8px 20px; text-align: center; font-weight: bold; color: #2e7d32; border-top: 2px solid #4caf50; font-size: 0.85rem;">
+            🔑 Código do Projeto: <span id="projectCodeDisplay"></span>
+        </div>
+    </header>
+
+    <!-- Modal de Ajuda -->
+    <div id="helpModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeHelp()">&times;</span>
+            <h2>📖 Guia de Uso do Sistema</h2>
+            
+            <div class="help-section">
+                <h3>⚙️ 1. Configuração Inicial</h3>
+                <p>Personalize os nomes dos 4 avaliadores conforme sua equipe. Clique em "Salvar Nomes" para aplicar as mudanças.</p>
+            </div>
+
+            <div class="help-section">
+                <h3>➕ 2. Cadastrar Tarefas</h3>
+                <p>Preencha todos os campos obrigatórios:</p>
+                <ul>
+                    <li><strong>Descrição:</strong> Nome ou descrição da tarefa/projeto</li>
+                    <li><strong>Estágio:</strong> Selecione o status atual (ATRASADO, EM PLANEJAMENTO, INICIADO, EM EXECUÇÃO, CONCLUÍDO)</li>
+                    <li><strong>Notas:</strong> Cada avaliador atribui uma nota de 1 a 5</li>
+                </ul>
+                <p><strong>Campos opcionais:</strong></p>
+                <ul>
+                    <li><strong>Data de Vencimento:</strong> usada para alertas de prazo (vence hoje e vencidas)</li>
+                    <li><strong>Custo Estimado:</strong> valor formatado automaticamente em moeda (R$)</li>
+                </ul>
+                <p>A média é calculada automaticamente e determina a prioridade da tarefa.</p>
+                <p>Tarefas com a média empatada são ordenadas por estágio. O estágio, <strong>ATRASADO</strong> tem prioridade máxima.</p>
+            </div>
+
+            <div class="help-section">
+                <h3>📋 3. Gerenciar Tarefas na Lista</h3>
+                <p><strong>Alterar Estágio:</strong> Use o dropdown na coluna "Estágio" para mudar rapidamente o status.</p>
+                <p><strong>Editar:</strong> Clique no ícone ✏️ para modificar todos os dados da tarefa.</p>
+                <p><strong>Excluir:</strong> Clique no ícone 🗑️ para remover a tarefa (confirmação necessária).</p>
+            </div>
+
+            <div class="help-section">
+                <h3>🔍 4. Filtros e Controles</h3>
+                <p><strong>Filtrar por Estágio:</strong> Selecione um estágio específico no dropdown para ver apenas essas tarefas.</p>
+                <p><strong>Filtrar por Prazo:</strong> Use o filtro de prazo para listar apenas tarefas que vencem hoje ou já estão vencidas.</p>
+                <p><strong>Ordenação:</strong></p>
+                <ul>
+                    <li>Por padrão, tarefas são ordenadas por <strong>prioridade</strong> (maior média primeiro)</li>
+                    <li>Clique em "ORDEM ALFABÉTICA" para ordenar por descrição</li>
+                    <li>Clique em "ORDEM POR PRIORIDADE" para voltar à ordenação por média</li>
+                </ul>
+                <p><strong>Resumo da Tabela:</strong> Exibe total de tarefas, tarefas filtradas, vencendo hoje, vencidas e soma de custo do que está em exibição.</p>
+                <p><strong>Limpar Filtros:</strong> Remove todos os filtros aplicados.</p>
+            </div>
+
+            <div class="help-section">
+                <h3>🖨️ 5. Impressão em PDF</h3>
+                <p>Clique em "IMPRIMIR PDF" para gerar uma versão otimizada para impressão:</p>
+                <ul>
+                    <li>Fonte Times New Roman, tamanho 10pt</li>
+                    <li>Inclui rodapé com data/hora de impressão e copyright</li>
+                    <li>Na janela de impressão, selecione "Salvar como PDF" para gerar o arquivo</li>
+                </ul>
+            </div>
+
+            <div class="help-section">
+                <h3>🎨 6. Código de Cores</h3>
+                <p><strong>Estágios:</strong></p>
+                <ul>
+                    <li>🟢 <strong>EM EXECUÇÃO:</strong> Verde - tarefa sendo executada</li>
+                    <li>🔴 <strong>ATRASADO:</strong> Vermelho - tarefa com atraso</li>
+                    <li>⚪ <strong>INICIADO:</strong> Cinza claro - tarefa iniciada</li>
+                    <li>🟠 <strong>EM PLANEJAMENTO:</strong> Laranja - em fase de planejamento</li>
+                    <li>⚫ <strong>CONCLUÍDO:</strong> Cinza escuro - tarefa finalizada</li>
+                </ul>
+                <p><strong>Médias:</strong></p>
+                <ul>
+                    <li>🟢 Verde: Média ≥ 4 (alta prioridade)</li>
+                    <li>🟡 Amarelo: Média entre 3 e 3.99 (média prioridade)</li>
+                    <li>🔴 Vermelho: Média < 3 (baixa prioridade)</li>
+                </ul>
+                <p><strong>Prazos:</strong></p>
+                <ul>
+                    <li>⏰ Laranja: tarefa com vencimento hoje</li>
+                    <li>⚠️ Vermelho: tarefa vencida (exceto quando concluída)</li>
+                </ul>
+            </div>
+
+            <div class="help-section">
+                <h3>💾 7. Salvar e Carregar Projetos do Banco de Dados</h3>
+                <p>Guarde seus projetos na nuvem (Supabase) e acesse de qualquer lugar!</p>
+                
+                <h4>📌 Botão "💾 SALVAR TAREFA"</h4>
+                <p>Ao clicar, abre uma lista com todos os projetos salvos. Você pode:</p>
+                <ul>
+                    <li><strong>Clicar em um projeto existente:</strong> Escolha a ação:
+                        <ul>
+                            <li>🔄 Atualizar - Sobrescreve o projeto com os dados atuais</li>
+                            <li>💾 Salvar Como Novo - Cria uma cópia com timestamp</li>
+                        </ul>
+                    </li>
+                    <li><strong>Clicar em "➕ Novo Projeto":</strong> Digite o nome e salve um novo projeto
+                        <ul>
+                            <li>A lista de tarefas <strong>NÃO pode estar vazia</strong></li>
+                            <li>Todas as tarefas <strong>DEVEM ter um estágio definido</strong></li>
+                        </ul>
+                    </li>
+                </ul>
+                
+                <h4>📥 Botão "📥 CARREGAR TAREFA"</h4>
+                <p>Abre uma lista dos últimos 10 projetos salvos. Clique diretamente no projeto desejado para restaurar todos os dados na tela.</p>
+                
+                <h4>⚠️ Importante</h4>
+                <p>Os dados são salvos em um banco de dados na nuvem. Certifique-se de que:</p>
+                <ul>
+                    <li>Tem conexão com a internet</li>
+                    <li>Não há tarefas com estágio vazio antes de salvar</li>
+                    <li>A lista não está vazia</li>
+                </ul>
+            </div>
+
+            <div class="help-section">
+                <h3>🎨 8. Armazenamento de Dados Local</h3>
+                <p>Além do banco de dados, suas tarefas atuais são salvas automaticamente no navegador (localStorage). Os dados permanecem mesmo após fechar a página.</p>
+                <p><strong>Atenção:</strong> Limpar dados ou trocar de navegador apagará todas as tarefas locais não salvas.</p>
+            </div>
+        </div>
+    </div>
+
+    <main class="container">
+        <!-- Seção de Configurações -->
+        <section class="config-section">
+            <h2>⚙️ Configurações de Avaliadores</h2>
+            <div class="evaluators-config">
+                <div id="evaluatorsConfigContainer"></div>
+                <div class="evaluators-config-actions">
+                    <button class="btn btn-primary" onclick="saveEvaluatorNames()">Salvar Nomes</button>
+                    <button class="btn btn-secondary" onclick="showNumEvaluatorsModal()" title="Alterar quantidade de avaliadores">🔧 Alterar Nº de Avaliadores</button>
+                    <button class="btn btn-secondary" onclick="restartSetup()" title="Refazer configuração inicial">🔙 Refazer Configuração</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Formulário de Cadastro -->
+        <section class="form-section">
+            <h2 id="formTitle">➕ Cadastrar Nova Tarefa</h2>
+            <form id="taskForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="taskDescription">Descrição da Tarefa *</label>
+                        <input type="text" id="taskDescription" required placeholder="Digite a descrição da tarefa">
+                    </div>
+                    <div class="form-group">
+                        <label for="taskStage">Estágio *</label>
+                        <select id="taskStage" required>
+                            <option value="">Selecione...</option>
+                            <option value="ATRASADO">ATRASADO</option>
+                            <option value="EM PLANEJAMENTO">EM PLANEJAMENTO</option>
+                            <option value="INICIADO">INICIADO</option>
+                            <option value="EM EXECUÇÃO">EM EXECUÇÃO</option>
+                            <option value="CONCLUÍDO">CONCLUÍDO</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="taskDueDate">Data de Vencimento</label>
+                        <input type="date" id="taskDueDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="taskCost">Custo Estimado</label>
+                        <input type="text" id="taskCost" inputmode="decimal" placeholder="Ex: R$ 5.000,00" onblur="formatTaskCostInput(this)">
+                    </div>
+                </div>
+
+                <div class="form-row evaluations-row" id="evaluationsFormRow">
+                    <!-- Evaluator inputs generated dynamically by buildEvaluatorUI() -->
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-success" id="submitBtn">Adicionar Tarefa</button>
+                    <button type="button" class="btn btn-secondary" id="cancelBtn" onclick="cancelEdit()" style="display: none;">Cancelar</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Filtros e Controles -->
+        <!-- Filtros ocultos — mantidos no DOM para compatibilidade JS -->
+        <section class="controls-section" style="display:none;">
+            <div class="controls-bar">
+                <div class="controls-group controls-filters">
+                    <div class="ctrl-select-wrap">
+                        <span class="ctrl-select-icon">&#9660;</span>
+                        <select id="filterStage" onchange="applyFilters()">
+                            <option value="">&#128269; Todos os Estágios</option>
+                            <option value="ATRASADO">⚠️ Atrasado</option>
+                            <option value="EM PLANEJAMENTO">📐 Em Planejamento</option>
+                            <option value="INICIADO">🔵 Iniciado</option>
+                            <option value="EM EXECUÇÃO">▶️ Em Execução</option>
+                            <option value="CONCLUÍDO">✅ Concluído</option>
+                        </select>
+                    </div>
+                    <div class="ctrl-select-wrap">
+                        <span class="ctrl-select-icon">&#9660;</span>
+                        <select id="filterDeadline" onchange="applyFilters()">
+                            <option value="">⏱️ Todos os Prazos</option>
+                            <option value="today">⏰ Vence Hoje</option>
+                            <option value="overdue">⚠️ Vencidas</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tabela de Tarefas -->
+        <section class="table-section">
+            <h2>📋 Lista de Tarefas</h2>
+            
+            <!-- Legenda de Cores -->
+            <div class="legend-container">
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: #d4edda;"></span>
+                    <span>🟢 Verde: Média ≥ 4 (alta prioridade)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: #fff3cd;"></span>
+                    <span>🟡 Amarelo: Média entre 3 e 3.99 (média prioridade)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: #f8d7da;"></span>
+                    <span>🔴 Vermelho: Média < 3 (baixa prioridade)</span>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table id="tasksTable">
+                    <thead>
+                        <tr id="tableHeaderRow">
+                            <!-- Table headers generated dynamically by buildTableHeader() -->
+                        </tr>
+                    </thead>
+                    <tbody id="tasksTableBody">
+                        <!-- Tarefas serão inseridas aqui dinamicamente -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="table-summary">
+                Exibindo <strong id="summaryShown">0</strong> de <strong id="summaryTotal">0</strong> tarefa(s)
+                | ⏰ Hoje: <strong id="summaryDueToday">0</strong>
+                | ⚠️ Vencidas: <strong id="summaryOverdue">0</strong>
+                | 💰 Custo exibido: <strong id="summaryCost">R$ 0,00</strong>
+            </div>
+            <div id="noTasksMessage" class="no-tasks">
+                Nenhuma tarefa cadastrada. Adicione uma nova tarefa acima.
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; CECM - 2025 Sistema de Gerenciamento de Prioridades. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- FAB: Adicionar Tarefa (mobile) -->
+    <button id="fab-add-task" onclick="document.querySelector('.form-section').scrollIntoView({behavior:'smooth'})" title="Nova Tarefa">＋</button>
+
+    <!-- PWA Install Banner -->
+    <div id="pwa-install-banner">
+        <div class="pwa-banner-inner">
+            <div class="pwa-banner-icon">📊</div>
+            <div class="pwa-banner-text">
+                <strong>Instalar como App</strong>
+                Adicione à tela inicial para acesso rápido, mesmo offline!
+            </div>
+            <div class="pwa-banner-actions">
+                <button class="pwa-btn-install" id="pwa-btn-install">Instalar</button>
+                <button class="pwa-btn-dismiss" id="pwa-btn-dismiss">Agora não</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Modal Análise IA (Gemini) ─────────────────────────────── -->
+    <div id="iaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:10010;padding:16px;box-sizing:border-box;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:16px;box-shadow:0 12px 48px rgba(0,0,0,0.3);width:100%;max-width:700px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;">
+            <!-- Header -->
+            <div style="background:linear-gradient(135deg,#f093fb,#f5576c);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+                <div>
+                    <div style="color:white;font-size:1.3rem;font-weight:700;">🤖 Análise de IA — Gemini</div>
+                    <div style="color:rgba(255,255,255,0.85);font-size:0.82rem;margin-top:2px;">Análise inteligente das suas tarefas</div>
+                </div>
+                <button onclick="fecharAnaliseIA()" style="background:rgba(255,255,255,0.2);border:none;color:white;font-size:1.4rem;cursor:pointer;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;">✕</button>
+            </div>
+            <!-- API Key config -->
+            <div id="iaApiKeySection" style="padding:16px 24px;border-bottom:1px solid #eee;flex-shrink:0;display:flex;gap:10px;align-items:center;">
+                <input type="password" id="iaApiKeyInput" placeholder="🔑 Cole sua chave API do Gemini aqui..."
+                    style="flex:1;padding:10px 14px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px;outline:none;"
+                    onfocus="this.style.borderColor='#f5576c'" onblur="this.style.borderColor='#e0e0e0'">
+                <button onclick="salvarChaveIA()" style="padding:10px 18px;background:#f5576c;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;white-space:nowrap;">Salvar Chave</button>
+                <button onclick="limparChaveIA()" style="padding:10px 14px;background:#ddd;color:#555;border:none;border-radius:8px;cursor:pointer;font-size:13px;" title="Apagar chave salva">🗑️</button>
+            </div>
+            <!-- Botão analisar -->
+            <div style="padding:12px 24px;border-bottom:1px solid #eee;flex-shrink:0;">
+                <button id="btnAnaliseIA" onclick="executarAnaliseIA()"
+                    style="width:100%;padding:13px;background:linear-gradient(135deg,#f093fb,#f5576c);color:white;border:none;border-radius:10px;cursor:pointer;font-size:15px;font-weight:700;">
+                    🚀 Analisar Projeto com IA
+                </button>
+            </div>
+            <!-- Resultado -->
+            <div style="padding:20px 24px;overflow-y:auto;flex:1;">
+                <div id="respostaIA" style="white-space:pre-wrap;font-size:14px;line-height:1.7;color:#333;min-height:80px;">
+                    Clique em "Analisar Projeto com IA" para obter uma análise inteligente das suas tarefas.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dark Mode
+        function toggleDarkMode() {
+            const isDark = document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', isDark ? '1' : '0');
+            const label = document.getElementById('darkLabelIdx');
+            if (label) label.textContent = isDark ? '☀️' : '🌙';
+        }
+        (function() {
+            if (localStorage.getItem('darkMode') === '1') {
+                document.body.classList.add('dark-mode');
+                const label = document.getElementById('darkLabelIdx');
+                if (label) label.textContent = '☀️';
+            }
+        })();
+    </script>
+</body>
+</html>

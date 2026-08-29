@@ -40,7 +40,7 @@ async function checkAuth() {
         }
 
         console.log('⚠️ Sem sessão e sem código, redirecionando...');
-        window.location.href = 'auth.html';
+        window.location.href = '/auth.html';
         return null;
     } catch (error) {
         console.error('❌ Erro:', error);
@@ -158,7 +158,7 @@ function closeLoginRequiredModal() {
 
 function goToLoginFromModal() {
     closeLoginRequiredModal();
-    window.location.href = 'auth.html?t=' + Date.now();
+    window.location.href = '/auth.html?t=' + Date.now();
 }
 
 async function performLogout() {
@@ -183,7 +183,7 @@ async function performLogout() {
     showNotification('✅ Desconectado com sucesso!');
     
     setTimeout(() => {
-        window.location.replace('auth.html?t=' + Date.now());
+        window.location.replace('/auth.html?t=' + Date.now());
     }, 1000);
 }
 
