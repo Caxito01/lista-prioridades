@@ -3320,11 +3320,13 @@ function exportPDF() {
     };
   });
 
-  // Largura disponível ≈ 267mm (A4 landscape - margens 14+14)
-  const evW = Math.max(8, Math.floor(40 / evaluators.length));
+  // Largura disponível: A4 landscape (297mm) - margens 14+14 ≈ 269mm
+  const FIXED_COLS_WIDTH = 10 + 24 + 38 + 28 + 24 + 18 + 28 + 20 + 10; // num+stage+what+why+where+when+how+howMuch+avg
+  const AVAILABLE_WIDTH = 269;
+  const evW = Math.max(10, Math.floor((AVAILABLE_WIDTH - FIXED_COLS_WIDTH) / evaluators.length));
   const evalColStyles = {};
   evaluators.forEach((_, i) => {
-    evalColStyles[`ev${i}`] = { cellWidth: evW, halign: 'center' };
+    evalColStyles[`ev${i}`] = { cellWidth: evW, halign: 'center', overflow: 'visible' };
   });
 
   doc.autoTable({
@@ -3334,15 +3336,15 @@ function exportPDF() {
     styles:     { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
     headStyles: { fillColor: [102,126,234], textColor: 255, fontStyle: 'bold', fontSize: 7 },
     columnStyles: {
-      num:     { cellWidth: 6,  halign: 'center' },
-      stage:   { cellWidth: 24, halign: 'center' },
+      num:     { cellWidth: 10, halign: 'center', overflow: 'visible' },
+      stage:   { cellWidth: 24, halign: 'center', overflow: 'visible' },
       what:    { cellWidth: 38 },
       why:     { cellWidth: 28 },
       where:   { cellWidth: 24 },
       when:    { cellWidth: 18, halign: 'center' },
       how:     { cellWidth: 28 },
       howMuch: { cellWidth: 20, halign: 'right'  },
-      avg:     { cellWidth: 10, halign: 'center', fontStyle: 'bold' },
+      avg:     { cellWidth: 10, halign: 'center', fontStyle: 'bold', overflow: 'visible' },
       ...evalColStyles
     },
     didParseCell(data) {
