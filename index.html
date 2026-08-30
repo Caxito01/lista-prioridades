@@ -1297,7 +1297,7 @@ function renderTable() {
   const tbody = document.getElementById('tableBody');
   if (!list.length) {
     tbody.innerHTML = `<tr class="empty-row"><td colspan="${8 + evaluators.length + 2}">
-      Nenhuma tarefa encontrada. Clique em <strong>➕ Nova Tarefa</strong> para começar.
+      Nenhuma tarefa encontrada. Clique em <strong style="cursor:pointer;color:var(--primary);text-decoration:underline;" onclick="openModal(null)">➕ Nova Tarefa</strong> para começar.
     </td></tr>`;
     refreshAiAssistantSubtitle();
     return;
@@ -1323,6 +1323,7 @@ function refreshAiAssistantSubtitle() {
 function initializeAiAssistant() {
   aiChatHistory = [];
   refreshAiAssistantSubtitle();
+  localStorage.setItem(LS_KEY_AI_ASSISTANT_HIDDEN, '1'); // sempre inicia oculto ao carregar a página
   applyAiAssistantVisibility();
 }
 
