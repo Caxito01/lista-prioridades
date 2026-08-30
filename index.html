@@ -2196,17 +2196,9 @@ function renameEval(idx) {
 /* ──────────────────────────────────────────────
    CONFIGURAÇÃO DE Nº DE AVALIADORES (setup inicial + troca posterior)
    ────────────────────────────────────────────── */
-function buildEvaluatorNamesArray(n, base) {
-  const arr = [];
-  for (let i = 0; i < n; i++) {
-    arr.push((base && base[i]) ? base[i] : `Avaliador ${i + 1}`);
-  }
-  return arr;
-}
-
-function applyEvaluatorsCount(n) {
-  const oldNames = evaluators.slice();
-  evaluators = buildEvaluatorNamesArray(n, oldNames);
+function applyEvaluatorsSetup(names) {
+  const n = names.length;
+  evaluators = names;
   localStorage.setItem(LS_KEY_EVALS, JSON.stringify(evaluators));
   localStorage.setItem(LS_KEY_NUM_EVALS, String(n));
 
@@ -2222,6 +2214,7 @@ function applyEvaluatorsCount(n) {
   renderTable();
 }
 
+// Passo 1 de 2: quantidade de avaliadores
 function openEvaluatorsSetupModal(isFirstRun, onDone) {
   if (!isFirstRun && ensureReadOnlyAccess('configurar avaliadores')) return;
 
@@ -2230,16 +2223,16 @@ function openEvaluatorsSetupModal(isFirstRun, onDone) {
 
   const overlay = document.createElement('div');
   overlay.id = 'evalSetupModal';
-  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:flex;justify-content:center;align-items:center;z-index:5000;';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:flex;justify-content:center;align-items:center;z-index:5000;padding:16px;box-sizing:border-box;';
 
   overlay.innerHTML = `
-    <div style="background:var(--card-bg,#fff);color:var(--text,#333);border-radius:15px;padding:30px;max-width:380px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
-      <h2 style="margin-bottom:14px;font-size:1.3rem;">⚙️ ${isFirstRun ? 'Configuração Inicial' : 'Configurar Avaliadores'}</h2>
+    <div style="background:var(--card-bg,#fff);color:var(--text,#333);border-radius:15px;padding:30px;max-width:380px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+      <h2 style="margin-bottom:14px;font-size:1.3rem;">⚙️ ${isFirstRun ? 'Configuração Inicial (1/2)' : 'Configurar Avaliadores (1/2)'}</h2>
       <p style="margin-bottom:18px;font-size:0.92rem;opacity:0.85;line-height:1.5;">Quantas pessoas vão avaliar a prioridade de cada tarefa (nota de 1 a 5)?</p>
       <input type="number" id="evalSetupInput" min="1" max="10" value="${evaluators.length || 4}"
         style="width:100%;padding:14px;border:2px solid var(--primary,#667eea);border-radius:8px;box-sizing:border-box;font-size:22px;text-align:center;margin-bottom:20px;outline:none;background:transparent;color:inherit;">
       <div style="display:flex;gap:10px;">
-        <button id="evalSetupConfirmBtn" style="flex:1;padding:12px;background:var(--primary,#667eea);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;">Confirmar</button>
+        <button id="evalSetupConfirmBtn" style="flex:1;padding:12px;background:var(--primary,#667eea);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;">Próximo</button>
         ${isFirstRun ? '' : '<button id="evalSetupCancelBtn" style="flex:1;padding:12px;background:#6c757d;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;">Cancelar</button>'}
       </div>
     </div>
@@ -2250,20 +2243,72 @@ function openEvaluatorsSetupModal(isFirstRun, onDone) {
   input.focus();
   input.select();
 
-  const confirm = () => {
+  const goNext = () => {
     let n = parseInt(input.value, 10);
     if (isNaN(n)) n = 4;
     n = Math.max(1, Math.min(10, n));
-    applyEvaluatorsCount(n);
     overlay.remove();
-    toast(`Avaliadores configurados: ${n}`, 'success');
+    openEvaluatorNamesStepModal(n, isFirstRun, onDone);
+  };
+
+  document.getElementById('evalSetupConfirmBtn').onclick = goNext;
+  const cancelBtn = document.getElementById('evalSetupCancelBtn');
+  if (cancelBtn) cancelBtn.onclick = () => overlay.remove();
+  input.addEventListener('keypress', e => { if (e.key === 'Enter') goNext(); });
+}
+
+// Passo 2 de 2: nome de cada avaliador
+function openEvaluatorNamesStepModal(n, isFirstRun, onDone) {
+  const existing = document.getElementById('evalNamesModal');
+  if (existing) existing.remove();
+
+  let inputsHtml = '';
+  for (let i = 0; i < n; i++) {
+    const val = evaluators[i] || `Avaliador ${i + 1}`;
+    inputsHtml += `
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-weight:600;margin-bottom:4px;font-size:0.85rem;opacity:0.85;">👤 Avaliador ${i + 1}</label>
+        <input type="text" id="evalNameInput${i}" value="${esc(val)}" placeholder="Nome do avaliador ${i + 1}"
+          style="width:100%;padding:12px;border:2px solid var(--border,#e0e0e0);border-radius:8px;box-sizing:border-box;font-size:0.95rem;outline:none;background:transparent;color:inherit;">
+      </div>`;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.id = 'evalNamesModal';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:flex;justify-content:center;align-items:center;z-index:5000;padding:16px;box-sizing:border-box;';
+  overlay.innerHTML = `
+    <div style="background:var(--card-bg,#fff);color:var(--text,#333);border-radius:15px;padding:28px;max-width:420px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+      <h2 style="margin-bottom:6px;font-size:1.2rem;">✍️ ${isFirstRun ? 'Configuração Inicial (2/2)' : 'Configurar Avaliadores (2/2)'}</h2>
+      <p style="margin-bottom:16px;font-size:0.85rem;opacity:0.7;">Defina o nome de cada avaliador do projeto</p>
+      ${inputsHtml}
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button id="evalNamesConfirmBtn" style="flex:1;padding:12px;background:var(--primary,#667eea);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;">✅ Confirmar</button>
+        ${isFirstRun ? '' : '<button id="evalNamesBackBtn" style="flex:1;padding:12px;background:#6c757d;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;">Voltar</button>'}
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const confirm = () => {
+    const names = [];
+    for (let i = 0; i < n; i++) {
+      const el = document.getElementById(`evalNameInput${i}`);
+      names.push((el && el.value.trim()) || `Avaliador ${i + 1}`);
+    }
+    applyEvaluatorsSetup(names);
+    overlay.remove();
+    toast(`Avaliadores configurados: ${names.join(', ')}`, 'success');
     if (onDone) onDone();
   };
 
-  document.getElementById('evalSetupConfirmBtn').onclick = confirm;
-  const cancelBtn = document.getElementById('evalSetupCancelBtn');
-  if (cancelBtn) cancelBtn.onclick = () => overlay.remove();
-  input.addEventListener('keypress', e => { if (e.key === 'Enter') confirm(); });
+  const firstInput = document.getElementById('evalNameInput0');
+  if (firstInput) setTimeout(() => firstInput.focus(), 50);
+  const lastInput = document.getElementById(`evalNameInput${n - 1}`);
+  if (lastInput) lastInput.addEventListener('keypress', e => { if (e.key === 'Enter') confirm(); });
+
+  document.getElementById('evalNamesConfirmBtn').onclick = confirm;
+  const backBtn = document.getElementById('evalNamesBackBtn');
+  if (backBtn) backBtn.onclick = () => { overlay.remove(); openEvaluatorsSetupModal(isFirstRun, onDone); };
 }
 
 /* ──────────────────────────────────────────────
