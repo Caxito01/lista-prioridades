@@ -1050,9 +1050,11 @@ const LS_KEY_DB_PROJECT_NAME = 'kanban5w2h_project_name';
 const LS_KEY_DB_PROJECT_CODE = 'kanban5w2h_project_code';
 const LS_KEY_NUM_EVALS = 'kanban5w2h_num_evaluators';
 const LS_KEY_LAST_USER = 'kanban5w2h_last_user_id';
+const LS_KEY_DEFAULT_RESPONSIBLE = 'kanban5w2h_default_responsible';
 
 let tasks      = [];
 let evaluators = ['Avaliador 1', 'Avaliador 2', 'Avaliador 3', 'Avaliador 4'];
+let defaultResponsible = null; // índice em `evaluators`, pré-selecionado em tarefas novas
 let editingId  = null;
 let sortAlphaActive = false;
 let sortCost   = null;  // null | 'asc' | 'desc'
@@ -1137,6 +1139,9 @@ const STAGE_MAP = {
   // Load evaluators
   const ev = localStorage.getItem(LS_KEY_EVALS);
   if (ev) try { evaluators = JSON.parse(ev); } catch(e){}
+
+  const savedDefaultResp = localStorage.getItem(LS_KEY_DEFAULT_RESPONSIBLE);
+  defaultResponsible = (savedDefaultResp !== null && savedDefaultResp !== '') ? parseInt(savedDefaultResp, 10) : null;
 
   // Load tasks
   const raw = localStorage.getItem(LS_KEY_TASKS);
@@ -2065,7 +2070,7 @@ function openModal(id) {
   const row = document.getElementById('scoresRow');
   row.innerHTML = evaluators.map((name, i) => {
     const val = t?.who?.[i] ?? '';
-    const isResp = (t?.responsible ?? null) === i;
+    const isResp = t ? (t.responsible ?? null) === i : defaultResponsible === i;
     return `<div class="field-group">
       <label style="display:flex;align-items:center;gap:5px;">
         <input type="radio" name="mResponsible" value="${i}" ${isResp ? 'checked' : ''}
@@ -2196,11 +2201,19 @@ function renameEval(idx) {
 /* ──────────────────────────────────────────────
    CONFIGURAÇÃO DE Nº DE AVALIADORES (setup inicial + troca posterior)
    ────────────────────────────────────────────── */
-function applyEvaluatorsSetup(names) {
+function applyEvaluatorsSetup(names, newDefaultResponsible) {
   const n = names.length;
   evaluators = names;
   localStorage.setItem(LS_KEY_EVALS, JSON.stringify(evaluators));
   localStorage.setItem(LS_KEY_NUM_EVALS, String(n));
+
+  defaultResponsible = (typeof newDefaultResponsible === 'number' && newDefaultResponsible >= 0 && newDefaultResponsible < n)
+    ? newDefaultResponsible : null;
+  if (defaultResponsible === null) {
+    localStorage.removeItem(LS_KEY_DEFAULT_RESPONSIBLE);
+  } else {
+    localStorage.setItem(LS_KEY_DEFAULT_RESPONSIBLE, String(defaultResponsible));
+  }
 
   tasks.forEach(t => {
     if (!Array.isArray(t.who)) t.who = [];
@@ -2264,11 +2277,18 @@ function openEvaluatorNamesStepModal(n, isFirstRun, onDone) {
 
   let inputsHtml = '';
   for (let i = 0; i < n; i++) {
-    const val = evaluators[i] || `Avaliador ${i + 1}`;
+    const existingName = evaluators[i] || '';
+    // Se ainda é o nome-padrão genérico, mostra vazio + placeholder (some ao digitar, sem apagar nada)
+    const isGenericDefault = !existingName || existingName === `Avaliador ${i + 1}`;
+    const displayValue = isGenericDefault ? '' : existingName;
+    const isDefaultResp = defaultResponsible === i;
     inputsHtml += `
       <div style="margin-bottom:12px;">
-        <label style="display:block;font-weight:600;margin-bottom:4px;font-size:0.85rem;opacity:0.85;">👤 Avaliador ${i + 1}</label>
-        <input type="text" id="evalNameInput${i}" value="${esc(val)}" placeholder="Nome do avaliador ${i + 1}"
+        <label style="display:flex;align-items:center;gap:6px;font-weight:600;margin-bottom:4px;font-size:0.85rem;opacity:0.85;">
+          <input type="radio" name="evalDefaultResp" value="${i}" ${isDefaultResp ? 'checked' : ''} title="Marcar como responsável padrão">
+          👤 Avaliador ${i + 1}
+        </label>
+        <input type="text" id="evalNameInput${i}" value="${esc(displayValue)}" placeholder="Avaliador ${i + 1}"
           style="width:100%;padding:12px;border:2px solid var(--border,#e0e0e0);border-radius:8px;box-sizing:border-box;font-size:0.95rem;outline:none;background:transparent;color:inherit;">
       </div>`;
   }
@@ -2279,7 +2299,8 @@ function openEvaluatorNamesStepModal(n, isFirstRun, onDone) {
   overlay.innerHTML = `
     <div style="background:var(--card-bg,#fff);color:var(--text,#333);border-radius:15px;padding:28px;max-width:420px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
       <h2 style="margin-bottom:6px;font-size:1.2rem;">✍️ ${isFirstRun ? 'Configuração Inicial (2/2)' : 'Configurar Avaliadores (2/2)'}</h2>
-      <p style="margin-bottom:16px;font-size:0.85rem;opacity:0.7;">Defina o nome de cada avaliador do projeto</p>
+      <p style="margin-bottom:2px;font-size:0.85rem;opacity:0.7;">Defina o nome de cada avaliador do projeto</p>
+      <p style="margin-bottom:16px;font-size:0.8rem;opacity:0.6;">Marque a bolinha de quem deve vir pré-selecionado como responsável nas tarefas novas (opcional)</p>
       ${inputsHtml}
       <div style="display:flex;gap:10px;margin-top:8px;">
         <button id="evalNamesConfirmBtn" style="flex:1;padding:12px;background:var(--primary,#667eea);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;">✅ Confirmar</button>
@@ -2295,7 +2316,9 @@ function openEvaluatorNamesStepModal(n, isFirstRun, onDone) {
       const el = document.getElementById(`evalNameInput${i}`);
       names.push((el && el.value.trim()) || `Avaliador ${i + 1}`);
     }
-    applyEvaluatorsSetup(names);
+    const checkedResp = overlay.querySelector('input[name="evalDefaultResp"]:checked');
+    const newDefaultResponsible = checkedResp ? parseInt(checkedResp.value, 10) : null;
+    applyEvaluatorsSetup(names, newDefaultResponsible);
     overlay.remove();
     toast(`Avaliadores configurados: ${names.join(', ')}`, 'success');
     if (onDone) onDone();
