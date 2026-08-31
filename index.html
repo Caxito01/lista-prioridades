@@ -2191,27 +2191,59 @@ function saveModal() {
 /* ──────────────────────────────────────────────
    RENAME EVALUATOR (dbl-click on header)
    ────────────────────────────────────────────── */
-async function renameEval(idx) {
+function renameEval(idx) {
   if (ensureReadOnlyAccess('renomear avaliadores')) return;
   const cur = evaluators[idx];
-  const name = prompt(`Renomear avaliador ${idx+1}:\n(Atual: "${cur}")`, cur);
-  if (!name || name.trim() === cur) return;
-  evaluators[idx] = name.trim();
-  localStorage.setItem(LS_KEY_EVALS, JSON.stringify(evaluators));
-  buildTableHeader();
-  renderTable();
 
-  const linkedProjectId = localStorage.getItem(LS_KEY_DB_PROJECT_ID);
-  if (linkedProjectId) {
-    clearTimeout(_silentSaveTimer);
-    const saved = await performSilentSave();
-    toast(saved
-      ? `Avaliador ${idx+1} renomeado para "${name.trim()}" e salvo no banco de dados!`
-      : `Avaliador ${idx+1} renomeado localmente, mas não foi possível salvar no banco agora.`,
-      saved ? 'success' : 'error');
-  } else {
-    toast(`Avaliador ${idx+1} renomeado para "${name.trim()}"`, 'info');
-  }
+  const existing = document.getElementById('renameEvalModal');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'renameEvalModal';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:flex;justify-content:center;align-items:center;z-index:5000;padding:16px;box-sizing:border-box;';
+  overlay.innerHTML = `
+    <div style="background:var(--card-bg,#fff);color:var(--text,#333);border-radius:15px;padding:28px;max-width:380px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+      <h2 style="margin-bottom:16px;font-size:1.2rem;">✏️ Renomear Avaliador ${idx + 1}</h2>
+      <input type="text" id="renameEvalInput" value="${esc(cur)}"
+        style="width:100%;padding:14px;border:2px solid var(--primary,#667eea);border-radius:8px;box-sizing:border-box;font-size:1rem;outline:none;background:transparent;color:inherit;margin-bottom:20px;">
+      <div style="display:flex;gap:10px;">
+        <button id="renameEvalConfirmBtn" style="flex:1;padding:12px;background:var(--primary,#667eea);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;">✅ Salvar</button>
+        <button id="renameEvalCancelBtn" style="flex:1;padding:12px;background:#6c757d;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;">Cancelar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const input = document.getElementById('renameEvalInput');
+  input.focus();
+  input.select();
+
+  const confirm = async () => {
+    const name = input.value.trim();
+    overlay.remove();
+    if (!name || name === cur) return;
+
+    evaluators[idx] = name;
+    localStorage.setItem(LS_KEY_EVALS, JSON.stringify(evaluators));
+    buildTableHeader();
+    renderTable();
+
+    const linkedProjectId = localStorage.getItem(LS_KEY_DB_PROJECT_ID);
+    if (linkedProjectId) {
+      clearTimeout(_silentSaveTimer);
+      const saved = await performSilentSave();
+      toast(saved
+        ? `Avaliador ${idx+1} renomeado para "${name}" e salvo no banco de dados!`
+        : `Avaliador ${idx+1} renomeado localmente, mas não foi possível salvar no banco agora.`,
+        saved ? 'success' : 'error');
+    } else {
+      toast(`Avaliador ${idx+1} renomeado para "${name}"`, 'info');
+    }
+  };
+
+  document.getElementById('renameEvalConfirmBtn').onclick = confirm;
+  document.getElementById('renameEvalCancelBtn').onclick = () => overlay.remove();
+  input.addEventListener('keypress', e => { if (e.key === 'Enter') confirm(); });
 }
 
 /* ──────────────────────────────────────────────
