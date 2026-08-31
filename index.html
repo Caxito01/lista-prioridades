@@ -1184,7 +1184,7 @@ const STAGE_MAP = {
     && !hasLegacyDataToImport && !localStorage.getItem(LS_KEY_DB_PROJECT_ID);
 
   if (needsEvaluatorSetup) {
-    openEvaluatorsSetupModal(true, finishInit);
+    openStartupChooserModal(() => openEvaluatorsSetupModal(true, finishInit), finishInit);
   } else {
     finishInit();
   }
@@ -2197,6 +2197,90 @@ function renameEval(idx) {
   buildTableHeader();
   renderTable();
   toast(`Avaliador ${idx+1} renomeado para "${name.trim()}"`, 'info');
+}
+
+/* ──────────────────────────────────────────────
+   TELA INICIAL: abrir projeto salvo ou criar novo
+   (só aparece no primeiro acesso, antes de configurar avaliadores)
+   ────────────────────────────────────────────── */
+function openStartupChooserModal(onCreateNew, onProjectLoaded) {
+  const existing = document.getElementById('startupChooserModal');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'startupChooserModal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:6000;padding:16px;box-sizing:border-box;';
+  overlay.innerHTML = `
+    <div style="background:var(--card-bg,#fff);color:var(--text,#333);border-radius:15px;padding:32px;max-width:420px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);text-align:center;">
+      <h2 style="margin-bottom:8px;font-size:1.3rem;">👋 Bem-vindo!</h2>
+      <p style="margin-bottom:22px;font-size:0.92rem;opacity:0.8;">Você quer abrir um projeto já salvo ou começar um projeto novo?</p>
+      <button id="startupOpenSavedBtn" style="width:100%;padding:14px;margin-bottom:10px;background:var(--primary,#667eea);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.95rem;">📂 Abrir Projeto Salvo</button>
+      <button id="startupCreateNewBtn" style="width:100%;padding:14px;background:#28a745;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.95rem;">➕ Criar Novo Projeto</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  document.getElementById('startupCreateNewBtn').onclick = () => {
+    overlay.remove();
+    onCreateNew();
+  };
+
+  document.getElementById('startupOpenSavedBtn').onclick = async () => {
+    const { client, session } = await getSupabaseSession();
+    if (!client || !session) { overlay.remove(); onCreateNew(); return; }
+    const projects = await fetchUserProjects(client, session.user.id);
+    overlay.remove();
+    if (!projects.length) {
+      toast('Nenhum projeto encontrado. Vamos criar um novo.', 'info');
+      onCreateNew();
+      return;
+    }
+    openStartupProjectListModal(projects, onCreateNew, onProjectLoaded);
+  };
+}
+
+function openStartupProjectListModal(projects, onCreateNew, onProjectLoaded) {
+  const existing = document.getElementById('startupProjectListModal');
+  if (existing) existing.remove();
+
+  const listHtml = projects.map(project => {
+    const code = project.project_code ? ` • 🔑 ${project.project_code}` : '';
+    const date = project.created_at ? new Date(project.created_at).toLocaleString('pt-BR') : '';
+    return `<div class="startup-project-row" data-id="${project.id}" style="padding:12px;border-bottom:1px solid var(--border,#eee);cursor:pointer;text-align:left;">
+      <strong>${esc(project.name || 'Sem nome')}</strong><br>
+      <small style="opacity:0.65;">${date}${code}</small>
+    </div>`;
+  }).join('');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'startupProjectListModal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:6000;padding:16px;box-sizing:border-box;';
+  overlay.innerHTML = `
+    <div style="background:var(--card-bg,#fff);color:var(--text,#333);border-radius:15px;padding:24px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+      <h2 style="margin-bottom:4px;font-size:1.2rem;">📂 Seus Projetos</h2>
+      <p style="margin-bottom:14px;font-size:0.85rem;opacity:0.7;">Escolha um projeto para abrir</p>
+      <div style="border:1px solid var(--border,#eee);border-radius:8px;overflow:hidden;">${listHtml}</div>
+      <div style="display:flex;gap:10px;margin-top:14px;">
+        <button id="startupProjectListBackBtn" style="flex:1;padding:12px;background:#6c757d;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;">← Voltar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.querySelectorAll('.startup-project-row').forEach(row => {
+    row.onclick = async () => {
+      const project = projects.find(p => p.id === row.dataset.id);
+      if (!project) return;
+      overlay.remove();
+      await performLoadProject(project);
+      onProjectLoaded();
+    };
+  });
+
+  document.getElementById('startupProjectListBackBtn').onclick = () => {
+    overlay.remove();
+    openStartupChooserModal(onCreateNew, onProjectLoaded);
+  };
 }
 
 /* ──────────────────────────────────────────────
