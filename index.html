@@ -1183,8 +1183,12 @@ const STAGE_MAP = {
   const needsEvaluatorSetup = !isCodeAccessReadOnly && !ev && !localStorage.getItem(LS_KEY_NUM_EVALS)
     && !hasLegacyDataToImport && !localStorage.getItem(LS_KEY_DB_PROJECT_ID);
 
+  const startCreateNewFlow = () => {
+    openEvaluatorsSetupModal(true, finishInit, () => openStartupChooserModal(startCreateNewFlow, finishInit));
+  };
+
   if (needsEvaluatorSetup) {
-    openStartupChooserModal(() => openEvaluatorsSetupModal(true, finishInit), finishInit);
+    openStartupChooserModal(startCreateNewFlow, finishInit);
   } else {
     finishInit();
   }
@@ -2313,7 +2317,7 @@ function applyEvaluatorsSetup(names, newDefaultResponsible) {
 }
 
 // Passo 1 de 2: quantidade de avaliadores
-function openEvaluatorsSetupModal(isFirstRun, onDone) {
+function openEvaluatorsSetupModal(isFirstRun, onDone, onBack) {
   if (!isFirstRun && ensureReadOnlyAccess('configurar avaliadores')) return;
 
   const existing = document.getElementById('evalSetupModal');
@@ -2323,6 +2327,8 @@ function openEvaluatorsSetupModal(isFirstRun, onDone) {
   overlay.id = 'evalSetupModal';
   overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:flex;justify-content:center;align-items:center;z-index:5000;padding:16px;box-sizing:border-box;';
 
+  const showBackBtn = isFirstRun && typeof onBack === 'function';
+
   overlay.innerHTML = `
     <div style="background:var(--card-bg,#fff);color:var(--text,#333);border-radius:15px;padding:30px;max-width:380px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
       <h2 style="margin-bottom:14px;font-size:1.3rem;">⚙️ ${isFirstRun ? 'Configuração Inicial (1/2)' : 'Configurar Avaliadores (1/2)'}</h2>
@@ -2330,8 +2336,9 @@ function openEvaluatorsSetupModal(isFirstRun, onDone) {
       <input type="number" id="evalSetupInput" min="1" max="10" value="${evaluators.length || 4}"
         style="width:100%;padding:14px;border:2px solid var(--primary,#667eea);border-radius:8px;box-sizing:border-box;font-size:22px;text-align:center;margin-bottom:20px;outline:none;background:transparent;color:inherit;">
       <div style="display:flex;gap:10px;">
+        ${showBackBtn ? '<button id="evalSetupBackBtn" style="flex:1;padding:12px;background:#6c757d;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;">← Voltar</button>' : ''}
         <button id="evalSetupConfirmBtn" style="flex:1;padding:12px;background:var(--primary,#667eea);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;">Próximo</button>
-        ${isFirstRun ? '' : '<button id="evalSetupCancelBtn" style="flex:1;padding:12px;background:#6c757d;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;">Cancelar</button>'}
+        ${(!isFirstRun) ? '<button id="evalSetupCancelBtn" style="flex:1;padding:12px;background:#6c757d;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;">Cancelar</button>' : ''}
       </div>
     </div>
   `;
@@ -2352,6 +2359,8 @@ function openEvaluatorsSetupModal(isFirstRun, onDone) {
   document.getElementById('evalSetupConfirmBtn').onclick = goNext;
   const cancelBtn = document.getElementById('evalSetupCancelBtn');
   if (cancelBtn) cancelBtn.onclick = () => overlay.remove();
+  const backBtn = document.getElementById('evalSetupBackBtn');
+  if (backBtn) backBtn.onclick = () => { overlay.remove(); onBack(); };
   input.addEventListener('keypress', e => { if (e.key === 'Enter') goNext(); });
 }
 
