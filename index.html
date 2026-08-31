@@ -2191,7 +2191,7 @@ function saveModal() {
 /* ──────────────────────────────────────────────
    RENAME EVALUATOR (dbl-click on header)
    ────────────────────────────────────────────── */
-function renameEval(idx) {
+async function renameEval(idx) {
   if (ensureReadOnlyAccess('renomear avaliadores')) return;
   const cur = evaluators[idx];
   const name = prompt(`Renomear avaliador ${idx+1}:\n(Atual: "${cur}")`, cur);
@@ -2200,7 +2200,18 @@ function renameEval(idx) {
   localStorage.setItem(LS_KEY_EVALS, JSON.stringify(evaluators));
   buildTableHeader();
   renderTable();
-  toast(`Avaliador ${idx+1} renomeado para "${name.trim()}"`, 'info');
+
+  const linkedProjectId = localStorage.getItem(LS_KEY_DB_PROJECT_ID);
+  if (linkedProjectId) {
+    clearTimeout(_silentSaveTimer);
+    const saved = await performSilentSave();
+    toast(saved
+      ? `Avaliador ${idx+1} renomeado para "${name.trim()}" e salvo no banco de dados!`
+      : `Avaliador ${idx+1} renomeado localmente, mas não foi possível salvar no banco agora.`,
+      saved ? 'success' : 'error');
+  } else {
+    toast(`Avaliador ${idx+1} renomeado para "${name.trim()}"`, 'info');
+  }
 }
 
 /* ──────────────────────────────────────────────
@@ -2290,7 +2301,7 @@ function openStartupProjectListModal(projects, onCreateNew, onProjectLoaded) {
 /* ──────────────────────────────────────────────
    CONFIGURAÇÃO DE Nº DE AVALIADORES (setup inicial + troca posterior)
    ────────────────────────────────────────────── */
-function applyEvaluatorsSetup(names, newDefaultResponsible) {
+async function applyEvaluatorsSetup(names, newDefaultResponsible) {
   const n = names.length;
   evaluators = names;
   localStorage.setItem(LS_KEY_EVALS, JSON.stringify(evaluators));
@@ -2314,6 +2325,16 @@ function applyEvaluatorsSetup(names, newDefaultResponsible) {
 
   buildTableHeader();
   renderTable();
+
+  // Se já existe um projeto vinculado no banco, salva a mudança de avaliadores
+  // imediatamente (em vez de esperar o debounce de 1.5s do auto-save silencioso)
+  const linkedProjectId = localStorage.getItem(LS_KEY_DB_PROJECT_ID);
+  if (linkedProjectId) {
+    clearTimeout(_silentSaveTimer);
+    const saved = await performSilentSave();
+    return saved ? 'saved' : 'save-failed';
+  }
+  return 'no-project';
 }
 
 // Passo 1 de 2: quantidade de avaliadores
@@ -2404,7 +2425,7 @@ function openEvaluatorNamesStepModal(n, isFirstRun, onDone) {
   `;
   document.body.appendChild(overlay);
 
-  const confirm = () => {
+  const confirm = async () => {
     const names = [];
     for (let i = 0; i < n; i++) {
       const el = document.getElementById(`evalNameInput${i}`);
@@ -2412,9 +2433,15 @@ function openEvaluatorNamesStepModal(n, isFirstRun, onDone) {
     }
     const checkedResp = overlay.querySelector('input[name="evalDefaultResp"]:checked');
     const newDefaultResponsible = checkedResp ? parseInt(checkedResp.value, 10) : null;
-    applyEvaluatorsSetup(names, newDefaultResponsible);
     overlay.remove();
-    toast(`Avaliadores configurados: ${names.join(', ')}`, 'success');
+    const result = await applyEvaluatorsSetup(names, newDefaultResponsible);
+    if (result === 'saved') {
+      toast('Avaliadores atualizados e salvos no banco de dados!', 'success');
+    } else if (result === 'save-failed') {
+      toast('Avaliadores atualizados localmente, mas não foi possível salvar no banco agora.', 'error');
+    } else {
+      toast(`Avaliadores configurados: ${names.join(', ')}`, 'success');
+    }
     if (onDone) onDone();
   };
 
@@ -2546,19 +2573,19 @@ function scheduleSilentSave() {
 }
 
 async function performSilentSave() {
-  if (_isSilentSaving) return;
+  if (_isSilentSaving) return false;
   const projectId = localStorage.getItem(LS_KEY_DB_PROJECT_ID);
-  if (!projectId) return;
+  if (!projectId) return false;
 
   try {
     _isSilentSaving = true;
     await window.initSupabase();
     const client = window.getClient();
-    if (!client || !client.auth) return;
+    if (!client || !client.auth) return false;
 
     const { data: sessionData } = await client.auth.getSession();
     const session = sessionData?.session;
-    if (!session) return;
+    if (!session) return false;
 
     // Busca dados atuais do projeto para fazer merge correto
     const { data: project, error: fetchErr } = await client
@@ -2568,12 +2595,12 @@ async function performSilentSave() {
       .eq('user_id', session.user.id)
       .single();
 
-    if (fetchErr || !project) return;
+    if (fetchErr || !project) return false;
 
     const payload = mergeProjectData(project.data);
     delete payload.evaluator_names;
 
-    const { data: updated } = await client
+    const { data: updated, error: updateErr } = await client
       .from('projects')
       .update({ data: payload, updated_at: new Date().toISOString() })
       .eq('id', projectId)
@@ -2581,11 +2608,15 @@ async function performSilentSave() {
       .select('updated_at')
       .single();
 
+    if (updateErr) return false;
+
     // Registra o timestamp para que o realtime não reaplique este próprio save
     if (updated?.updated_at) _lastKnownUpdatedAt = updated.updated_at;
+    return true;
 
   } catch(e) {
     console.warn('[5w2h] silent save falhou:', e?.message || e);
+    return false;
   } finally {
     _isSilentSaving = false;
   }
